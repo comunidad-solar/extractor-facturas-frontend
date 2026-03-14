@@ -199,7 +199,11 @@ export default function FacturaUpload() {
     if (!cliente.nombre.trim())     errs.nombre    = "Obligatorio";
     if (!cliente.apellidos.trim())  errs.apellidos = "Obligatorio";
     if (!cliente.correo.trim())     errs.correo    = "Obligatorio";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cliente.correo.trim()))
+      errs.correo = "Introduce un correo electrónico válido";
     if (!cliente.telefono.trim())   errs.telefono  = "Obligatorio";
+    else if (!/^(?:\+34|0034)?[679]\d{8}$/.test(cliente.telefono.replace(/\s/g, "")))
+      errs.telefono = "Introduce un teléfono español válido (ej: 612345678 o +34 612345678)";
     if (!cliente.direccion.trim())  errs.direccion = "Obligatorio";
     setClienteErrors(errs);
     return Object.keys(errs).length === 0;
