@@ -49,6 +49,8 @@ const MANUAL_FIELD_KEYS = [
   "pp_p1", "pp_p2", "imp_ele", "iva", "alq_eq_dia",
 ];
 
+const PRECIOS_POT_3TD_KEYS = ["pp_p3", "pp_p4", "pp_p5", "pp_p6"];
+
 const API_AUTO_KEYS = [
   "tarifa_acceso", "distribuidora",
   "pot_p1_kw", "pot_p2_kw", "pot_p3_kw", "pot_p4_kw", "pot_p5_kw", "pot_p6_kw",
@@ -60,7 +62,9 @@ const API_AUTO_KEYS = [
 const hasValue = (v) => v !== null && v !== undefined && v !== "" && v != 0;
 
 const emptyManual = () =>
-  Object.fromEntries(MANUAL_FIELD_KEYS.map((k) => [k, ""]));
+  Object.fromEntries(
+    [...MANUAL_FIELD_KEYS, ...PRECIOS_POT_3TD_KEYS].map((k) => [k, ""])
+  );
 
 // ── Helpers — proximidad CE ───────────────────────────────────────────────────
 function haversineDistance(lat1, lon1, lat2, lon2) {
@@ -77,7 +81,24 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 // CE API proxiada por Vite (evita CORS en dev)
 const CE_API_URL = "/ce-api/server/api/get-ce-info-lat-lng";
 
-const API_BASE = import.meta.env.VITE_API_URL || "";
+const API_BASE        = import.meta.env.VITE_API_URL       || "";
+const LEAD_URL        = import.meta.env.VITE_LEAD_URL      || "";
+const NOMINATIM_URL   = import.meta.env.VITE_NOMINATIM_URL || "https://nominatim.openstreetmap.org";
+const CE_DETAIL_URL   = import.meta.env.VITE_CE_DETAIL_URL || "";
+
+async function enviarLead(url, payload, onWarn) {
+  if (!url) { onWarn?.(); return; }
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    console.log("📤 Lead enviado al backend:", { status: res.status, payload });
+  } catch (e) {
+    console.warn("⚠️ Error enviando lead al backend:", e);
+  }
+}
 
 export default function FacturaUpload() {
   // ── Steps & navigation ───────────────────────────────────────────────────
@@ -127,6 +148,7 @@ export default function FacturaUpload() {
   const [error, setError]             = useState("");
   const [status, setStatus]           = useState("idle"); // "idle"|"analyzed"|"sent"
   const [sending, setSending]         = useState(false);
+  const [leadWarn, setLeadWarn]       = useState(false);
 
   // ── Pre-fetch lista CE al montar ──────────────────────────────────────────
   useEffect(() => {
@@ -175,7 +197,7 @@ export default function FacturaUpload() {
     nominatimTimerRef.current = setTimeout(async () => {
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(val)}&format=json&limit=5&countrycodes=es&addressdetails=1`,
+          `${NOMINATIM_URL}/search?q=${encodeURIComponent(val)}&format=json&limit=5&countrycodes=es&addressdetails=1`,
           { headers: { "User-Agent": "ComunidadSolar/1.0", "Accept": "application/json" } }
         );
         const data = await res.json();
@@ -240,7 +262,7 @@ export default function FacturaUpload() {
 
       try {
         const detailRes = await fetch(
-          `https://comunidades-energeticas-api-20084454554.catalystserverless.eu/server/api/get-ce-info?name=${encodeURIComponent(ceNombreVal)}`,
+          `${CE_DETAIL_URL}/server/api/get-ce-info?name=${encodeURIComponent(ceNombreVal)}`,
           { method: "POST" }
         );
         const detailData = await detailRes.json();
@@ -260,6 +282,7 @@ export default function FacturaUpload() {
       setCeStatus(ceStatusVal);
       setCeEtiqueta(ceEtiquetaVal);
       console.log("📊 Resultado:", { Fmstate: "01_DENTRO_ZONA", ceNombreVal, ceDireccionVal, ceStatusVal, ceEtiquetaVal, distanciaCEMasCercana });
+      return { fsmstate: "01_DENTRO_ZONA", ceNombre: ceNombreVal, ceDireccion: ceDireccionVal, ceStatus: ceStatusVal, ceEtiqueta: ceEtiquetaVal };
     } else {
       const distanciaCEMasCercana = nearestAll ? Math.round(nearestAllDist) : null;
       updateFsmstate("02_FUERA_ZONA");
@@ -274,7 +297,7 @@ export default function FacturaUpload() {
       if (nearestAll && ceNombreVal) {
         try {
           const detailRes = await fetch(
-            `https://comunidades-energeticas-api-20084454554.catalystserverless.eu/server/api/get-ce-info?name=${encodeURIComponent(ceNombreVal)}`,
+            `${CE_DETAIL_URL}/server/api/get-ce-info?name=${encodeURIComponent(ceNombreVal)}`,
             { method: "POST" }
           );
           const detailData = await detailRes.json();
@@ -295,6 +318,7 @@ export default function FacturaUpload() {
       setCeStatus(ceStatusVal);
       setCeEtiqueta(ceEtiquetaVal);
       console.log("📊 Resultado:", { Fmstate: "02_FUERA_ZONA", ceNombreVal, ceDireccionVal, ceStatusVal, ceEtiquetaVal, distanciaCEMasCercana });
+      return { fsmstate: "02_FUERA_ZONA", ceNombre: ceNombreVal, ceDireccion: ceDireccionVal, ceStatus: ceStatusVal, ceEtiqueta: ceEtiquetaVal };
     }
   };
 
@@ -316,7 +340,7 @@ export default function FacturaUpload() {
       } else {
         // Fallback: geocodificar con Nominatim (solo 1 req/s, solo si no hay coords)
         const geoRes = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cliente.direccion)}&format=json&limit=1&countrycodes=es`,
+          `${NOMINATIM_URL}/search?q=${encodeURIComponent(cliente.direccion)}&format=json&limit=1&countrycodes=es`,
           { headers: { "User-Agent": "ComunidadSolar/1.0" } }
         );
         const geoData = await geoRes.json();
@@ -353,7 +377,8 @@ export default function FacturaUpload() {
       });
 
       // 3. Calcular proximidad con Haversine
-      await runZonaCheck(userLat, userLon, ces);
+      const ceResult = await runZonaCheck(userLat, userLon, ces);
+      enviarLead(LEAD_URL, { cliente, ...ceResult }, () => setLeadWarn(true)); // fire-and-forget
       setStep(2);
     } catch {
       setZonaWarn("No pudimos verificar tu zona. Continuamos sin verificación de cobertura.");
@@ -795,6 +820,12 @@ export default function FacturaUpload() {
                 {/* Banner de test — resultado verificación zona */}
                 <ZonaBanner />
 
+                {leadWarn && (
+                  <div style={{ fontSize:11, color:"#aaa", textAlign:"center", marginBottom:8 }}>
+                    ⚠️ VITE_LEAD_URL no configurada — datos no enviados al backend
+                  </div>
+                )}
+
                 <h1 style={{ fontSize:22, fontWeight:700, color:"#111", marginBottom:6 }}>
                   ¿Tienes tu factura?
                 </h1>
@@ -1022,7 +1053,10 @@ export default function FacturaUpload() {
 
                 <p className="cs-section-label">Completa los datos restantes</p>
                 <div className="cs-manual-grid">
-                  {MANUAL_FIELD_KEYS.map((k) => (
+                  {(cupsData?.tarifa_acceso !== "2.0TD"
+                    ? [...MANUAL_FIELD_KEYS, ...PRECIOS_POT_3TD_KEYS]
+                    : MANUAL_FIELD_KEYS
+                  ).map((k) => (
                     <div key={k} className="cs-field-group">
                       <label className="cs-label">{FIELD_LABELS[k]}</label>
                       <input className="cs-input" name={k}
