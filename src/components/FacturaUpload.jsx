@@ -73,7 +73,8 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 }
 
 // CE API proxiada por Vite (evita CORS en dev)
-const CE_API_URL = "/ce-api/server/api/get-ce-info-lat-lng";
+const CE_API_URL = import.meta.env.VITE_CE_API_URL
+  || "https://comunidades-energeticas-api-20084454554.catalystserverless.eu/server/api/get-ce-info-lat-lng";
 
 const API_BASE        = import.meta.env.VITE_API_URL       || "";
 const LEAD_URL        = import.meta.env.VITE_LEAD_URL      || "";
