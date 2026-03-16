@@ -6,12 +6,6 @@
 
 import { useState, useRef, useEffect } from "react";
 
-const toBase64 = (file) => new Promise((resolve, reject) => {
-  const reader = new FileReader();
-  reader.readAsDataURL(file);
-  reader.onload = () => resolve(reader.result.split(',')[1]);
-  reader.onerror = reject;
-});
 
 const FIELD_LABELS = {
   cups:             "CUPS",
@@ -488,13 +482,16 @@ export default function FacturaUpload() {
     if (sending) return;
     setSending(true); setError("");
     try {
-      const res = await fetch(`${API_BASE}/enviar`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cliente, Fsmstate, FsmPrevious: fsmPrevious, ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta } }),
-      });
+      const fd = new FormData();
+      fd.append("data", JSON.stringify({
+        cliente, Fsmstate, FsmPrevious: fsmPrevious,
+        ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta },
+      }));
+      const res = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
       if (!res.ok) {
-        const detail = await res.json().then((d) => d.detail).catch(() => `HTTP ${res.status}`);
+        const detail = await res.json()
+          .then((d) => typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail))
+          .catch(() => `HTTP ${res.status}`);
         throw new Error(detail);
       }
       setStatus("sent");
@@ -509,18 +506,18 @@ export default function FacturaUpload() {
     if (sending) return;
     setSending(true); setError("");
     const factura = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
-    if (mode === "pdf" && file) {
-      factura.archivo.pdf_base64 = await toBase64(file);
-      factura.archivo.pdf_nombre = file.name;
-    }
     try {
-      const res = await fetch(`${API_BASE}/enviar`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cliente, factura, Fsmstate, FsmPrevious: fsmPrevious, ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta } }),
-      });
+      const fd = new FormData();
+      fd.append("data", JSON.stringify({
+        cliente, factura, Fsmstate, FsmPrevious: fsmPrevious,
+        ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta },
+      }));
+      if (mode === "pdf" && file) fd.append("file", file, file.name);
+      const res = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
       if (!res.ok) {
-        const detail = await res.json().then((d) => d.detail).catch(() => `HTTP ${res.status}`);
+        const detail = await res.json()
+          .then((d) => typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail))
+          .catch(() => `HTTP ${res.status}`);
         throw new Error(detail);
       }
       setStatus("sent");
