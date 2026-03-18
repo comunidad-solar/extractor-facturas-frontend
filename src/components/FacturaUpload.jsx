@@ -73,12 +73,12 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 }
 
 // CE API proxiada por Vite (evita CORS en dev)
-const CE_API_URL = "/ce-api/server/api/get-ce-info-lat-lng";
+const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu/ce-api/server/api/get-ce-info-lat-lng";
 
-const API_BASE        = import.meta.env.VITE_API_URL       || "";
-const LEAD_URL        = import.meta.env.VITE_LEAD_URL      || "";
-const NOMINATIM_URL   = import.meta.env.VITE_NOMINATIM_URL || "https://nominatim.openstreetmap.org";
-const CE_DETAIL_URL   = import.meta.env.VITE_CE_DETAIL_URL || "";
+const API_BASE        = "https://extractor.13.38.9.119.nip.io/";
+const LEAD_URL        = "https://extractor.13.38.9.119.nip.io/leads";
+const NOMINATIM_URL   = "https://nominatim.openstreetmap.org";
+const CE_DETAIL_URL   = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu";
 
 async function enviarLead(url, payload, onWarn) {
   if (!url) { onWarn?.(); return; }
