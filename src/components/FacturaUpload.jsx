@@ -373,7 +373,11 @@ export default function FacturaUpload() {
       // 3. Calcular proximidad con Haversine
       const ceResult = await runZonaCheck(userLat, userLon, ces);
       enviarLead(LEAD_URL, { cliente, ...ceResult }, () => setLeadWarn(true)); // fire-and-forget
-      setStep(2);
+      if (ceResult?.fsmstate === "02_FUERA_ZONA") {
+        setStatus("fuera_zona");
+      } else {
+        setStep(2);
+      }
     } catch {
       setZonaWarn("No pudimos verificar tu zona. Continuamos sin verificación de cobertura.");
       updateFsmstate("02_FUERA_ZONA");
@@ -712,8 +716,26 @@ export default function FacturaUpload() {
           </div>
         )}
 
+        {/* ── FUERA DE ZONA ── */}
+        {!loading && status === "fuera_zona" && (
+          <div className="cs-card fade-in" style={{ textAlign:"center" }}>
+            <div style={{ fontSize:48, marginBottom:16 }}>🕐</div>
+            <h2 style={{ fontSize:20, fontWeight:700, color:"#111", marginBottom:8 }}>
+              Estás en lista de espera
+            </h2>
+            <p style={{ fontSize:14, color:"#555", marginBottom:28 }}>
+              La comunidad energética más cercana a tu domicilio es{" "}
+              <strong>{ceNombre}</strong> y actualmente está en periodo de espera.
+              Nos pondremos en contacto contigo en cuanto esté disponible.
+            </p>
+            <button className="cs-btn-primary" style={{ marginTop:0 }} onClick={() => { setStatus("idle"); setStep(1); }}>
+              ← Volver y corregir dirección
+            </button>
+          </div>
+        )}
+
         {/* ── STEP 1 — Datos del cliente ── */}
-        {!loading && status !== "sent" && step === 1 && (
+        {!loading && status !== "sent" && status !== "fuera_zona" && step === 1 && (
           <div className="cs-card fade-in">
             <div className="cs-step-indicator">
               <div className="cs-step-dot active">1</div>
