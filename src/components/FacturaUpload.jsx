@@ -75,7 +75,7 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 // CE API proxiada por Vite (evita CORS en dev)
 const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu/ce-api/server/api/get-ce-info-lat-lng";
 
-const API_BASE        = "https://extractor.13.38.9.119.nip.io/";
+const API_BASE        = "https://extractor.13.38.9.119.nip.io";
 const LEAD_URL        = "https://extractor.13.38.9.119.nip.io/leads";
 const NOMINATIM_URL   = "https://nominatim.openstreetmap.org";
 const CE_DETAIL_URL   = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu";
