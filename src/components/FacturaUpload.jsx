@@ -720,27 +720,27 @@ export default function FacturaUpload() {
           <div className="cs-results-card fade-in" style={{ maxWidth:900, padding:"0 0 40px" }}>
 
             {/* ── HERO ── */}
-            <div style={{ background:"linear-gradient(135deg,#E48409 0%,#FFAD2A 100%)", borderRadius:"16px 16px 0 0", padding:"36px 48px 32px", color:"#fff", marginBottom:0 }}>
+            <div style={{borderRadius:"16px 16px 0 0", padding:"36px 48px 32px", color:"#fff", marginBottom:0 }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:16 }}>
                 <div style={{ flex:1, minWidth:220 }}>
-                  <a href="https://comunidad.solar" style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(255,255,255,0.2)", border:"1px solid rgba(255,255,255,0.4)", borderRadius:8, padding:"5px 10px", fontSize:13, fontWeight:700, color:"#fff", textDecoration:"none", marginBottom:20 }} target="_blank" rel="noreferrer">
+                  <a href="https://comunidad.solar" style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(255,255,255,0.2)", border:"1px solid #000000", borderRadius:8, padding:"5px 10px", fontSize:13, fontWeight:700, color:"#000000", textDecoration:"none", marginBottom:20 }} target="_blank" rel="noreferrer">
                     🌤️ Comunidad Solar
                   </a>
-                  <p style={{ fontSize:16, fontWeight:400, opacity:0.9, marginBottom:4 }}>
+                  <p style={{ fontSize:16, fontWeight:400, opacity:0.9, marginBottom:4, color:"#000000" }}>
                     Hola <strong>{cliente.nombre}</strong>, estás a un paso de tener
                   </p>
-                  <p style={{ fontSize:36, fontWeight:800, lineHeight:1.1, marginBottom:12 }}>
+                  <p style={{ fontSize:36, fontWeight:800, lineHeight:1.1, marginBottom:12,color:"#E48409" }}>
                     tu propia energía a 0€
                   </p>
-                  <p style={{ fontSize:13, opacity:0.8, marginBottom:4 }}>
+                  <p style={{ fontSize:13, opacity:0.8, marginBottom:4, color:"#000000"}}>
                     Este es tu plan en la Comunidad Energética de
                   </p>
-                  <p style={{ fontSize:18, fontWeight:700 }}>{ceNombre || "—"}</p>
+                  <p style={{ fontSize:18, fontWeight:700, color:"#000000"}}>{ceNombre || "—"}</p>
                 </div>
                 {/* Ahorro destacado */}
-                <div style={{ background:"rgba(255,255,255,0.15)", borderRadius:12, padding:"20px 28px", textAlign:"right", minWidth:180 }}>
-                  <p style={{ fontSize:11, opacity:0.8, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6 }}>Ahorro previsto en 25 años</p>
-                  <p style={{ fontSize:48, fontWeight:800, lineHeight:1 }}>
+                <div style={{ background:"rgba(181, 180, 180, 0.15)", borderRadius:12, padding:"20px 28px", textAlign:"right", minWidth:180, marginTop:38 }}>
+                  <p style={{ fontSize:11, opacity:0.8, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6, color:"#000000" }}>Ahorro previsto en 25 años</p>
+                  <p style={{ fontSize:48, fontWeight:800, lineHeight:1, color:"#000000" }}>
                     {fmtES(planData?.ahorro25Anos /* TODO: confirmar nombre del campo con el backend */)}€<span style={{ fontSize:22 }}>*</span>
                   </p>
                 </div>
@@ -777,12 +777,12 @@ export default function FacturaUpload() {
               </div>
 
               {/* ── TU PLAN + OPTIMIZADOR ── */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr auto", gap:24, alignItems:"start", marginBottom:28 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr auto", gap:24, alignItems:"start", marginBottom:28,  padding:24 }}>
                 {/* Tabla */}
                 <div>
                   <p className="cs-section-label" style={{ marginTop:0 }}>Tu plan</p>
                   <table className="cs-table">
-                    <tbody>
+                    <tbody >
                       <tr><td>Numero de paneles</td><td>{panelesSel}</td></tr>
                       <tr><td>Potencia total</td><td>{fmtES(planData?.potenciaTotal /* TODO: confirmar nombre del campo con el backend */)} kWh</td></tr>
                       <tr><td>Producción de energía anual estimada*</td><td>{fmtES(planData?.produccionAnual /* TODO: confirmar nombre del campo con el backend */)} kWh</td></tr>
@@ -796,11 +796,11 @@ export default function FacturaUpload() {
                 </div>
 
                 {/* Optimizador de paneles */}
-                <div style={{ background:"#EEECE8", borderRadius:12, padding:"20px 18px", textAlign:"center", minWidth:160, display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
-                  <p style={{ fontSize:12, fontWeight:700, color:"#555", textTransform:"uppercase", letterSpacing:"0.06em" }}>Optimiza tu plan</p>
-                  <p style={{ fontSize:11, color:"#888", lineHeight:1.4 }}>Añade o quita paneles solares</p>
+                <div style={{ background:"#F3D5A9", borderRadius:12, padding:"20px 18px", textAlign:"center", minWidth:160, maxWidth:180, display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
+                  <p style={{ fontSize:12, fontWeight:700, color:"#000000", textTransform:"uppercase", letterSpacing:"0.06em" }}>Optimiza tu plan</p>
+                  <p style={{ fontSize:11, color:"#000000", lineHeight:1.4 }}>Añade o quita paneles solares</p>
                   {/* Stepper */}
-                  <div style={{ display:"flex", alignItems:"center", gap:0, background:"#fff", borderRadius:10, border:"1.5px solid #d0cfc9", overflow:"hidden" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:0, background:"#fff", borderRadius:10, border:"1.5px solid #000000", overflow:"hidden" }}>
                     <button
                       onClick={() => setPanelesSel(p => Math.max(1, p - 1))}
                       style={{ background:"none", border:"none", padding:"8px 14px", fontSize:18, fontWeight:700, cursor:"pointer", color:"#E48409", fontFamily:"inherit" }}>
@@ -815,6 +815,12 @@ export default function FacturaUpload() {
                       +
                     </button>
                   </div>
+                  <p style={{ fontSize:11, color:"#000000", lineHeight:1.4 }}>Te recomendamos 3 paneles
+solares, pero puedes solicitar
+una cantidad diferente
+optimizando tu plan de
+participación con un asesor
+energético.</p>
                   <button
                     onClick={() => {}}
                     style={{ background:"#fff", color:"#E48409", border:"2px solid #E48409", borderRadius:8, padding:"8px 20px", fontSize:12, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.05em", width:"100%" }}>
