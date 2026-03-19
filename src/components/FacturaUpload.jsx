@@ -2,7 +2,7 @@
 // Formulario de 2 pasos: datos del cliente → factura (PDF o CUPS).
 // Al avanzar de Step 1 a Step 2, verifica proximidad a Comunidades Energéticas
 // vía coordenadas del autocomplete Nominatim (OSM) o geocodificación Nominatim (fallback).
-// Envía resultado al webhook de Zoho Flow vía /enviar.
+// Envía resultado al backend de quoting.
 
 import { useState, useRef, useEffect } from "react";
 
@@ -80,12 +80,29 @@ const LEAD_URL        = "https://extractor.13.38.9.119.nip.io/leads";
 const NOMINATIM_URL   = "https://nominatim.openstreetmap.org";
 const CE_DETAIL_URL   = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu";
 
+// TODO: confirmar endpoint com o backend
+const ASESOR_ENVIO_URL    = "";
+// TODO: confirmar URL de redirecionamento após envío
+const ASESOR_REDIRECT_URL = "";
+
 function fmtES(valor, decimais = 2) {
   if (valor == null) return "0";
   return Number(valor).toLocaleString("es-ES", {
     minimumFractionDigits: decimais,
     maximumFractionDigits: decimais,
   });
+}
+
+// Monta el payload para el endpoint interno de asesores
+// TODO: ajustar campos conforme especificación del backend
+function buildPayloadAsesor(mode, facturaData, cupsData, manualFields) {
+  if (mode === "pdf") {
+    return { origen: "pdf", ...facturaData };
+  }
+  if (mode === "cups") {
+    return { origen: "cups", ...cupsData, ...manualFields };
+  }
+  return {};
 }
 
 async function enviarLead(url, payload, onWarn) {
@@ -106,6 +123,7 @@ export default function FacturaUpload() {
   // ── Steps & navigation ───────────────────────────────────────────────────
   const [step, setStep] = useState(1);  // 1 | 2
   const [mode, setMode] = useState(null); // null | "pdf" | "cups"
+  const [modoAsesor, setModoAsesor] = useState(false);
 
   // ── Step 1 — client data ─────────────────────────────────────────────────
   const [cliente, setCliente] = useState({
@@ -153,6 +171,15 @@ export default function FacturaUpload() {
   const [leadWarn, setLeadWarn]       = useState(false);
   const [planData, setPlanData]       = useState(null);
   const [panelesSel, setPanelesSel]   = useState(3); // optimizador de paneles
+
+  // ── Modo asesor — detectar ?interno-asesores=true ────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("interno-asesores") === "true") {
+      setModoAsesor(true);
+      setStep(2); // saltar directamente al Paso 2
+    }
+  }, []);
 
   // ── Pre-fetch lista CE al montar ──────────────────────────────────────────
   useEffect(() => {
@@ -518,6 +545,40 @@ export default function FacturaUpload() {
 
   const handleEnviar = async () => {
     if (sending) return;
+
+    // ── Modo asesor ───────────────────────────────────────────────────────
+    if (modoAsesor) {
+      if (import.meta.env.DEV) {
+        if (!ASESOR_ENVIO_URL) console.warn("[asesor] ASESOR_ENVIO_URL não configurada");
+        if (!ASESOR_REDIRECT_URL) console.warn("[asesor] ASESOR_REDIRECT_URL não configurada");
+      }
+      if (!ASESOR_ENVIO_URL) {
+        console.error("[asesor] ASESOR_ENVIO_URL não configurada");
+        return;
+      }
+      setSending(true); setError("");
+      try {
+        const payload = buildPayloadAsesor(mode, facturaData, cupsData, manualFields);
+        await fetch(ASESOR_ENVIO_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (ASESOR_REDIRECT_URL) {
+          window.location.href = ASESOR_REDIRECT_URL;
+        } else {
+          console.warn("[asesor] ASESOR_REDIRECT_URL não configurada — sem redirecionamento");
+          setStatus("sent");
+        }
+      } catch (err) {
+        console.error("[asesor] Erro no envío:", err);
+        setError(err.message);
+      } finally {
+        setSending(false);
+      }
+      return; // não continuar para o fluxo normal
+    }
+
     setSending(true); setError("");
     const factura = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
     try {
@@ -708,6 +769,21 @@ export default function FacturaUpload() {
             🌤️ Comunidad Solar
           </a>
         </div>
+
+        {/* Indicador modo asesor */}
+        {modoAsesor && (
+          <div style={{
+            textAlign: "center",
+            fontSize: 11,
+            fontWeight: 600,
+            color: "#E48409",
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            marginBottom: 8,
+          }}>
+            🔒 Modo interno — Asesores
+          </div>
+        )}
 
         {/* ── LOADING ── */}
         {loading && (
@@ -1053,9 +1129,11 @@ energético.</p>
                   Te llamaremos para ayudarte personalmente
                 </p>
 
-                <button className="cs-btn-ghost" style={{ marginTop:12 }} onClick={() => setStep(1)}>
-                  ← Volver
-                </button>
+                {!modoAsesor && (
+                  <button className="cs-btn-ghost" style={{ marginTop:12 }} onClick={() => setStep(1)}>
+                    ← Volver
+                  </button>
+                )}
               </div>
             )}
 
