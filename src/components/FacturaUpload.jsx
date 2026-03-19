@@ -73,12 +73,20 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 }
 
 // CE API proxiada por Vite (evita CORS en dev)
-const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu/ce-api/server/api/get-ce-info-lat-lng";
+const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu/server/api/get-ce-info-lat-lng";
 
 const API_BASE        = "https://extractor.13.38.9.119.nip.io";
 const LEAD_URL        = "https://extractor.13.38.9.119.nip.io/leads";
 const NOMINATIM_URL   = "https://nominatim.openstreetmap.org";
 const CE_DETAIL_URL   = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu";
+
+function fmtES(valor, decimais = 2) {
+  if (valor == null) return "0";
+  return Number(valor).toLocaleString("es-ES", {
+    minimumFractionDigits: decimais,
+    maximumFractionDigits: decimais,
+  });
+}
 
 async function enviarLead(url, payload, onWarn) {
   if (!url) { onWarn?.(); return; }
@@ -143,6 +151,8 @@ export default function FacturaUpload() {
   const [status, setStatus]           = useState("idle"); // "idle"|"analyzed"|"sent"
   const [sending, setSending]         = useState(false);
   const [leadWarn, setLeadWarn]       = useState(false);
+  const [planData, setPlanData]       = useState(null);
+  const [panelesSel, setPanelesSel]   = useState(3); // optimizador de paneles
 
   // ── Pre-fetch lista CE al montar ──────────────────────────────────────────
   useEffect(() => {
@@ -524,7 +534,12 @@ export default function FacturaUpload() {
           .catch(() => `HTTP ${res.status}`);
         throw new Error(detail);
       }
-      setStatus("sent");
+      const data = await res.json();
+      if (data.ok) {
+        setPlanData(data.plan ?? null); // TODO: confirmar nombre del campo con el backend
+        setPanelesSel(data.plan?.numeroPaneles ?? 3); // TODO: confirmar nombre del campo con el backend
+        setStatus("sent");
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -538,8 +553,8 @@ export default function FacturaUpload() {
     setError(""); setStatus("idle"); setSending(false); setClienteErrors({});
     setCliente({ nombre: "", apellidos: "", correo: "", telefono: "", direccion: "" });
     setFsmstate(""); setFsmPrevious(null); setCeNombre(""); setCeDireccion(""); setZonaWarn("");
-    setUserCoords(null); setPhotonSuggestions([]); setShowDropdown(false);
-    setCeDistancia(null); setCeRadio(null);
+    setUserCoords(null); setNominatimSuggestions([]); setShowDropdown(false);
+    setCeDistancia(null); setCeRadio(null); setPlanData(null); setPanelesSel(3);
   };
 
   // ── Render helpers ────────────────────────────────────────────────────────
@@ -700,19 +715,148 @@ export default function FacturaUpload() {
           </div>
         )}
 
-        {/* ── SENT SUCCESS ── */}
+        {/* ── PLAN PERSONALIZADO ── */}
         {!loading && status === "sent" && (
-          <div className="cs-card fade-in" style={{ textAlign:"center" }}>
-            <div style={{ fontSize:48, marginBottom:16 }}>✅</div>
-            <h2 style={{ fontSize:20, fontWeight:700, color:"#111", marginBottom:8 }}>
-              ¡Datos enviados correctamente!
-            </h2>
-            <p style={{ fontSize:14, color:"#555", marginBottom:28 }}>
-              Hemos recibido tu información. Nuestro equipo se pondrá en contacto contigo pronto.
-            </p>
-            <button className="cs-btn-primary" style={{ marginTop:0 }} onClick={handleReset}>
-              Enviar otra factura
-            </button>
+          <div className="cs-results-card fade-in" style={{ maxWidth:900, padding:"0 0 40px" }}>
+
+            {/* ── HERO ── */}
+            <div style={{ background:"linear-gradient(135deg,#E48409 0%,#FFAD2A 100%)", borderRadius:"16px 16px 0 0", padding:"36px 48px 32px", color:"#fff", marginBottom:0 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:16 }}>
+                <div style={{ flex:1, minWidth:220 }}>
+                  <a href="https://comunidad.solar" style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(255,255,255,0.2)", border:"1px solid rgba(255,255,255,0.4)", borderRadius:8, padding:"5px 10px", fontSize:13, fontWeight:700, color:"#fff", textDecoration:"none", marginBottom:20 }} target="_blank" rel="noreferrer">
+                    🌤️ Comunidad Solar
+                  </a>
+                  <p style={{ fontSize:16, fontWeight:400, opacity:0.9, marginBottom:4 }}>
+                    Hola <strong>{cliente.nombre}</strong>, estás a un paso de tener
+                  </p>
+                  <p style={{ fontSize:36, fontWeight:800, lineHeight:1.1, marginBottom:12 }}>
+                    tu propia energía a 0€
+                  </p>
+                  <p style={{ fontSize:13, opacity:0.8, marginBottom:4 }}>
+                    Este es tu fantástico plan en la Comunidad Energética de
+                  </p>
+                  <p style={{ fontSize:18, fontWeight:700 }}>{ceNombre || "—"}</p>
+                </div>
+                {/* Ahorro destacado */}
+                <div style={{ background:"rgba(255,255,255,0.15)", borderRadius:12, padding:"20px 28px", textAlign:"right", minWidth:180 }}>
+                  <p style={{ fontSize:11, opacity:0.8, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6 }}>Ahorro previsto en 25 años</p>
+                  <p style={{ fontSize:48, fontWeight:800, lineHeight:1 }}>
+                    {fmtES(planData?.ahorro25Anos /* TODO: confirmar nombre del campo con el backend */)}€<span style={{ fontSize:22 }}>*</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ padding:"32px 48px 0" }}>
+
+              {/* ── IMPORTE A PAGAR ── */}
+              <p className="cs-section-label" style={{ marginTop:0 }}>Importe a pagar</p>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:32 }}>
+                {/* Pago único */}
+                <div style={{ background:"#fff", border:"2px solid #EEECE8", borderRadius:14, padding:"24px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
+                  <p style={{ fontSize:11, fontWeight:700, color:"#888", textTransform:"uppercase", letterSpacing:"0.08em" }}>Pago único</p>
+                  <p style={{ fontSize:38, fontWeight:800, color:"#121212", lineHeight:1.1 }}>
+                    {fmtES(planData?.pagoUnico /* TODO: confirmar nombre del campo con el backend */)}€
+                  </p>
+                  <p style={{ fontSize:11, color:"#aaa" }}>(IVA 21% incluido)</p>
+                  <button
+                    style={{ marginTop:10, background:"#E48409", color:"#fff", border:"none", borderRadius:24, padding:"10px 28px", fontSize:13, fontWeight:700, fontFamily:"inherit", cursor:"not-allowed", opacity:0.6, letterSpacing:"0.05em" }}
+                    disabled onClick={() => {}}>
+                    CONTRATAR
+                  </button>
+                </div>
+                {/* Financiado */}
+                <div style={{ background:"#fff", border:"2px solid #EEECE8", borderRadius:14, padding:"24px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
+                  <p style={{ fontSize:11, fontWeight:700, color:"#888", textTransform:"uppercase", letterSpacing:"0.08em" }}>Financiado</p>
+                  <p style={{ fontSize:12, color:"#aaa", marginBottom:2 }}>Hasta 120 cuotas mensuales</p>
+                  <p style={{ fontSize:38, fontWeight:800, color:"#121212", lineHeight:1.1 }}>
+                    {fmtES(planData?.pagoFinanciado /* TODO: confirmar nombre del campo con el backend */)}€
+                  </p>
+                  <p style={{ fontSize:11, color:"#aaa" }}>(IVA 21% incluido)</p>
+                </div>
+              </div>
+
+              {/* ── TU PLAN + OPTIMIZADOR ── */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr auto", gap:24, alignItems:"start", marginBottom:28 }}>
+                {/* Tabla */}
+                <div>
+                  <p className="cs-section-label" style={{ marginTop:0 }}>Tu plan</p>
+                  <table className="cs-table">
+                    <tbody>
+                      <tr><td>Numero de paneles</td><td>{panelesSel}</td></tr>
+                      <tr><td>Potencia total</td><td>{fmtES(planData?.potenciaTotal /* TODO: confirmar nombre del campo con el backend */)} kWh</td></tr>
+                      <tr><td>Producción de energía anual estimada*</td><td>{fmtES(planData?.produccionAnual /* TODO: confirmar nombre del campo con el backend */)} kWh</td></tr>
+                      <tr><td>Ahorro anual medio estimado*</td><td>{fmtES(planData?.ahorroAnual /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
+                      <tr><td>Ahorro total estimado durante 25 años*</td><td>{fmtES(planData?.ahorro25Anos /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
+                      <tr><td>Coeficiente de distribución sobre total de la instalación</td><td>{fmtES(planData?.coeficienteDistribucion /* TODO: confirmar nombre del campo con el backend */, 0)} %</td></tr>
+                      <tr><td>Pago al contado</td><td>{fmtES(planData?.pagoUnico /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
+                      <tr><td>Plazo estimado de recuperación del coste inicial*</td><td>{fmtES(planData?.plazoRecuperacion /* TODO: confirmar nombre del campo con el backend */, 1)} años</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Optimizador de paneles */}
+                <div style={{ background:"#EEECE8", borderRadius:12, padding:"20px 18px", textAlign:"center", minWidth:160, display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
+                  <p style={{ fontSize:12, fontWeight:700, color:"#555", textTransform:"uppercase", letterSpacing:"0.06em" }}>Optimiza tu plan</p>
+                  <p style={{ fontSize:11, color:"#888", lineHeight:1.4 }}>Añade o quita paneles solares</p>
+                  {/* Stepper */}
+                  <div style={{ display:"flex", alignItems:"center", gap:0, background:"#fff", borderRadius:10, border:"1.5px solid #d0cfc9", overflow:"hidden" }}>
+                    <button
+                      onClick={() => setPanelesSel(p => Math.max(1, p - 1))}
+                      style={{ background:"none", border:"none", padding:"8px 14px", fontSize:18, fontWeight:700, cursor:"pointer", color:"#E48409", fontFamily:"inherit" }}>
+                      −
+                    </button>
+                    <span style={{ fontSize:20, fontWeight:700, color:"#121212", minWidth:32, textAlign:"center" }}>
+                      {panelesSel}
+                    </span>
+                    <button
+                      onClick={() => setPanelesSel(p => p + 1)}
+                      style={{ background:"none", border:"none", padding:"8px 14px", fontSize:18, fontWeight:700, cursor:"pointer", color:"#E48409", fontFamily:"inherit" }}>
+                      +
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => {}}
+                    style={{ background:"#fff", color:"#E48409", border:"2px solid #E48409", borderRadius:8, padding:"8px 20px", fontSize:12, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.05em", width:"100%" }}>
+                    OPTIMIZAR
+                  </button>
+                </div>
+              </div>
+
+              {/* ── MÉTRICAS DE AHORRO ── */}
+              <div style={{ background:"#EEECE8", borderRadius:12, padding:"20px 28px", marginBottom:28, display:"flex", justifyContent:"space-around", alignItems:"center", textAlign:"center", gap:8 }}>
+                <div>
+                  <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroMensual /* TODO: confirmar nombre del campo con el backend */)}€</p>
+                  <p style={{ fontSize:11, color:"#666", marginTop:4 }}>Al mes</p>
+                </div>
+                <div style={{ width:1, background:"#d0cfc9", alignSelf:"stretch" }} />
+                <div>
+                  <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroAnual /* TODO: confirmar nombre del campo con el backend */)}€</p>
+                  <p style={{ fontSize:11, color:"#666", marginTop:4 }}>Al año</p>
+                </div>
+                <div style={{ width:1, background:"#d0cfc9", alignSelf:"stretch" }} />
+                <div>
+                  <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorro25Anos /* TODO: confirmar nombre del campo con el backend */)}€</p>
+                  <p style={{ fontSize:11, color:"#666", marginTop:4 }}>En 25 años (estimado)</p>
+                </div>
+              </div>
+
+              {/* ── CONTACTAR CON ASESOR ── */}
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"#fff", border:"1.5px solid #EEECE8", borderRadius:12, padding:"16px 20px", marginBottom:24 }}>
+                <span style={{ fontSize:13, color:"#555" }}>¿Tienes dudas?</span>
+                <button style={{ background:"transparent", color:"#121212", border:"1.5px solid #121212", borderRadius:24, padding:"8px 20px", fontSize:12, fontWeight:700, fontFamily:"inherit", cursor:"pointer" }} onClick={() => {}}>
+                  Contacta con TU asesor
+                </button>
+              </div>
+
+              {/* ── VOLVER ── */}
+              <button className="cs-btn-ghost" onClick={handleReset}>← Volver al inicio</button>
+
+              {/* ── FOOTNOTE ── */}
+              <p style={{ fontSize:11, color:"#aaa", marginTop:16, lineHeight:1.6 }}>
+                * La electricidad a 0€ es la producida por tus paneles solares, seguirás pagando la energía que no produzcas.
+              </p>
+            </div>
           </div>
         )}
 
