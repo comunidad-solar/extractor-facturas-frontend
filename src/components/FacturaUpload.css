@@ -19,12 +19,12 @@ body { background: #EEECE8; font-family: 'DM Sans','Helvetica Neue',sans-serif; 
 .cs-btn-secondary:hover { background:#f5f5f0; }
 
 .cs-btn-ghost { background:#fff; color:#555; border:1.5px solid #e0e0da; border-radius:10px; padding:12px 20px; font-size:14px; font-weight:500; font-family:inherit; cursor:pointer; width:100%; margin-top:12px; transition:background 0.2s,border-color 0.2s,color 0.2s; }
-.cs-btn-ghost:hover { background:#EF931D !important; border-color:#EF931D; color:#000 !important; }
-.cs-btn-ghost:active { background:#121212 !important; border-color:#121212; color:#fff !important; }
+.cs-btn-ghost:hover { background:#f5f5f0; border-color:#aaa; }
+.cs-btn-ghost:active { background:#e8e8e4; }
 
-.cs-page button { transition:background-color 0.15s, color 0.15s; }
-.cs-page button:hover { background-color:#EF931D !important; color:#000 !important; }
-.cs-page button:active { background-color:#121212 !important; color:#fff !important; }
+.cs-results-card button { transition:background-color 0.15s, color 0.15s; }
+.cs-results-card button:hover { background-color:#EF931D !important; color:#000 !important; }
+.cs-results-card button:active { background-color:#121212 !important; color:#fff !important; }
 
 .cs-btn-phone { width:100%; background:#2d7a2d; color:#fff; border:none; border-radius:10px; padding:14px 0; font-size:15px; font-weight:600; font-family:inherit; cursor:pointer; margin-top:12px; display:flex; align-items:center; justify-content:center; gap:8px; transition:background 0.2s; }
 .cs-btn-phone:hover { background:#1f5c1f; }
