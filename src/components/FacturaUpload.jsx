@@ -748,7 +748,7 @@ export default function FacturaUpload() {
                 {/* Columna derecha: imagen del edificio */}
                 <div style={{ flex:"0 0 auto", display:"flex", alignItems:"flex-start"}}>
                   <img
-                    src="/public/Intersect.png"
+                    src="/Intersect.png"
                     alt="Instalación solar"
                     style={{ width:300, height:340, objectFit:"cover", borderRadius:20, display:"block" }}
                   />
