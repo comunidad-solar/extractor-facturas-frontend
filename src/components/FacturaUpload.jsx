@@ -1088,6 +1088,29 @@ energético.</p>
                 </div>
               </div>
 
+              {/* ── REGALO APP ── */}
+              <div style={{ display:"flex", alignItems:"center", gap:40, background:"#ffffff", borderRadius:14, padding:"48px 48px", marginBottom:50, overflow:"hidden", boxShadow:"0 2px 12px rgba(0,0,0,0.05)" }}>
+                {/* Columna texto */}
+                <div style={{ flex:1, minWidth:240 }}>
+                  <p style={{ fontSize:30, fontWeight:800, color:"#000000", lineHeight:1.2, marginBottom:16 }}>
+                    Tenemos un regalo para ti
+                  </p>
+                  <p style={{ fontSize:17, fontWeight:700, color:"#000000", lineHeight:1.4, marginBottom:20 }}>
+                    Aunque no nos contrates puedes descargarte gratis el asistente energético
+                  </p>
+                  <p style={{ fontSize:13, color:"rgba(0, 0, 0, 0.75)", lineHeight:1.7, marginBottom:32 }}>
+                    Nuestra aplicación te permitirá <strong style={{ color:"#000000" }}>optimizar el uso de energía</strong> en tu hogar, proporcionándote toda la información necesaria para ahorrar y mejorar tu eficiencia energética.
+                  </p>
+                  <button style={{ background:"#E48409", color:"#000000", border:"none", borderRadius:28, padding:"14px 36px", fontSize:14, fontWeight:800, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.08em" }}>
+                    DESCARGAR
+                  </button>
+                </div>
+                {/* Columna imagen */}
+                <div style={{ flex:"0 0 auto" }}>
+                  <img src="/App.png" alt="App Comunidad Solar" style={{ height:280, display:"block", objectFit:"contain" }} />
+                </div>
+              </div>
+
               {/* ── CONTACTAR CON ASESOR ── */}
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"#fff", border:"1.5px solid #EEECE8", borderRadius:12, padding:"16px 20px", marginBottom:50, boxShadow:"0 2px 12px rgba(0,0,0,0.03)" }}>
                 <span style={{ fontSize:13, color:"#555" }}>¿Tienes dudas?</span>
