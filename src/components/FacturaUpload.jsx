@@ -809,13 +809,13 @@ export default function FacturaUpload() {
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:24 }}>
                 {/* Columna izquierda: texto + ahorro */}
                 <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column", gap:0 }}>
-                  <p style={{ fontSize:16, fontWeight:400, opacity:0.9, marginBottom:4, color:"#000000" }}>
+                  <p style={{ fontSize:22, fontWeight:400, opacity:0.9, marginBottom:4, color:"#000000" }}>
                     Hola <strong>{cliente.nombre}</strong>, estás a un paso de tener
                   </p>
-                  <p style={{ fontSize:36, fontWeight:800, lineHeight:1.1, marginBottom:12, color:"#E48409" }}>
+                  <p style={{ fontSize:46, fontWeight:800, lineHeight:1.1, marginBottom:12, color:"#E48409" }}>
                     tu propia energía a 0€
                   </p>
-                  <p style={{ fontSize:13, opacity:0.8, marginBottom:4, color:"#000000"}}>
+                  <p style={{ fontSize:18, opacity:0.8, marginBottom:4, color:"#000000"}}>
                     Este es tu fantástico plan en la Comunidad Energética de
                   </p>
                   <p style={{ fontSize:18, fontWeight:700, color:"#000000", marginBottom:20 }}>{ceNombre || "—"}</p>
