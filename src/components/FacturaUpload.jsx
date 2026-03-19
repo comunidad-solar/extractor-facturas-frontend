@@ -694,8 +694,13 @@ export default function FacturaUpload() {
         .cs-btn-secondary { background:#fff; color:#111; border:1.5px solid #111; border-radius:10px; padding:10px 20px; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; transition:background 0.2s; white-space:nowrap; }
         .cs-btn-secondary:hover { background:#f5f5f0; }
 
-        .cs-btn-ghost { background:#fff; color:#555; border:1.5px solid #e0e0da; border-radius:10px; padding:12px 20px; font-size:14px; font-weight:500; font-family:inherit; cursor:pointer; width:100%; margin-top:12px; transition:background 0.2s,border-color 0.2s; }
-        .cs-btn-ghost:hover { background:#f5f5f0; border-color:#aaa; }
+        .cs-btn-ghost { background:#fff; color:#555; border:1.5px solid #e0e0da; border-radius:10px; padding:12px 20px; font-size:14px; font-weight:500; font-family:inherit; cursor:pointer; width:100%; margin-top:12px; transition:background 0.2s,border-color 0.2s,color 0.2s; }
+        .cs-btn-ghost:hover { background:#EF931D !important; border-color:#EF931D; color:#000 !important; }
+        .cs-btn-ghost:active { background:#121212 !important; border-color:#121212; color:#fff !important; }
+
+        .cs-page button { transition:background-color 0.15s, color 0.15s; }
+        .cs-page button:hover { background-color:#EF931D !important; color:#000 !important; }
+        .cs-page button:active { background-color:#121212 !important; color:#fff !important; }
 
         .cs-btn-phone { width:100%; background:#2d7a2d; color:#fff; border:none; border-radius:10px; padding:14px 0; font-size:15px; font-weight:600; font-family:inherit; cursor:pointer; margin-top:12px; display:flex; align-items:center; justify-content:center; gap:8px; transition:background 0.2s; }
         .cs-btn-phone:hover { background:#1f5c1f; }
@@ -771,6 +776,15 @@ export default function FacturaUpload() {
         .cs-autocomplete-item:last-child { border-bottom:none; }
         .cs-autocomplete-item:hover { background:#f5f5f0; }
 
+        /* ── Plan section layout classes ── */
+        .cs-plan-hero { display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:24px; }
+        .cs-plan-inner { padding:32px 48px 0; }
+        .cs-plan-pagos { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:85px; }
+        .cs-plan-origen { display:flex; gap:0; align-items:stretch; margin-bottom:85px; }
+        .cs-plan-connector { display:flex; align-items:center; padding:0 12px; }
+        .cs-plan-tabla { display:grid; grid-template-columns:1fr auto; gap:24px; align-items:start; margin-bottom:55px; padding:24px; }
+        .cs-plan-regalo { display:flex; align-items:center; gap:40px; background:#1C1C1C; border-radius:14px; padding:48px 48px; margin-bottom:50px; overflow:hidden; }
+
         @media (max-width:640px) {
           .cs-page { padding:0 12px 60px; }
           .cs-page > *:not(.cs-header) { margin-top:20px; }
@@ -783,6 +797,16 @@ export default function FacturaUpload() {
           .cs-auto-grid { grid-template-columns:1fr; }
           .cs-results-header { flex-direction:column; gap:12px; }
           .cs-results-header .cs-btn-secondary { width:100%; text-align:center; }
+          /* Plan section */
+          .cs-plan-inner { padding:20px 16px 0; }
+          .cs-plan-pagos { grid-template-columns:1fr; margin-bottom:40px; }
+          .cs-plan-origen { flex-direction:column; margin-bottom:40px; }
+          .cs-plan-connector { display:none; }
+          .cs-plan-tabla { grid-template-columns:1fr; margin-bottom:32px; padding:0; }
+          .cs-plan-regalo { flex-direction:column; padding:32px 20px; }
+          .cs-plan-regalo img { height:200px !important; width:100%; object-fit:contain; }
+          .cs-plan-hero-img { display:none; }
+          .cs-plan-hero-title { font-size:32px !important; }
         }
       `}</style>
 
@@ -825,13 +849,13 @@ export default function FacturaUpload() {
 
             {/* ── HERO ── */}
             <div style={{borderRadius:"16px 16px 0 0", padding:"36px 48px 32px", color:"#fff", marginBottom:0 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:24 }}>
+              <div className="cs-plan-hero">
                 {/* Columna izquierda: texto + ahorro */}
                 <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column", gap:0 }}>
                   <p style={{ fontSize:22, fontWeight:400, opacity:0.9, marginBottom:4, color:"#000000" }}>
                     Hola <strong>{cliente.nombre}</strong>, estás a un paso de tener
                   </p>
-                  <p style={{ fontSize:46, fontWeight:800, lineHeight:1.1, marginBottom:12, color:"#E48409" }}>
+                  <p className="cs-plan-hero-title" style={{ fontSize:46, fontWeight:800, lineHeight:1.1, marginBottom:12, color:"#E48409" }}>
                     tu propia energía a 0€
                   </p>
                   <p style={{ fontSize:18, opacity:0.8, marginBottom:4, color:"#000000"}}>
@@ -847,9 +871,9 @@ export default function FacturaUpload() {
                   </div>
                 </div>
                 {/* Columna derecha: imagen del edificio */}
-                <div style={{ flex:"0 0 auto", display:"flex", alignItems:"flex-start"}}>
+                <div className="cs-plan-hero-img" style={{ flex:"0 0 auto", display:"flex", alignItems:"flex-start"}}>
                   <img
-                    src="/public/Intersect.png"
+                    src="/Intersect.png"
                     alt="Instalación solar"
                     style={{ width:300, height:340, objectFit:"cover", borderRadius:20, display:"block" }}
                   />
@@ -857,11 +881,11 @@ export default function FacturaUpload() {
               </div>
             </div>
 
-            <div style={{ padding:"32px 48px 0" }}>
+            <div className="cs-plan-inner">
 
               {/* ── IMPORTE A PAGAR ── */}
               <p className="cs-section-label" style={{ marginTop:0, color:"#000000" }}>Importe a pagar</p>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:85}}>
+              <div className="cs-plan-pagos">
                 {/* Pago único */}
                 <div style={{ background:"#fff", border:"2px solid #EEECE8", borderRadius:14, padding:"24px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, boxShadow:"0 2px 12px rgba(0,0,0,0.03)" }}>
                   <p style={{ fontSize:11, fontWeight:700, color:"#000000", textTransform:"uppercase", letterSpacing:"0.08em" }}>Pago único</p>
@@ -885,8 +909,8 @@ export default function FacturaUpload() {
                   <p style={{ fontSize:11, color:"#aaa" }}>(IVA 21% incluido)</p>
                 </div>
               </div>
-               {/* ── ORIGEN / DESTINO ── */}
-              <div style={{ display:"flex", gap:0, alignItems:"stretch", marginBottom:85 }}>
+              {/* ── ORIGEN / DESTINO ── */}
+              <div className="cs-plan-origen">
                 {/* Tarjeta Origen — CE */}
                 <div style={{ flex:1, background:"#fff", borderRadius:14, overflow:"hidden", boxShadow:"0 2px 12px rgba(0,0,0,0.06)" }}>
                   <div style={{ position:"relative" }}>
@@ -906,7 +930,7 @@ export default function FacturaUpload() {
                 </div>
 
                 {/* Conector */}
-                <div style={{ display:"flex", alignItems:"center", padding:"0 12px" }}>
+                <div className="cs-plan-connector">
                   <div style={{ width:12, height:12, borderRadius:"50%", background:"#E48409", flexShrink:0 }} />
                   <div style={{ width:30, height:2, background:"#E48409" }} />
                   <div style={{ width:12, height:12, borderRadius:"50%", background:"#E48409", flexShrink:0 }} />
@@ -940,7 +964,7 @@ export default function FacturaUpload() {
               </div>
 
               {/* ── TU PLAN + OPTIMIZADOR ── */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr auto", gap:24, alignItems:"start", marginBottom:55,  padding:24 }}>
+              <div className="cs-plan-tabla">
                 {/* Tabla */}
                 <div>
                   <p className="cs-section-label" style={{ marginTop:0, color:"#000000" }}>Tu plan</p>
@@ -1089,7 +1113,7 @@ energético.</p>
               </div>
 
               {/* ── REGALO APP ── */}
-              <div style={{ display:"flex", alignItems:"center", gap:40, background:"#ffffff", borderRadius:14, padding:"48px 48px", marginBottom:50, overflow:"hidden", boxShadow:"0 2px 12px rgba(0,0,0,0.05)" }}>
+              <div className="cs-plan-regalo" style={{ background:"#ffffff", boxShadow:"0 2px 12px rgba(0,0,0,0.05)" }}>
                 {/* Columna texto */}
                 <div style={{ flex:1, minWidth:240 }}>
                   <p style={{ fontSize:30, fontWeight:800, color:"#000000", lineHeight:1.2, marginBottom:16 }}>
