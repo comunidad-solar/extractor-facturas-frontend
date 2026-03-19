@@ -721,28 +721,37 @@ export default function FacturaUpload() {
 
             {/* ── HERO ── */}
             <div style={{borderRadius:"16px 16px 0 0", padding:"36px 48px 32px", color:"#fff", marginBottom:0 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:16 }}>
-                <div style={{ flex:1, minWidth:220 }}>
-                  <a href="https://comunidad.solar" style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(255,255,255,0.2)", border:"1px solid #000000", borderRadius:8, padding:"5px 10px", fontSize:13, fontWeight:700, color:"#000000", textDecoration:"none", marginBottom:20 }} target="_blank" rel="noreferrer">
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:24 }}>
+                {/* Columna izquierda: texto + ahorro */}
+                <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column", gap:0 }}>
+                  <a href="https://comunidad.solar" style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(255,255,255,0.2)", border:"1px solid #000000", borderRadius:8, padding:"5px 10px", fontSize:13, fontWeight:700, color:"#000000", textDecoration:"none", marginBottom:20, alignSelf:"flex-start" }} target="_blank" rel="noreferrer">
                     🌤️ Comunidad Solar
                   </a>
                   <p style={{ fontSize:16, fontWeight:400, opacity:0.9, marginBottom:4, color:"#000000" }}>
                     Hola <strong>{cliente.nombre}</strong>, estás a un paso de tener
                   </p>
-                  <p style={{ fontSize:36, fontWeight:800, lineHeight:1.1, marginBottom:12,color:"#E48409" }}>
+                  <p style={{ fontSize:36, fontWeight:800, lineHeight:1.1, marginBottom:12, color:"#E48409" }}>
                     tu propia energía a 0€
                   </p>
                   <p style={{ fontSize:13, opacity:0.8, marginBottom:4, color:"#000000"}}>
-                    Este es tu plan en la Comunidad Energética de
+                    Este es tu fantástico plan en la Comunidad Energética de
                   </p>
-                  <p style={{ fontSize:18, fontWeight:700, color:"#000000"}}>{ceNombre || "—"}</p>
+                  <p style={{ fontSize:18, fontWeight:700, color:"#000000", marginBottom:20 }}>{ceNombre || "—"}</p>
+                  {/* Ahorro destacado — abaixo do texto */}
+                  <div style={{ background:"rgba(181, 180, 180, 0.15)", borderRadius:12, padding:"20px 28px", display:"inline-block", maxWidth:400 }}>
+                    <p style={{ fontSize:11, opacity:0.8, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6, color:"#000000" }}>Ahorro previsto en 25 años</p>
+                    <p style={{ fontSize:48, fontWeight:800, lineHeight:1, color:"#000000" }}>
+                      {fmtES(planData?.ahorro25Anos /* TODO: confirmar nombre del campo con el backend */)}€<span style={{ fontSize:22 }}>*</span>
+                    </p>
+                  </div>
                 </div>
-                {/* Ahorro destacado */}
-                <div style={{ background:"rgba(181, 180, 180, 0.15)", borderRadius:12, padding:"20px 28px", textAlign:"right", minWidth:180, marginTop:38 }}>
-                  <p style={{ fontSize:11, opacity:0.8, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6, color:"#000000" }}>Ahorro previsto en 25 años</p>
-                  <p style={{ fontSize:48, fontWeight:800, lineHeight:1, color:"#000000" }}>
-                    {fmtES(planData?.ahorro25Anos /* TODO: confirmar nombre del campo con el backend */)}€<span style={{ fontSize:22 }}>*</span>
-                  </p>
+                {/* Columna derecha: imagen del edificio */}
+                <div style={{ flex:"0 0 auto", display:"flex", alignItems:"flex-start"}}>
+                  <img
+                    src="/public/Intersect.png"
+                    alt="Instalación solar"
+                    style={{ width:300, height:340, objectFit:"cover", borderRadius:20, display:"block" }}
+                  />
                 </div>
               </div>
             </div>
