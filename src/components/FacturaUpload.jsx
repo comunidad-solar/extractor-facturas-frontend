@@ -842,7 +842,7 @@ export default function FacturaUpload() {
                   <div style={{ background:"rgb(255, 255, 255)", borderRadius:12, padding:"20px 28px", display:"inline-block", maxWidth:400, boxShadow:"0 2px 12px rgba(0,0,0,0.1)" }}>
                     <p style={{ fontSize:11, opacity:0.8, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6, color:"#000000" }}>Ahorro previsto en 25 años</p>
                     <p style={{ fontSize:48, fontWeight:800, lineHeight:1, color:"#000000"}}>
-                      {fmtES(planData?.ahorro25Anos /* TODO: confirmar nombre del campo con el backend */)}€<span style={{ fontSize:22 }}>*</span>
+                      {fmtES(planData?.ahorro25Anos ?? 1575.35 /* TODO: confirmar nombre del campo con el backend */)}€<span style={{ fontSize:22 }}>*</span>
                     </p>
                   </div>
                 </div>
@@ -866,7 +866,7 @@ export default function FacturaUpload() {
                 <div style={{ background:"#fff", border:"2px solid #EEECE8", borderRadius:14, padding:"24px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, boxShadow:"0 2px 12px rgba(0,0,0,0.03)" }}>
                   <p style={{ fontSize:11, fontWeight:700, color:"#000000", textTransform:"uppercase", letterSpacing:"0.08em" }}>Pago único</p>
                   <p style={{ fontSize:38, fontWeight:800, color:"#121212", lineHeight:1.1 }}>
-                    {fmtES(planData?.pagoUnico /* TODO: confirmar nombre del campo con el backend */)}€
+                    {fmtES(planData?.pagoUnico ?? 3480.75 /* TODO: confirmar nombre del campo con el backend */)}€
                   </p>
                   <p style={{ fontSize:11, color:"#aaa" }}>(IVA 21% incluido)</p>
                   <button
@@ -880,7 +880,7 @@ export default function FacturaUpload() {
                   <p style={{ fontSize:11, fontWeight:700, color:"#000000", textTransform:"uppercase", letterSpacing:"0.08em" }}>Financiado</p>
                   <p style={{ fontSize:12, color:"#000000", marginBottom:2 }}>Hasta 120 cuotas mensuales</p>
                   <p style={{ fontSize:38, fontWeight:800, color:"#121212", lineHeight:1.1 }}>
-                    {fmtES(planData?.pagoFinanciado /* TODO: confirmar nombre del campo con el backend */)}€
+                    {fmtES(planData?.pagoFinanciado ?? 41.33/* TODO: confirmar nombre del campo con el backend */)}€
                   </p>
                   <p style={{ fontSize:11, color:"#aaa" }}>(IVA 21% incluido)</p>
                 </div>
@@ -925,15 +925,15 @@ export default function FacturaUpload() {
                 <div style={{ flexShrink:0, marginLeft:16, border:"2px solid #E48409", borderRadius:14, padding:"20px 20px", display:"flex", flexDirection:"column", gap:12, background:"#fff", minWidth:160, justifyContent:"center", alignItems:"center" }}>
                   <p style={{ fontSize:12, fontWeight:700, color:"#E48409", textTransform:"uppercase", letterSpacing:"0.08em", textAlign:"center" }}>AHORRO*</p>
                   <div style={{ textAlign:"center" }}>
-                    <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroMensual)}€</p>
+                    <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroMensual ?? 38.35)}€</p>
                     <p style={{ fontSize:11, color:"#555", marginTop:4 }}>Al mes</p>
                   </div>
                   <div style={{ textAlign:"center" }}>
-                    <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroAnual)}€</p>
+                    <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroAnual ?? 460.20)}€</p>
                     <p style={{ fontSize:11, color:"#555", marginTop:4 }}>Al año</p>
                   </div>
                   <div style={{ textAlign:"center" }}>
-                    <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorro25Anos)}€</p>
+                    <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorro25Anos ?? 1575.35)}€</p>
                     <p style={{ fontSize:11, color:"#555", marginTop:4 }}>En 25 años (estimado)</p>
                   </div>
                 </div>
@@ -947,13 +947,13 @@ export default function FacturaUpload() {
                   <table className="cs-table">
                     <tbody >
                       <tr ><td style={{color:"#000000"}}>Numero de paneles</td><td>{panelesSel}</td></tr>
-                      <tr><td style={{color:"#000000"}}>Potencia total</td><td>{fmtES(planData?.potenciaTotal /* TODO: confirmar nombre del campo con el backend */)} kWh</td></tr>
-                      <tr><td style={{color:"#000000"}}>Producción de energía anual estimada*</td><td>{fmtES(planData?.produccionAnual /* TODO: confirmar nombre del campo con el backend */)} kWh</td></tr>
-                      <tr><td style={{color:"#000000"}}>Ahorro anual medio estimado*</td><td>{fmtES(planData?.ahorroAnual /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
-                      <tr><td style={{color:"#000000"}}>Ahorro total estimado durante 25 años*</td><td>{fmtES(planData?.ahorro25Anos /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
-                      <tr><td style={{color:"#000000"}}>Coeficiente de distribución sobre total de la instalación</td><td>{fmtES(planData?.coeficienteDistribucion /* TODO: confirmar nombre del campo con el backend */, 0)} %</td></tr>
-                      <tr><td style={{color:"#000000"}}>Pago al contado</td><td>{fmtES(planData?.pagoUnico /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
-                      <tr><td style={{color:"#000000"}}>Plazo estimado de recuperación del coste inicial*</td><td>{fmtES(planData?.plazoRecuperacion /* TODO: confirmar nombre del campo con el backend */, 1)} años</td></tr>
+                      <tr><td style={{color:"#000000"}}>Potencia total</td><td>{parseInt(fmtES(planData?.potenciaTotal ?? 3) /* TODO: confirmar nombre del campo con el backend */)} kWh</td></tr>
+                      <tr><td style={{color:"#000000"}}>Producción de energía anual estimada*</td><td>{fmtES(planData?.produccionAnual ?? 4101.25 /* TODO: confirmar nombre del campo con el backend */)} kWh</td></tr>
+                      <tr><td style={{color:"#000000"}}>Ahorro anual medio estimado*</td><td>{fmtES(planData?.ahorroAnual ?? 522.48 /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
+                      <tr><td style={{color:"#000000"}}>Ahorro total estimado durante 25 años*</td><td>{fmtES(planData?.ahorro25Anos ?? 15707.25 /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
+                      <tr><td style={{color:"#000000"}}>Coeficiente de distribución sobre total de la instalación</td><td>{fmtES(planData?.coeficienteDistribucion ?? 5  /* TODO: confirmar nombre del campo con el backend */, 0)} %</td></tr>
+                      <tr><td style={{color:"#000000"}}>Pago al contado</td><td>{fmtES(planData?.pagoUnico ?? 3480.75 /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
+                      <tr><td style={{color:"#000000"}}>Plazo estimado de recuperación del coste inicial*</td><td>{fmtES(planData?.plazoRecuperacion ?? 6.7 /* TODO: confirmar nombre del campo con el backend */, 1)} años</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -1073,18 +1073,41 @@ energético.</p>
               {/* ── MÉTRICAS DE AHORRO ── */}
               <div style={{ background:"#ffffff", borderRadius:12, padding:"20px 28px", marginBottom:65, display:"flex", justifyContent:"space-around", alignItems:"center", textAlign:"center", gap:8, boxShadow:"0 2px 12px rgba(0,0,0,0.05)" }}>
                 <div>
-                  <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroMensual /* TODO: confirmar nombre del campo con el backend */)}€</p>
+                  <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroMensual ?? 38.35 /* TODO: confirmar nombre del campo con el backend */)}€</p>
                   <p style={{ fontSize:11, color:"#000000", marginTop:4 }}>Al mes</p>
                 </div>
                 <div style={{ width:1, background:"#d0cfc9", alignSelf:"stretch" }} />
                 <div>
-                  <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroAnual /* TODO: confirmar nombre del campo con el backend */)}€</p>
+                  <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroAnual ?? 460.20 /* TODO: confirmar nombre del campo con el backend */)}€</p>
                   <p style={{ fontSize:11, color:"#000000", marginTop:4 }}>Al año</p>
                 </div>
                 <div style={{ width:1, background:"#d0cfc9", alignSelf:"stretch" }} />
                 <div>
-                  <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorro25Anos /* TODO: confirmar nombre del campo con el backend */)}€</p>
+                  <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorro25Anos ?? 1575.35 /* TODO: confirmar nombre del campo con el backend */)}€</p>
                   <p style={{ fontSize:11, color:"#000000", marginTop:4 }}>En 25 años (estimado)</p>
+                </div>
+              </div>
+
+              {/* ── REGALO APP ── */}
+              <div style={{ display:"flex", alignItems:"center", gap:40, background:"#ffffff", borderRadius:14, padding:"48px 48px", marginBottom:50, overflow:"hidden", boxShadow:"0 2px 12px rgba(0,0,0,0.05)" }}>
+                {/* Columna texto */}
+                <div style={{ flex:1, minWidth:240 }}>
+                  <p style={{ fontSize:30, fontWeight:800, color:"#000000", lineHeight:1.2, marginBottom:16 }}>
+                    Tenemos un regalo para ti
+                  </p>
+                  <p style={{ fontSize:17, fontWeight:700, color:"#000000", lineHeight:1.4, marginBottom:20 }}>
+                    Aunque no nos contrates puedes descargarte gratis el asistente energético
+                  </p>
+                  <p style={{ fontSize:13, color:"rgba(0, 0, 0, 0.75)", lineHeight:1.7, marginBottom:32 }}>
+                    Nuestra aplicación te permitirá <strong style={{ color:"#000000" }}>optimizar el uso de energía</strong> en tu hogar, proporcionándote toda la información necesaria para ahorrar y mejorar tu eficiencia energética.
+                  </p>
+                  <button style={{ background:"#E48409", color:"#000000", border:"none", borderRadius:28, padding:"14px 36px", fontSize:14, fontWeight:800, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.08em" }}>
+                    DESCARGAR
+                  </button>
+                </div>
+                {/* Columna imagen */}
+                <div style={{ flex:"0 0 auto" }}>
+                  <img src="/App.png" alt="App Comunidad Solar" style={{ height:280, display:"block", objectFit:"contain" }} />
                 </div>
               </div>
 
