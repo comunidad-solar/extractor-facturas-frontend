@@ -80,10 +80,16 @@ const LEAD_URL        = "https://extractor.13.38.9.119.nip.io/leads";
 const NOMINATIM_URL   = "https://nominatim.openstreetmap.org";
 const CE_DETAIL_URL   = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu";
 
+// Mapa de estados de la CE a etiquetas visibles
+const CE_STATUS_LABELS = {
+  "waiting list": "En Espera",
+  "Available":    "En Contratación",
+};
+
 // TODO: confirmar endpoint com o backend
 const ASESOR_ENVIO_URL    = "";
 // TODO: confirmar URL de redirecionamento após envío
-const ASESOR_REDIRECT_URL = "";
+const ASESOR_REDIRECT_URL = "https://main.d3rqv6h66vhq03.amplifyapp.com?cups={{cups}}";
 
 function fmtES(valor, decimais = 2) {
   if (valor == null) return "0";
@@ -836,7 +842,7 @@ export default function FacturaUpload() {
 
               {/* ── IMPORTE A PAGAR ── */}
               <p className="cs-section-label" style={{ marginTop:0, color:"#000000" }}>Importe a pagar</p>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:32}}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:85}}>
                 {/* Pago único */}
                 <div style={{ background:"#fff", border:"2px solid #EEECE8", borderRadius:14, padding:"24px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, boxShadow:"0 2px 12px rgba(0,0,0,0.03)" }}>
                   <p style={{ fontSize:11, fontWeight:700, color:"#000000", textTransform:"uppercase", letterSpacing:"0.08em" }}>Pago único</p>
@@ -858,6 +864,59 @@ export default function FacturaUpload() {
                     {fmtES(planData?.pagoFinanciado /* TODO: confirmar nombre del campo con el backend */)}€
                   </p>
                   <p style={{ fontSize:11, color:"#aaa" }}>(IVA 21% incluido)</p>
+                </div>
+              </div>
+               {/* ── ORIGEN / DESTINO ── */}
+              <div style={{ display:"flex", gap:0, alignItems:"stretch", marginBottom:85 }}>
+                {/* Tarjeta Origen — CE */}
+                <div style={{ flex:1, background:"#fff", borderRadius:14, overflow:"hidden", boxShadow:"0 2px 12px rgba(0,0,0,0.06)" }}>
+                  <div style={{ position:"relative" }}>
+                    <img src="/Intersect.png" alt="Comunidad Energética" style={{ width:"100%", height:160, objectFit:"cover", display:"block" }} />
+                    <span style={{ position:"absolute", top:10, left:10, background:"#E48409", color:"#fff", fontSize:11, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", padding:"4px 10px", borderRadius:6 }}>
+                      {CE_STATUS_LABELS[ceStatus] || ceStatus || "—"}
+                    </span>
+                  </div>
+                  <div style={{ padding:"14px 16px" }}>
+                    <p style={{ fontSize:11, color:"#aaa", marginBottom:2 }}>Origen</p>
+                    <p style={{ fontSize:12, color:"#555", marginBottom:2 }}>Comunidad Energética</p>
+                    <p style={{ fontSize:14, fontWeight:700, color:"#111", marginBottom:12 }}><strong>{ceNombre || "—"}</strong></p>
+                    <button style={{ width:"100%", background:"#E48409", color:"#fff", border:"none", borderRadius:8, padding:"10px", fontSize:13, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.08em" }}>
+                      VER MÁS
+                    </button>
+                  </div>
+                </div>
+
+                {/* Conector */}
+                <div style={{ display:"flex", alignItems:"center", padding:"0 12px" }}>
+                  <div style={{ width:12, height:12, borderRadius:"50%", background:"#E48409", flexShrink:0 }} />
+                  <div style={{ width:30, height:2, background:"#E48409" }} />
+                  <div style={{ width:12, height:12, borderRadius:"50%", background:"#E48409", flexShrink:0 }} />
+                </div>
+
+                {/* Tarjeta Destino — domicilio */}
+                <div style={{ flex:1, background:"#fff", borderRadius:14, overflow:"hidden", boxShadow:"0 2px 12px rgba(0,0,0,0.06)" }}>
+                  <img src="/domicilio.png" alt="Domicilio" style={{ width:"100%", height:160, objectFit:"cover", display:"block" }} />
+                  <div style={{ padding:"14px 16px" }}>
+                    <p style={{ fontSize:11, color:"#aaa", marginBottom:4 }}>Destino</p>
+                    <p style={{ fontSize:20, fontWeight:500, color:"#111" }}>{cliente.direccion || "—"}</p>
+                  </div>
+                </div>
+
+                {/* Métricas de ahorro */}
+                <div style={{ flexShrink:0, marginLeft:16, border:"2px solid #E48409", borderRadius:14, padding:"20px 20px", display:"flex", flexDirection:"column", gap:12, background:"#fff", minWidth:160, justifyContent:"center", alignItems:"center" }}>
+                  <p style={{ fontSize:12, fontWeight:700, color:"#E48409", textTransform:"uppercase", letterSpacing:"0.08em", textAlign:"center" }}>AHORRO*</p>
+                  <div style={{ textAlign:"center" }}>
+                    <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroMensual)}€</p>
+                    <p style={{ fontSize:11, color:"#555", marginTop:4 }}>Al mes</p>
+                  </div>
+                  <div style={{ textAlign:"center" }}>
+                    <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroAnual)}€</p>
+                    <p style={{ fontSize:11, color:"#555", marginTop:4 }}>Al año</p>
+                  </div>
+                  <div style={{ textAlign:"center" }}>
+                    <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorro25Anos)}€</p>
+                    <p style={{ fontSize:11, color:"#555", marginTop:4 }}>En 25 años (estimado)</p>
+                  </div>
                 </div>
               </div>
 
