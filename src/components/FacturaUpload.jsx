@@ -620,7 +620,7 @@ export default function FacturaUpload() {
 
         .cs-page { min-height:100vh; background:transparent; display:flex; flex-direction:column; align-items:center; padding:0 16px 80px; gap:0; }
         .cs-page > *:not(.cs-header) { margin-top:32px; }
-        .cs-header { width:100%; background:#fff; border-bottom:1px solid #e8e8e4; padding:14px 32px; display:flex; align-items:center; box-shadow:0 1px 8px rgba(0,0,0,0.06); align-self:stretch; }
+        .cs-header { width:100vw; margin-left:calc(-50vw + 50%); background:#fff; border-bottom:1px solid #e8e8e4; padding:14px 32px; display:flex; align-items:center; box-shadow:0 1px 8px rgba(0,0,0,0.06); align-self:stretch; }
         .cs-logo { display:flex; align-items:center; gap:8px; border:1.5px solid #222; border-radius:8px; padding:6px 12px; font-weight:700; font-size:14px; color:#111; text-decoration:none; }
 
         .cs-card { background:#fff; border-radius:16px; box-shadow:0 2px 24px rgba(0,0,0,0.09); padding:40px 48px; width:100%; max-width:620px; }
