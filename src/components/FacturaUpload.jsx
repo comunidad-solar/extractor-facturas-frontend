@@ -590,7 +590,7 @@ export default function FacturaUpload() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #f5f5f0; font-family: 'DM Sans','Helvetica Neue',sans-serif; }
+        body { background: #EEECE8; font-family: 'DM Sans','Helvetica Neue',sans-serif; }
 
         @keyframes spin { to { transform: rotate(360deg); } }
         @keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
@@ -608,22 +608,23 @@ export default function FacturaUpload() {
         .cs-btn-secondary { background:#fff; color:#111; border:1.5px solid #111; border-radius:10px; padding:10px 20px; font-size:14px; font-weight:600; font-family:inherit; cursor:pointer; transition:background 0.2s; white-space:nowrap; }
         .cs-btn-secondary:hover { background:#f5f5f0; }
 
-        .cs-btn-ghost { background:transparent; color:#555; border:1.5px solid #e0e0da; border-radius:10px; padding:12px 20px; font-size:14px; font-weight:500; font-family:inherit; cursor:pointer; width:100%; margin-top:12px; transition:background 0.2s,border-color 0.2s; }
+        .cs-btn-ghost { background:#fff; color:#555; border:1.5px solid #e0e0da; border-radius:10px; padding:12px 20px; font-size:14px; font-weight:500; font-family:inherit; cursor:pointer; width:100%; margin-top:12px; transition:background 0.2s,border-color 0.2s; }
         .cs-btn-ghost:hover { background:#f5f5f0; border-color:#aaa; }
 
         .cs-btn-phone { width:100%; background:#2d7a2d; color:#fff; border:none; border-radius:10px; padding:14px 0; font-size:15px; font-weight:600; font-family:inherit; cursor:pointer; margin-top:12px; display:flex; align-items:center; justify-content:center; gap:8px; transition:background 0.2s; }
         .cs-btn-phone:hover { background:#1f5c1f; }
 
-        .cs-dropzone { border:2px dashed #d0d0ca; border-radius:12px; padding:28px 20px; text-align:center; cursor:pointer; background:#fafaf8; transition:all 0.2s; }
+        .cs-dropzone { border:2px dashed #d0d0ca; border-radius:12px; padding:28px 20px; text-align:center; cursor:pointer; background:#fff; transition:all 0.2s; }
         .cs-dropzone:hover,.cs-dropzone.dragging { border-color:#888; background:#f5f5f0; }
         .cs-dropzone.has-file { border-color:#2d7a2d; background:#f5fbf5; }
 
-        .cs-page { min-height:100vh; background:#f5f5f0; display:flex; flex-direction:column; align-items:center; padding-bottom:60px; }
-        .cs-header { width:100%; background:#fff; border-bottom:1px solid #e8e8e4; padding:14px 32px; display:flex; align-items:center; }
+        .cs-page { min-height:100vh; background:transparent; display:flex; flex-direction:column; align-items:center; padding:0 16px 80px; gap:0; }
+        .cs-page > *:not(.cs-header) { margin-top:32px; }
+        .cs-header { width:100%; background:#fff; border-bottom:1px solid #e8e8e4; padding:14px 32px; display:flex; align-items:center; box-shadow:0 1px 8px rgba(0,0,0,0.06); align-self:stretch; }
         .cs-logo { display:flex; align-items:center; gap:8px; border:1.5px solid #222; border-radius:8px; padding:6px 12px; font-weight:700; font-size:14px; color:#111; text-decoration:none; }
 
-        .cs-card { background:#fff; border-radius:16px; box-shadow:0 2px 24px rgba(0,0,0,0.07); padding:40px 48px; width:100%; max-width:620px; margin-top:48px; }
-        .cs-results-card { background:#fff; border-radius:16px; box-shadow:0 2px 24px rgba(0,0,0,0.07); padding:32px 40px; width:100%; max-width:780px; margin-top:32px; }
+        .cs-card { background:#fff; border-radius:16px; box-shadow:0 2px 24px rgba(0,0,0,0.09); padding:40px 48px; width:100%; max-width:620px; }
+        .cs-results-card { background:#fff; border-radius:16px; padding:32px 40px; width:100%; max-width:780px; }
 
         .cs-row { display:flex; gap:16px; margin-bottom:16px; }
         .cs-field-group { display:flex; flex-direction:column; flex:1; gap:6px; }
@@ -640,7 +641,7 @@ export default function FacturaUpload() {
         .cs-step-label.active { color:#111; }
         .cs-step-label.inactive { color:#aaa; }
 
-        .cs-option-btn { width:100%; background:#fff; border:1.5px solid #e0e0da; border-radius:12px; padding:18px 20px; text-align:left; cursor:pointer; font-family:inherit; transition:border-color 0.2s,box-shadow 0.2s; display:flex; align-items:center; gap:14px; }
+        .cs-option-btn { width:100%; background:#fff; border:1.5px solid #e0e0da; border-radius:12px; padding:18px 20px; text-align:left; cursor:pointer; font-family:inherit; transition:border-color 0.2s,box-shadow 0.2s; display:flex; align-items:center; gap:14px; box-shadow:0 1px 6px rgba(0,0,0,0.05); }
         .cs-option-btn:hover { border-color:#111; box-shadow:0 0 0 3px rgba(0,0,0,0.04); }
         .cs-option-icon { font-size:24px; flex-shrink:0; }
         .cs-option-title { font-size:15px; font-weight:600; color:#111; margin-bottom:2px; }
@@ -653,7 +654,7 @@ export default function FacturaUpload() {
 
         .cs-table { width:100%; border-collapse:separate; border-spacing:0 2px; }
         .cs-table tr td { padding:10px 12px; font-size:13px; }
-        .cs-table tr:nth-child(odd) td { background:#fafaf8; }
+        .cs-table tr:nth-child(odd) td { background:#f7f7f5; }
         .cs-table tr:nth-child(odd) td:first-child { border-radius:6px 0 0 6px; }
         .cs-table tr:nth-child(odd) td:last-child { border-radius:0 6px 6px 0; }
         .cs-table td:first-child { color:#777; font-weight:500; width:55%; }
@@ -674,7 +675,7 @@ export default function FacturaUpload() {
         .cs-results-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; }
 
         .cs-client-grid { display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:8px; }
-        .cs-client-item { display:flex; flex-direction:column; padding:10px 12px; background:#fafaf8; border-radius:6px; }
+        .cs-client-item { display:flex; flex-direction:column; padding:10px 12px; background:#fff; border:1px solid #eeece8; border-radius:6px; }
         .cs-client-item .ci-label { font-size:11px; color:#aaa; font-weight:500; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:2px; }
         .cs-client-item .ci-value { font-size:14px; color:#111; font-weight:600; }
 
@@ -685,8 +686,10 @@ export default function FacturaUpload() {
         .cs-autocomplete-item:hover { background:#f5f5f0; }
 
         @media (max-width:640px) {
-          .cs-card { padding:28px 20px; margin-top:24px; }
-          .cs-results-card { padding:24px 16px; margin-top:20px; }
+          .cs-page { padding:0 12px 60px; }
+          .cs-page > *:not(.cs-header) { margin-top:20px; }
+          .cs-card { padding:28px 20px; }
+          .cs-results-card { padding:24px 16px; }
           .cs-row { flex-direction:column; gap:12px; }
           .cs-header { padding:14px 20px; }
           .cs-client-grid { grid-template-columns:1fr; }
@@ -717,16 +720,13 @@ export default function FacturaUpload() {
 
         {/* ── PLAN PERSONALIZADO ── */}
         {!loading && status === "sent" && (
-          <div className="cs-results-card fade-in" style={{ maxWidth:900, padding:"0 0 40px" }}>
+          <div className="cs-results-card fade-in" style={{ maxWidth:1000, padding:"0 0 40px", backgroundColor:"#EEECE8" }}>
 
             {/* ── HERO ── */}
             <div style={{borderRadius:"16px 16px 0 0", padding:"36px 48px 32px", color:"#fff", marginBottom:0 }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:24 }}>
                 {/* Columna izquierda: texto + ahorro */}
                 <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column", gap:0 }}>
-                  <a href="https://comunidad.solar" style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(255,255,255,0.2)", border:"1px solid #000000", borderRadius:8, padding:"5px 10px", fontSize:13, fontWeight:700, color:"#000000", textDecoration:"none", marginBottom:20, alignSelf:"flex-start" }} target="_blank" rel="noreferrer">
-                    🌤️ Comunidad Solar
-                  </a>
                   <p style={{ fontSize:16, fontWeight:400, opacity:0.9, marginBottom:4, color:"#000000" }}>
                     Hola <strong>{cliente.nombre}</strong>, estás a un paso de tener
                   </p>
@@ -738,9 +738,9 @@ export default function FacturaUpload() {
                   </p>
                   <p style={{ fontSize:18, fontWeight:700, color:"#000000", marginBottom:20 }}>{ceNombre || "—"}</p>
                   {/* Ahorro destacado — abaixo do texto */}
-                  <div style={{ background:"rgba(181, 180, 180, 0.15)", borderRadius:12, padding:"20px 28px", display:"inline-block", maxWidth:400 }}>
+                  <div style={{ background:"rgb(255, 255, 255)", borderRadius:12, padding:"20px 28px", display:"inline-block", maxWidth:400, boxShadow:"0 2px 12px rgba(0,0,0,0.1)" }}>
                     <p style={{ fontSize:11, opacity:0.8, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6, color:"#000000" }}>Ahorro previsto en 25 años</p>
-                    <p style={{ fontSize:48, fontWeight:800, lineHeight:1, color:"#000000" }}>
+                    <p style={{ fontSize:48, fontWeight:800, lineHeight:1, color:"#000000"}}>
                       {fmtES(planData?.ahorro25Anos /* TODO: confirmar nombre del campo con el backend */)}€<span style={{ fontSize:22 }}>*</span>
                     </p>
                   </div>
@@ -759,25 +759,25 @@ export default function FacturaUpload() {
             <div style={{ padding:"32px 48px 0" }}>
 
               {/* ── IMPORTE A PAGAR ── */}
-              <p className="cs-section-label" style={{ marginTop:0 }}>Importe a pagar</p>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:32 }}>
+              <p className="cs-section-label" style={{ marginTop:0, color:"#000000" }}>Importe a pagar</p>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, marginBottom:32}}>
                 {/* Pago único */}
-                <div style={{ background:"#fff", border:"2px solid #EEECE8", borderRadius:14, padding:"24px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
-                  <p style={{ fontSize:11, fontWeight:700, color:"#888", textTransform:"uppercase", letterSpacing:"0.08em" }}>Pago único</p>
+                <div style={{ background:"#fff", border:"2px solid #EEECE8", borderRadius:14, padding:"24px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, boxShadow:"0 2px 12px rgba(0,0,0,0.03)" }}>
+                  <p style={{ fontSize:11, fontWeight:700, color:"#000000", textTransform:"uppercase", letterSpacing:"0.08em" }}>Pago único</p>
                   <p style={{ fontSize:38, fontWeight:800, color:"#121212", lineHeight:1.1 }}>
                     {fmtES(planData?.pagoUnico /* TODO: confirmar nombre del campo con el backend */)}€
                   </p>
                   <p style={{ fontSize:11, color:"#aaa" }}>(IVA 21% incluido)</p>
                   <button
                     style={{ marginTop:10, background:"#E48409", color:"#fff", border:"none", borderRadius:24, padding:"10px 28px", fontSize:13, fontWeight:700, fontFamily:"inherit", cursor:"not-allowed", opacity:0.6, letterSpacing:"0.05em" }}
-                    disabled onClick={() => {}}>
+                    onClick={() => {}}>
                     CONTRATAR
                   </button>
                 </div>
                 {/* Financiado */}
-                <div style={{ background:"#fff", border:"2px solid #EEECE8", borderRadius:14, padding:"24px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
-                  <p style={{ fontSize:11, fontWeight:700, color:"#888", textTransform:"uppercase", letterSpacing:"0.08em" }}>Financiado</p>
-                  <p style={{ fontSize:12, color:"#aaa", marginBottom:2 }}>Hasta 120 cuotas mensuales</p>
+                <div style={{ background:"#fff", border:"2px solid #EEECE8", borderRadius:14, padding:"24px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, boxShadow:"0 2px 12px rgba(0,0,0,0.03)"}}>
+                  <p style={{ fontSize:11, fontWeight:700, color:"#000000", textTransform:"uppercase", letterSpacing:"0.08em" }}>Financiado</p>
+                  <p style={{ fontSize:12, color:"#000000", marginBottom:2 }}>Hasta 120 cuotas mensuales</p>
                   <p style={{ fontSize:38, fontWeight:800, color:"#121212", lineHeight:1.1 }}>
                     {fmtES(planData?.pagoFinanciado /* TODO: confirmar nombre del campo con el backend */)}€
                   </p>
@@ -789,17 +789,17 @@ export default function FacturaUpload() {
               <div style={{ display:"grid", gridTemplateColumns:"1fr auto", gap:24, alignItems:"start", marginBottom:28,  padding:24 }}>
                 {/* Tabla */}
                 <div>
-                  <p className="cs-section-label" style={{ marginTop:0 }}>Tu plan</p>
+                  <p className="cs-section-label" style={{ marginTop:0, color:"#000000" }}>Tu plan</p>
                   <table className="cs-table">
                     <tbody >
-                      <tr><td>Numero de paneles</td><td>{panelesSel}</td></tr>
-                      <tr><td>Potencia total</td><td>{fmtES(planData?.potenciaTotal /* TODO: confirmar nombre del campo con el backend */)} kWh</td></tr>
-                      <tr><td>Producción de energía anual estimada*</td><td>{fmtES(planData?.produccionAnual /* TODO: confirmar nombre del campo con el backend */)} kWh</td></tr>
-                      <tr><td>Ahorro anual medio estimado*</td><td>{fmtES(planData?.ahorroAnual /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
-                      <tr><td>Ahorro total estimado durante 25 años*</td><td>{fmtES(planData?.ahorro25Anos /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
-                      <tr><td>Coeficiente de distribución sobre total de la instalación</td><td>{fmtES(planData?.coeficienteDistribucion /* TODO: confirmar nombre del campo con el backend */, 0)} %</td></tr>
-                      <tr><td>Pago al contado</td><td>{fmtES(planData?.pagoUnico /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
-                      <tr><td>Plazo estimado de recuperación del coste inicial*</td><td>{fmtES(planData?.plazoRecuperacion /* TODO: confirmar nombre del campo con el backend */, 1)} años</td></tr>
+                      <tr ><td style={{color:"#000000"}}>Numero de paneles</td><td>{panelesSel}</td></tr>
+                      <tr><td style={{color:"#000000"}}>Potencia total</td><td>{fmtES(planData?.potenciaTotal /* TODO: confirmar nombre del campo con el backend */)} kWh</td></tr>
+                      <tr><td style={{color:"#000000"}}>Producción de energía anual estimada*</td><td>{fmtES(planData?.produccionAnual /* TODO: confirmar nombre del campo con el backend */)} kWh</td></tr>
+                      <tr><td style={{color:"#000000"}}>Ahorro anual medio estimado*</td><td>{fmtES(planData?.ahorroAnual /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
+                      <tr><td style={{color:"#000000"}}>Ahorro total estimado durante 25 años*</td><td>{fmtES(planData?.ahorro25Anos /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
+                      <tr><td style={{color:"#000000"}}>Coeficiente de distribución sobre total de la instalación</td><td>{fmtES(planData?.coeficienteDistribucion /* TODO: confirmar nombre del campo con el backend */, 0)} %</td></tr>
+                      <tr><td style={{color:"#000000"}}>Pago al contado</td><td>{fmtES(planData?.pagoUnico /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
+                      <tr><td style={{color:"#000000"}}>Plazo estimado de recuperación del coste inicial*</td><td>{fmtES(planData?.plazoRecuperacion /* TODO: confirmar nombre del campo con el backend */, 1)} años</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -839,25 +839,25 @@ energético.</p>
               </div>
 
               {/* ── MÉTRICAS DE AHORRO ── */}
-              <div style={{ background:"#EEECE8", borderRadius:12, padding:"20px 28px", marginBottom:28, display:"flex", justifyContent:"space-around", alignItems:"center", textAlign:"center", gap:8 }}>
+              <div style={{ background:"#ffffff", borderRadius:12, padding:"20px 28px", marginBottom:28, display:"flex", justifyContent:"space-around", alignItems:"center", textAlign:"center", gap:8, boxShadow:"0 2px 12px rgba(0,0,0,0.05)" }}>
                 <div>
                   <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroMensual /* TODO: confirmar nombre del campo con el backend */)}€</p>
-                  <p style={{ fontSize:11, color:"#666", marginTop:4 }}>Al mes</p>
+                  <p style={{ fontSize:11, color:"#000000", marginTop:4 }}>Al mes</p>
                 </div>
                 <div style={{ width:1, background:"#d0cfc9", alignSelf:"stretch" }} />
                 <div>
                   <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroAnual /* TODO: confirmar nombre del campo con el backend */)}€</p>
-                  <p style={{ fontSize:11, color:"#666", marginTop:4 }}>Al año</p>
+                  <p style={{ fontSize:11, color:"#000000", marginTop:4 }}>Al año</p>
                 </div>
                 <div style={{ width:1, background:"#d0cfc9", alignSelf:"stretch" }} />
                 <div>
                   <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorro25Anos /* TODO: confirmar nombre del campo con el backend */)}€</p>
-                  <p style={{ fontSize:11, color:"#666", marginTop:4 }}>En 25 años (estimado)</p>
+                  <p style={{ fontSize:11, color:"#000000", marginTop:4 }}>En 25 años (estimado)</p>
                 </div>
               </div>
 
               {/* ── CONTACTAR CON ASESOR ── */}
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"#fff", border:"1.5px solid #EEECE8", borderRadius:12, padding:"16px 20px", marginBottom:24 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"#fff", border:"1.5px solid #EEECE8", borderRadius:12, padding:"16px 20px", marginBottom:24, boxShadow:"0 2px 12px rgba(0,0,0,0.03)" }}>
                 <span style={{ fontSize:13, color:"#555" }}>¿Tienes dudas?</span>
                 <button style={{ background:"transparent", color:"#121212", border:"1.5px solid #121212", borderRadius:24, padding:"8px 20px", fontSize:12, fontWeight:700, fontFamily:"inherit", cursor:"pointer" }} onClick={() => {}}>
                   Contacta con TU asesor
