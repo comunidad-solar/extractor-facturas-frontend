@@ -733,7 +733,7 @@ export default function FacturaUpload() {
                     tu propia energía a 0€
                   </p>
                   <p style={{ fontSize:13, opacity:0.8, marginBottom:4 }}>
-                    Este es tu fantástico plan en la Comunidad Energética de
+                    Este es tu plan en la Comunidad Energética de
                   </p>
                   <p style={{ fontSize:18, fontWeight:700 }}>{ceNombre || "—"}</p>
                 </div>
