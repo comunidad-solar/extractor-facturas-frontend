@@ -76,7 +76,8 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu/server/api/get-ce-info-lat-lng";
 
 const API_BASE        = "https://extractor.13.38.9.119.nip.io";
-const LEAD_URL        = "https://extractor.13.38.9.119.nip.io/leads";
+const QUOTING_URL     = "https://quoting-api.13.38.9.119.nip.io/api/asesores/factura-details-demo";
+const LEAD_URL        = "https://quoting-api.13.38.9.119.nip.io/api/asesores/factura-details-demo";
 const NOMINATIM_URL   = "https://nominatim.openstreetmap.org";
 const CE_DETAIL_URL   = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu";
 
@@ -602,12 +603,29 @@ export default function FacturaUpload() {
           .catch(() => `HTTP ${res.status}`);
         throw new Error(detail);
       }
-      const data = await res.json();
-      if (data.ok) {
-        setPlanData(data.plan ?? null); // TODO: confirmar nombre del campo con el backend
-        setPanelesSel(data.plan?.numeroPaneles ?? 3); // TODO: confirmar nombre del campo con el backend
-        setStatus("sent");
+
+      // Llamar al backend de quoting con los datos de la factura
+      const quotingRes = await fetch(QUOTING_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cliente,
+          factura,
+          Fsmstate,
+          FsmPrevious: fsmPrevious,
+          ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta },
+        }),
+      });
+      if (!quotingRes.ok) {
+        const detail = await quotingRes.json()
+          .then((d) => typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail))
+          .catch(() => `HTTP ${quotingRes.status}`);
+        throw new Error(detail);
       }
+      const plan = await quotingRes.json();
+      setPlanData(plan ?? null);
+      setPanelesSel(plan?.numeroPaneles ?? 3);
+      setStatus("sent");
     } catch (err) {
       setError(err.message);
     } finally {
