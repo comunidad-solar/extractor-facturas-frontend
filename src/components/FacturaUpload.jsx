@@ -177,6 +177,7 @@ export default function FacturaUpload() {
   const [leadWarn, setLeadWarn]       = useState(false);
   const [planData, setPlanData]       = useState(null);
   const [panelesSel, setPanelesSel]   = useState(3); // optimizador de paneles
+  const [tabActiva, setTabActiva]     = useState("como"); // "como" | "plan" | "condiciones"
 
   // ── Modo asesor — detectar ?interno-asesores=true ────────────────────────
   useEffect(() => {
@@ -921,7 +922,7 @@ export default function FacturaUpload() {
               </div>
 
               {/* ── TU PLAN + OPTIMIZADOR ── */}
-              <div style={{ display:"grid", gridTemplateColumns:"1fr auto", gap:24, alignItems:"start", marginBottom:28,  padding:24 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr auto", gap:24, alignItems:"start", marginBottom:55,  padding:24 }}>
                 {/* Tabla */}
                 <div>
                   <p className="cs-section-label" style={{ marginTop:0, color:"#000000" }}>Tu plan</p>
@@ -973,8 +974,86 @@ energético.</p>
                 </div>
               </div>
 
+              {/* ── TABS: CÓMO FUNCIONA / TU PLAN / CONDICIONES ── */}
+              <div style={{ borderRadius:14, overflow:"hidden", marginBottom:65, boxShadow:"0 2px 12px rgba(0,0,0,0.06)" }}>
+                {/* Cabecera de tabs */}
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr" }}>
+                  {[
+                    { id:"como",         label:"Cómo funciona" },
+                    { id:"plan",         label:"Tu plan" },
+                    { id:"condiciones",  label:"Condiciones" },
+                  ].map(({ id, label }) => (
+                    <button
+                      key={id}
+                      onClick={() => setTabActiva(id)}
+                      style={{
+                        background: tabActiva === id ? "#fff" : "#F2C080",
+                        border: "none",
+                        borderBottom: tabActiva === id ? "none" : "2px solid #F3D5A9",
+                        padding: "14px 8px",
+                        fontSize: 14,
+                        fontWeight: 700,
+                        fontFamily: "inherit",
+                        cursor: "pointer",
+                        color: "#111",
+                      }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Contenido */}
+                <div style={{ background:"#fff", padding:"24px 28px", fontSize:13, color:"#333", lineHeight:1.7 }}>
+
+                  {/* ── Cómo funciona ── */}
+                  {tabActiva === "como" && (
+                    <div>
+                      <p style={{ fontWeight:700, color:"#E48409", marginBottom:12 }}>Abierta la fase de Contratación:</p>
+                      <p style={{ marginBottom:8 }}>Al pulsar "Contratar", comenzaremos a generar tres documentos:</p>
+                      <ul style={{ paddingLeft:20, marginBottom:8 }}>
+                        <li>La orden de compra de tus paneles.</li>
+                        <li>La participación en la asociación Light for Humanity.</li>
+                        <li>Tu alta en la comercializadora de Comunidad Solar, para recibir electricidad a coste cero.</li>
+                      </ul>
+                      <p style={{ marginBottom:8 }}>Es muy importante que tengas a mano una factura actual de la luz.</p>
+                      <p style={{ marginBottom:8 }}>Tus paneles quedarán reservados durante 48 horas; si no firmas la documentación en ese plazo, la reserva quedará sin efecto y volverás a lista de espera. Tras la firma de la documentación, dispondrás de 5 días para realizar el primer pago.</p>
+                      <p>Si estás interesado en financiación, podrás solicitarla después de firmar el contrato. En caso de que la entidad bancaria no apruebe la financiación, el contrato no entrará en vigor.</p>
+                    </div>
+                  )}
+
+                  {/* ── Tu plan ── */}
+                  {tabActiva === "plan" && (
+                    <div>
+                      <p style={{ marginBottom:8 }}>A continuación detallamos tu plan recomendado de participación de autoconsumo en la Comunidad Energética <strong>{ceNombre || "—"}</strong>. Este plan está basado en el consumo eléctrico que nos has facilitado y que te permitirá ahorrar hasta un 70% en tu factura de la luz.</p>
+                      <p style={{ marginBottom:8 }}>El plan incluye la compra de <strong>{panelesSel} paneles solares</strong> que generarán un total aproximado de <strong>{fmtES(planData?.produccionAnual)} kWh</strong> de electricidad en un periodo de <strong>{fmtES(planData?.plazoRecuperacion, 0)} años</strong> con un coste inicial de <strong>{fmtES(planData?.pagoUnico)}€</strong>. (El precio podría ser mayor en función del coste final de la instalación para verter a la red eléctrica, de lo que se informaría claramente por anticipado antes de cualquier contratación)</p>
+                      <p style={{ marginBottom:8 }}>Al unirte a la Comunidad Energética de <strong>{ceNombre || "—"}</strong>, podrás disfrutar de la electricidad a <strong>0€ por kWh</strong> en tu factura de la luz.</p>
+                      <p style={{ marginBottom:4 }}>Basándonos en los precios de energía de los últimos años, obtendrás los siguientes beneficios:</p>
+                      <ul style={{ paddingLeft:20, marginBottom:8 }}>
+                        <li>Ahorro promedio de <strong>{fmtES(planData?.ahorroAnual)}€</strong> al año.</li>
+                        <li>Recuperación de la inversión inicial en solo <strong>{fmtES(planData?.plazoRecuperacion, 1)} años</strong>.</li>
+                        <li>Ahorro total estimado de <strong>{fmtES(planData?.ahorro25Anos)}€</strong> en 25 años (considerando una subida del precio de la energía del 0% anual).</li>
+                      </ul>
+                      <p>Los <strong>{panelesSel} paneles</strong> contienen una potencia nominal total de <strong>{fmtES(planData?.potenciaTotal)} kW</strong>. Lo que quiere decir que el coeficiente de reparto que te pertenece es del <strong>{fmtES(planData?.coeficienteDistribucion, 0)}%</strong> de toda la Comunidad Energética.</p>
+                    </div>
+                  )}
+
+                  {/* ── Condiciones ── */}
+                  {tabActiva === "condiciones" && (
+                    <div>
+                      <p style={{ marginBottom:8 }}>Al adquirir tu participación en la comunidad energética <strong>{ceNombre || "—"}</strong>, verás reflejada la electricidad generada por tus paneles en tu hogar a través de tu comercializadora. Durante los próximos 25 años, verás reflejada en tu factura de la luz la energía producida por tus paneles solares, con un coste de <strong>0€/kWh</strong>.</p>
+                      <p style={{ marginBottom:8 }}>Para el mantenimiento y seguro de tus paneles solares, pagarás una cuota mensual de <strong>0€ + IVA</strong> por cada panel solar. Estos paneles están diseñados para tener una vida útil de 25 años, y esta cuota es necesaria para asegurar su buen funcionamiento.</p>
+                      <p style={{ marginBottom:8 }}>Una vez firmada la documentación, el pago se realizará en 3 fases: 50% del total se abonará tras la firma de los documentos, un 25% al finalizar la instalación y el 25% restante al comenzar la producción de la planta.</p>
+                      <p style={{ marginBottom:8 }}>Podrás cambiarte a otra comercializadora en cualquier momento, ya que no hay permanencia con la comercializadora de Comunidad Solar. La distribuidora de electricidad ya conoce el porcentaje de producción solar que te corresponde, y la nueva comercializadora deberá descontarte esa producción en tu factura de la luz. Debes tener en cuenta que aunque te cambies de comercializadora, tendrás que seguir abonando la cuota de mantenimiento de tus paneles.</p>
+                      <p style={{ marginBottom:8 }}>Toda la electricidad que no consumas será vendida a la red pública a precio de mercado, y ese valor se descontará de tu factura. Para cualquier energía adicional que necesites, pagarás el precio de coste junto con los cargos regulados, sin ningún margen adicional.</p>
+                      <p style={{ marginBottom:8 }}>Comunidad Solar no busca obtener beneficios a través de la comercializadora; este es simplemente el mecanismo necesario para llevar la energía a tu hogar.</p>
+                      <p>Este es un resumen de las condiciones. Te recomendamos leer toda la documentación para conocer todos los términos y detalles antes de proceder con la contratación.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* ── MÉTRICAS DE AHORRO ── */}
-              <div style={{ background:"#ffffff", borderRadius:12, padding:"20px 28px", marginBottom:28, display:"flex", justifyContent:"space-around", alignItems:"center", textAlign:"center", gap:8, boxShadow:"0 2px 12px rgba(0,0,0,0.05)" }}>
+              <div style={{ background:"#ffffff", borderRadius:12, padding:"20px 28px", marginBottom:65, display:"flex", justifyContent:"space-around", alignItems:"center", textAlign:"center", gap:8, boxShadow:"0 2px 12px rgba(0,0,0,0.05)" }}>
                 <div>
                   <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroMensual /* TODO: confirmar nombre del campo con el backend */)}€</p>
                   <p style={{ fontSize:11, color:"#000000", marginTop:4 }}>Al mes</p>
@@ -992,7 +1071,7 @@ energético.</p>
               </div>
 
               {/* ── CONTACTAR CON ASESOR ── */}
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"#fff", border:"1.5px solid #EEECE8", borderRadius:12, padding:"16px 20px", marginBottom:24, boxShadow:"0 2px 12px rgba(0,0,0,0.03)" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"#fff", border:"1.5px solid #EEECE8", borderRadius:12, padding:"16px 20px", marginBottom:50, boxShadow:"0 2px 12px rgba(0,0,0,0.03)" }}>
                 <span style={{ fontSize:13, color:"#555" }}>¿Tienes dudas?</span>
                 <button style={{ background:"transparent", color:"#121212", border:"1.5px solid #121212", borderRadius:24, padding:"8px 20px", fontSize:12, fontWeight:700, fontFamily:"inherit", cursor:"pointer" }} onClick={() => {}}>
                   Contacta con TU asesor
