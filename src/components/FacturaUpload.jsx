@@ -544,7 +544,7 @@ export default function FacturaUpload() {
           .catch(() => `HTTP ${res.status}`);
         throw new Error(detail);
       }
-      setStatus("sent");
+      setStatus("asesor_solicitado");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -1050,8 +1050,22 @@ energético.</p>
           </div>
         )}
 
+        {/* ── ASESOR SOLICITADO ── */}
+        {!loading && status === "asesor_solicitado" && (
+          <div className="cs-card fade-in" style={{ textAlign:"center" }}>
+            <div style={{ fontSize:48, marginBottom:16 }}>✅</div>
+            <h2 style={{ fontSize:20, fontWeight:700, color:"#111", marginBottom:8 }}>
+              ¡Solicitud recibida!
+            </h2>
+            <p style={{ fontSize:14, color:"#555", marginBottom:28, lineHeight:1.7 }}>
+              En breve, uno de nuestros asesores se pondrá en contacto contigo.
+            </p>
+            <button className="cs-btn-ghost" onClick={handleReset}>← Volver al inicio</button>
+          </div>
+        )}
+
         {/* ── STEP 1 — Datos del cliente ── */}
-        {!loading && status !== "sent" && status !== "fuera_zona" && step === 1 && (
+        {!loading && status !== "sent" && status !== "fuera_zona" && status !== "asesor_solicitado" && step === 1 && (
           <div className="cs-card fade-in">
             <div className="cs-step-indicator">
               <div className="cs-step-dot active">1</div>
@@ -1139,7 +1153,7 @@ energético.</p>
         )}
 
         {/* ── STEP 2 — Factura ── */}
-        {!loading && status !== "sent" && step === 2 && (
+        {!loading && status !== "sent" && status !== "asesor_solicitado" && step === 2 && (
           <>
             {/* Option selector */}
             {mode === null && (
