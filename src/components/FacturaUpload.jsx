@@ -231,7 +231,6 @@ export default function FacturaUpload() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("interno-asesores") === "true") {
       setModoAsesor(true);
-      setStep(2); // saltar directamente al Paso 2
     }
   }, []);
 
