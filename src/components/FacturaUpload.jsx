@@ -903,7 +903,7 @@ export default function FacturaUpload() {
                 </div>
 
                 {/* Métricas de ahorro */}
-                <div style={{ flexShrink:0, marginLeft:16, border:"2px solid #E48409", borderRadius:14, padding:"20px 20px", display:"flex", flexDirection:"column", gap:12, background:"#fff", minWidth:160, justifyContent:"center", alignItems:"center" }}>
+                <div className="cs-plan-ahorro" style={{ flexShrink:0, marginLeft:16, border:"2px solid #E48409", borderRadius:14, padding:"20px 20px", display:"flex", flexDirection:"column", gap:12, background:"#fff", minWidth:160, justifyContent:"center", alignItems:"center" }}>
                   <p style={{ fontSize:12, fontWeight:700, color:"#E48409", textTransform:"uppercase", letterSpacing:"0.08em", textAlign:"center" }}>AHORRO*</p>
                   <div style={{ textAlign:"center" }}>
                     <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroMensual ?? 38.35)}€</p>
@@ -1562,18 +1562,6 @@ energético.</p>
                     <tr><td>Plazo estimado de recuperación*</td><td>{fmtES(modalOptimizar?.plazoRecuperacion ?? 0, 1)} años</td></tr>
                   </tbody>
                 </table>
-                <div style={{ display:"flex", gap:12, justifyContent:"center", marginBottom:28 }}>
-                  {[
-                    { label:"Al mes",     val: fmtES(modalOptimizar?.ahorroMensual ?? 0) },
-                    { label:"Al año",     val: fmtES(modalOptimizar?.ahorroAnual ?? 0) },
-                    { label:"En 25 años", val: fmtES(modalOptimizar?.ahorro25Anos ?? 0) },
-                  ].map(({ label, val }) => (
-                    <div key={label} style={{ flex:1, border:"2px solid #E48409", borderRadius:12, padding:"12px 8px", textAlign:"center" }}>
-                      <p style={{ fontSize:18, fontWeight:800, color:"#E48409" }}>{val}€</p>
-                      <p style={{ fontSize:11, color:"#555", marginTop:4 }}>{label}</p>
-                    </div>
-                  ))}
-                </div>
                 <div style={{ display:"flex", gap:12 }}>
                   <button className="cs-btn-ghost" style={{ flex:1, marginTop:0 }} onClick={() => setModalOptimizar(null)}>
                     ← Volver

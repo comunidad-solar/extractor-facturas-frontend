@@ -119,8 +119,9 @@ body { background: #EEECE8; font-family: 'DM Sans','Helvetica Neue',sans-serif; 
   .cs-card { padding:28px 20px; }
   .cs-results-card { padding:24px 16px; }
   .cs-row { flex-direction:column; gap:12px; }
-  .cs-header { padding:14px 20px; }
+  .cs-header { padding:14px 20px; min-height:66px; }
   .cs-header-logo { left:20px; }
+  .cs-header-logo img { height:32px !important; }
   .cs-header-nav { display:none; }
   .cs-client-grid { grid-template-columns:1fr; }
   .cs-manual-grid { grid-template-columns:1fr; }
@@ -137,4 +138,6 @@ body { background: #EEECE8; font-family: 'DM Sans','Helvetica Neue',sans-serif; 
   .cs-plan-regalo img { height:200px !important; width:100%; object-fit:contain; }
   .cs-plan-hero-img { display:none; }
   .cs-plan-hero-title { font-size:32px !important; }
+  .cs-plan-ahorro { margin-left:0 !important; width:100%; flex-direction:row !important; flex-wrap:wrap; justify-content:space-around !important; min-width:unset !important; }
+  .cs-plan-ahorro > div { flex:1; min-width:80px; }
 }
