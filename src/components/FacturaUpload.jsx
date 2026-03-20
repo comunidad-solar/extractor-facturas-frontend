@@ -588,7 +588,7 @@ export default function FacturaUpload() {
       return; // não continuar para o fluxo normal
     }
 
-    setSending(true); setError("");
+    setSending(true); setError(""); setStatus("loading_plan");
     const factura = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
     try {
       const fd = new FormData();
@@ -629,6 +629,7 @@ export default function FacturaUpload() {
       setStatus("sent");
     } catch (err) {
       setError(err.message);
+      setStatus("analyzed");
     } finally {
       setSending(false);
     }
@@ -1050,6 +1051,27 @@ energético.</p>
           </div>
         )}
 
+        {/* ── CARGANDO PLAN ── */}
+        {!loading && status === "loading_plan" && (
+          <div className="cs-card fade-in" style={{ textAlign:"center", padding:"60px 24px" }}>
+            <div style={{ fontSize:48, marginBottom:24 }}>☀️</div>
+            <h2 style={{ fontSize:18, fontWeight:700, color:"#111", marginBottom:12 }}>
+              Estamos calculando tu plan personalizado…
+            </h2>
+            <p style={{ fontSize:13, color:"#777", marginBottom:32 }}>
+              Esto puede tardar unos segundos.
+            </p>
+            <div style={{ display:"flex", justifyContent:"center", gap:8 }}>
+              {[0,1,2].map(i => (
+                <div key={i} style={{
+                  width:10, height:10, borderRadius:"50%", background:"#E48409",
+                  animation:"cs-bounce 1s infinite", animationDelay:`${i*0.2}s`,
+                }}/>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── ASESOR SOLICITADO ── */}
         {!loading && status === "asesor_solicitado" && (
           <div className="cs-card fade-in" style={{ textAlign:"center" }}>
@@ -1153,7 +1175,7 @@ energético.</p>
         )}
 
         {/* ── STEP 2 — Factura ── */}
-        {!loading && status !== "sent" && status !== "asesor_solicitado" && step === 2 && (
+        {!loading && status !== "sent" && status !== "asesor_solicitado" && status !== "loading_plan" && step === 2 && (
           <>
             {/* Option selector */}
             {mode === null && (
