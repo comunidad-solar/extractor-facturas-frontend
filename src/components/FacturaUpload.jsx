@@ -77,8 +77,8 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu/server/api/get-ce-info-lat-lng";
 
 const API_BASE        = "https://extractor.13.38.9.119.nip.io";
-const QUOTING_URL     = "https://quoting-api.13.38.9.119.nip.io/api/asesores/factura-details-demo";
-const LEAD_URL        = "https://quoting-api.13.38.9.119.nip.io/api/asesores/factura-details-demo";
+const QUOTING_URL     = "https://quoting-new.13.38.9.119.nip.io/api/asesores/factura-details-demo";
+const LEAD_URL        = "https://quoting-new.13.38.9.119.nip.io/api/asesores/factura-details-demo";
 const NOMINATIM_URL   = "https://nominatim.openstreetmap.org";
 const CE_DETAIL_URL   = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu";
 
