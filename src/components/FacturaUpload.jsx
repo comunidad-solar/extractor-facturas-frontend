@@ -89,7 +89,7 @@ const CE_STATUS_LABELS = {
 };
 
 // TODO: confirmar endpoint com o backend
-const ASESOR_ENVIO_URL    = "";
+const ASESOR_ENVIO_URL    = "https://dummyjson.com/test";
 // TODO: confirmar URL de redirecionamento após envío
 const ASESOR_REDIRECT_URL = "https://main.d3rqv6h66vhq03.amplifyapp.com?cups={{cups}}";
 
