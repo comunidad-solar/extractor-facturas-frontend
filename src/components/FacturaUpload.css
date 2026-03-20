@@ -23,8 +23,8 @@ body { background: #EEECE8; font-family: 'DM Sans','Helvetica Neue',sans-serif; 
 .cs-btn-ghost:active { background:#e8e8e4; }
 
 .cs-results-card button { transition:background-color 0.15s, color 0.15s; }
-.cs-results-card button:hover { background-color:#EF931D !important; color:#000 !important; }
-.cs-results-card button:active { background-color:#121212 !important; color:#fff !important; }
+.cs-results-card button:not(.cs-tab-btn):hover { background-color:#EF931D !important; color:#000 !important; }
+.cs-results-card button:not(.cs-tab-btn):active { background-color:#121212 !important; color:#fff !important; }
 
 .cs-btn-phone { width:100%; background:#2d7a2d; color:#fff; border:none; border-radius:10px; padding:14px 0; font-size:15px; font-weight:600; font-family:inherit; cursor:pointer; margin-top:12px; display:flex; align-items:center; justify-content:center; gap:8px; transition:background 0.2s; }
 .cs-btn-phone:hover { background:#1f5c1f; }

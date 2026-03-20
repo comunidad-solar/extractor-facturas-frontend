@@ -84,7 +84,7 @@ const CE_DETAIL_URL   = "https://comunidades-energeticas-api-20084454554.catalys
 
 // Mapa de estados de la CE a etiquetas visibles
 const CE_STATUS_LABELS = {
-  "waiting list": "En Espera",
+  "Waiting list": "En Espera",
   "Available":    "En Contratación",
 };
 
@@ -711,6 +711,7 @@ export default function FacturaUpload() {
 
         {/* ── PLAN PERSONALIZADO ── */}
         {!loading && status === "sent" && (
+          <>
           <div className="cs-results-card fade-in" style={{ maxWidth:1000, padding:"0 0 40px", backgroundColor:"#EEECE8" }}>
 
             {/* ── HERO ── */}
@@ -760,7 +761,7 @@ export default function FacturaUpload() {
                   </p>
                   <p style={{ fontSize:11, color:"#aaa" }}>(IVA 21% incluido)</p>
                   <button
-                    style={{ marginTop:10, background:"#E48409", color:"#fff", border:"none", borderRadius:24, padding:"10px 28px", fontSize:13, fontWeight:700, fontFamily:"inherit", cursor:"not-allowed", opacity:0.6, letterSpacing:"0.05em" }}
+                    style={{ marginTop:10, background:"#E48409", color:"#fff", border:"none", borderRadius:24, padding:"10px 28px", fontSize:13, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.05em" }}
                     onClick={() => {}}>
                     CONTRATAR
                   </button>
@@ -893,6 +894,7 @@ energético.</p>
                   ].map(({ id, label }) => (
                     <button
                       key={id}
+                      className="cs-tab-btn"
                       onClick={() => setTabActiva(id)}
                       style={{
                         background: tabActiva === id ? "#fff" : "#F2C080",
@@ -1018,6 +1020,9 @@ energético.</p>
               </p>
             </div>
           </div>
+
+          
+          </>
         )}
 
         {/* ── FUERA DE ZONA ── */}
@@ -1400,6 +1405,71 @@ energético.</p>
         )}
 
       </div>
+      {/* ── FOOTER ── */}
+          <footer style={{ background:"#121212", color:"#fff", padding:"48px 40px 0", width:"100vw", marginLeft:"calc(-50vw + 50%)" }}>
+            <div style={{ maxWidth:1000, margin:"0 auto" }}>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:40, justifyContent:"space-between", paddingBottom:40, borderBottom:"1px solid rgba(255,255,255,0.1)" }}>
+
+                {/* Columna logo */}
+                <div style={{ minWidth:160 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:20 }}>
+                    <span style={{ fontSize:20 }}>🌤️</span>
+                    <span style={{ fontWeight:700, fontSize:15 }}>Comunidad Solar</span>
+                  </div>
+                  <div style={{ display:"flex", gap:12, marginBottom:16 }}>
+                    {["f", "▶", "in", "ig"].map((icon, i) => (
+                      <div key={i} style={{ width:32, height:32, borderRadius:"50%", background:"rgba(255,255,255,0.12)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                        {icon}
+                      </div>
+                    ))}
+                  </div>
+                  <p style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginBottom:8, cursor:"pointer" }}>CS en medios de comunicación</p>
+                  <p style={{ fontSize:12, color:"rgba(255,255,255,0.5)", cursor:"pointer" }}>Blog</p>
+                </div>
+
+                {/* Servicios */}
+                <div style={{ minWidth:160 }}>
+                  <p style={{ fontWeight:700, fontSize:13, marginBottom:16, color:"#fff" }}>Servicios</p>
+                  {["Autoconsumo Remoto","Comunidades Energéticas","Autoconsumo Individual","Anfitrión Solar","Comercializadora"].map(item => (
+                    <p key={item} style={{ fontSize:13, color:"rgba(255,255,255,0.6)", marginBottom:10, cursor:"pointer" }}>{item}</p>
+                  ))}
+                </div>
+
+                {/* Compañía */}
+                <div style={{ minWidth:140 }}>
+                  <p style={{ fontWeight:700, fontSize:13, marginBottom:16, color:"#fff" }}>Compañía</p>
+                  {["Sobre nosotros","Trabaja con nosotros","Centro de ayuda","Soporte","Eventos"].map(item => (
+                    <p key={item} style={{ fontSize:13, color:"rgba(255,255,255,0.6)", marginBottom:10, cursor:"pointer" }}>{item}</p>
+                  ))}
+                </div>
+
+                {/* Contacta */}
+                <div style={{ minWidth:180 }}>
+                  <p style={{ fontWeight:700, fontSize:13, marginBottom:16, color:"#fff" }}>Contacta</p>
+                  {[
+                    { icon:"📞", text:"+34 900 102 172" },
+                    { icon:"💬", text:"+34 699 752 019" },
+                    { icon:"✉️", text:"info@comunidad.solar" },
+                    { icon:"❓", text:"Preguntas frecuentes" },
+                  ].map(({ icon, text }) => (
+                    <p key={text} style={{ fontSize:13, color:"rgba(255,255,255,0.6)", marginBottom:10, cursor:"pointer" }}>
+                      <span style={{ marginRight:8 }}>{icon}</span>{text}
+                    </p>
+                  ))}
+                </div>
+              </div>
+
+              {/* Barra inferior */}
+              <div style={{ display:"flex", flexWrap:"wrap", gap:16, justifyContent:"space-between", alignItems:"center", padding:"20px 0", fontSize:12, color:"rgba(255,255,255,0.4)" }}>
+                <span>Copyright © 2025 Comunidad Solar</span>
+                <div style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
+                  {["Política de Privacidad","Política de Cookies","Aviso legal","Términos y Condiciones"].map(item => (
+                    <span key={item} style={{ cursor:"pointer", color:"rgba(255,255,255,0.55)" }}>{item}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </footer>
     </>
   );
 }
