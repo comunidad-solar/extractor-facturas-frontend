@@ -79,7 +79,7 @@ const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserv
 const API_BASE        = "https://extractor.13.38.9.119.nip.io";
 const PLAN_REDIRECT_URL = "https://main.d3rqv6h66vhq03.amplifyapp.com/";
 const QUOTING_URL       = "https://dummyjson.com/test";
-const LEAD_URL        = "https://quoting-new.13.38.9.119.nip.io/api/asesores/factura-details-demo";
+const LEAD_URL        = "https://dummyjson.com/test";
 const NOMINATIM_URL   = "https://nominatim.openstreetmap.org";
 const CE_DETAIL_URL   = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu";
 
@@ -221,7 +221,9 @@ export default function FacturaUpload() {
   const [sending, setSending]         = useState(false);
   const [leadWarn, setLeadWarn]       = useState(false);
   const [planData, setPlanData]       = useState(null);
-  const [panelesSel, setPanelesSel]   = useState(3); // optimizador de paneles
+  const [panelesSel, setPanelesSel]             = useState(3); // valor confirmado — sección Tu plan
+  const [panelesPropuesta, setPanelesPropuesta] = useState(3); // valor provisional — stepper
+  const [modalOptimizar, setModalOptimizar]     = useState(null); // null | "loading" | planProposta
   const [tabActiva, setTabActiva]     = useState("como"); // "como" | "plan" | "condiciones"
 
   // ── Modo asesor — detectar ?interno-asesores=true ────────────────────────
@@ -668,6 +670,7 @@ export default function FacturaUpload() {
       const plan = await quotingRes.json();
       setPlanData(plan ?? null);
       setPanelesSel(plan?.numeroPaneles ?? 3);
+      setPanelesPropuesta(plan?.numeroPaneles ?? 3);
       setStatus("sent");
     } catch (err) {
       setError(err.message);
@@ -675,6 +678,43 @@ export default function FacturaUpload() {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleOptimizar = async () => {
+    setModalOptimizar("loading");
+    const factura = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
+    const payload = {
+      cliente, factura, Fsmstate, FsmPrevious: fsmPrevious,
+      ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta },
+      numeroPaneles: panelesPropuesta,
+    };
+    console.log("[optimizar] payload enviado:", payload);
+    try {
+      const res = await fetch(QUOTING_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const plan = await res.json();
+      setModalOptimizar(plan);
+    } catch (err) {
+      setModalOptimizar(null);
+      setError(err.message);
+    }
+  };
+
+  const handleAceptarPropuesta = () => {
+    const proposta = modalOptimizar;
+    setPlanData(proposta);
+    setPanelesSel(panelesPropuesta);
+    setModalOptimizar(null);
+    // fire-and-forget: señal de aceptación al backend
+    fetch(QUOTING_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...proposta, numeroPaneles: panelesPropuesta, aceptado: true }),
+    }).catch(() => {});
   };
 
   const handleReset = () => {
@@ -863,7 +903,7 @@ export default function FacturaUpload() {
                 </div>
 
                 {/* Métricas de ahorro */}
-                <div style={{ flexShrink:0, marginLeft:16, border:"2px solid #E48409", borderRadius:14, padding:"20px 20px", display:"flex", flexDirection:"column", gap:12, background:"#fff", minWidth:160, justifyContent:"center", alignItems:"center" }}>
+                <div className="cs-plan-ahorro" style={{ flexShrink:0, marginLeft:16, border:"2px solid #E48409", borderRadius:14, padding:"20px 20px", display:"flex", flexDirection:"column", gap:12, background:"#fff", minWidth:160, justifyContent:"center", alignItems:"center" }}>
                   <p style={{ fontSize:12, fontWeight:700, color:"#E48409", textTransform:"uppercase", letterSpacing:"0.08em", textAlign:"center" }}>AHORRO*</p>
                   <div style={{ textAlign:"center" }}>
                     <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroMensual ?? 38.35)}€</p>
@@ -906,15 +946,15 @@ export default function FacturaUpload() {
                   {/* Stepper */}
                   <div style={{ display:"flex", alignItems:"center", gap:0, background:"#fff", borderRadius:10, border:"1.5px solid #000000", overflow:"hidden" }}>
                     <button
-                      onClick={() => setPanelesSel(p => Math.max(1, p - 1))}
+                      onClick={() => setPanelesPropuesta(p => Math.max(1, p - 1))}
                       style={{ background:"none", border:"none", padding:"8px 14px", fontSize:18, fontWeight:700, cursor:"pointer", color:"#E48409", fontFamily:"inherit" }}>
                       −
                     </button>
                     <span style={{ fontSize:20, fontWeight:700, color:"#121212", minWidth:32, textAlign:"center" }}>
-                      {panelesSel}
+                      {panelesPropuesta}
                     </span>
                     <button
-                      onClick={() => setPanelesSel(p => p + 1)}
+                      onClick={() => setPanelesPropuesta(p => p + 1)}
                       style={{ background:"none", border:"none", padding:"8px 14px", fontSize:18, fontWeight:700, cursor:"pointer", color:"#E48409", fontFamily:"inherit" }}>
                       +
                     </button>
@@ -926,7 +966,7 @@ optimizando tu plan de
 participación con un asesor
 energético.</p>
                   <button
-                    onClick={() => {}}
+                    onClick={handleOptimizar}
                     style={{ background:"#fff", color:"#E48409", border:"2px solid #E48409", borderRadius:8, padding:"8px 20px", fontSize:12, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.05em", width:"100%" }}>
                     OPTIMIZAR
                   </button>
@@ -1071,7 +1111,6 @@ energético.</p>
             </div>
           </div>
 
-          
           </>
         )}
 
@@ -1490,6 +1529,53 @@ energético.</p>
         )}
 
       </div>
+
+      {/* ── MODAL OPTIMIZAR ── */}
+      {modalOptimizar !== null && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+          <div style={{ background:"#fff", borderRadius:16, padding:"32px 28px", maxWidth:560, width:"100%", maxHeight:"90vh", overflowY:"auto", boxShadow:"0 8px 40px rgba(0,0,0,0.18)" }}>
+            {modalOptimizar === "loading" ? (
+              <div style={{ textAlign:"center", padding:"40px 0" }}>
+                <div style={{ fontSize:40, marginBottom:20 }}>☀️</div>
+                <p style={{ fontSize:15, fontWeight:700, color:"#111", marginBottom:8 }}>Calculando tu nueva propuesta…</p>
+                <p style={{ fontSize:13, color:"#777", marginBottom:28 }}>Esto puede tardar unos segundos.</p>
+                <div style={{ display:"flex", justifyContent:"center", gap:8 }}>
+                  {[0,1,2].map(i => (
+                    <div key={i} style={{ width:10, height:10, borderRadius:"50%", background:"#E48409", animation:"cs-bounce 1s infinite", animationDelay:`${i*0.2}s` }} />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                <h3 style={{ fontSize:16, fontWeight:700, color:"#111", marginBottom:20 }}>
+                  Propuesta con {panelesPropuesta} paneles
+                </h3>
+                <table className="cs-table" style={{ marginBottom:20 }}>
+                  <tbody>
+                    <tr><td>Numero de paneles</td><td>{panelesPropuesta}</td></tr>
+                    <tr><td>Potencia total</td><td>{parseInt(fmtES(modalOptimizar?.potenciaTotal ?? 0))} kWh</td></tr>
+                    <tr><td>Producción de energía anual estimada*</td><td>{fmtES(modalOptimizar?.produccionAnual ?? 0)} kWh</td></tr>
+                    <tr><td>Ahorro anual medio estimado*</td><td>{fmtES(modalOptimizar?.ahorroAnual ?? 0)} €</td></tr>
+                    <tr><td>Ahorro total estimado durante 25 años*</td><td>{fmtES(modalOptimizar?.ahorro25Anos ?? 0)} €</td></tr>
+                    <tr><td>Coeficiente de distribución</td><td>{fmtES(modalOptimizar?.coeficienteDistribucion ?? 0, 0)} %</td></tr>
+                    <tr><td>Pago al contado</td><td>{fmtES(modalOptimizar?.pagoUnico ?? 0)} €</td></tr>
+                    <tr><td>Plazo estimado de recuperación*</td><td>{fmtES(modalOptimizar?.plazoRecuperacion ?? 0, 1)} años</td></tr>
+                  </tbody>
+                </table>
+                <div style={{ display:"flex", gap:12 }}>
+                  <button className="cs-btn-ghost" style={{ flex:1, marginTop:0 }} onClick={() => setModalOptimizar(null)}>
+                    ← Volver
+                  </button>
+                  <button className="cs-btn-primary" style={{ flex:1, marginTop:0 }} onClick={handleAceptarPropuesta}>
+                    Aceptar propuesta
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── FOOTER ── */}
           <footer style={{ background:"#121212", color:"#fff", padding:"48px 40px 0", width:"100vw", marginLeft:"calc(-50vw + 50%)" }}>
             <div style={{ maxWidth:1000, margin:"0 auto" }}>
