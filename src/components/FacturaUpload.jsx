@@ -77,7 +77,8 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu/server/api/get-ce-info-lat-lng";
 
 const API_BASE        = "https://extractor.13.38.9.119.nip.io";
-const QUOTING_URL     = "https://quoting-new.13.38.9.119.nip.io/api/asesores/factura-details-demo";
+const PLAN_REDIRECT_URL = "https://main.d3rqv6h66vhq03.amplifyapp.com/";
+const QUOTING_URL       = "https://dummyjson.com/test";
 const LEAD_URL        = "https://quoting-new.13.38.9.119.nip.io/api/asesores/factura-details-demo";
 const NOMINATIM_URL   = "https://nominatim.openstreetmap.org";
 const CE_DETAIL_URL   = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu";
@@ -111,6 +112,48 @@ function buildPayloadAsesor(mode, facturaData, cupsData, manualFields) {
     return { origen: "cups", ...cupsData, ...manualFields };
   }
   return {};
+}
+
+// Construye la URL de redirección al quoting con todos los datos como query params
+function buildRedirectURL(baseUrl, cliente, factura) {
+  const f = factura ?? {};
+  const c = cliente ?? {};
+  const p = new URLSearchParams();
+  p.set("cups",             f.cups             ?? "");
+  p.set("periodo_inicio",   f.periodo_inicio   ?? "");
+  p.set("periodo_fin",      f.periodo_fin      ?? "");
+  p.set("comercializadora", f.comercializadora ?? "");
+  p.set("pp_p1",  f.precios_potencia?.p1 ?? "");
+  p.set("pp_p2",  f.precios_potencia?.p2 ?? "");
+  p.set("pp_p3",  f.precios_potencia?.p3 ?? "");
+  p.set("pp_p4",  f.precios_potencia?.p4 ?? "");
+  p.set("pp_p5",  f.precios_potencia?.p5 ?? "");
+  p.set("pp_p6",  f.precios_potencia?.p6 ?? "");
+  p.set("imp_ele",          f.impuestos?.imp_ele  ?? "");
+  p.set("iva",              f.impuestos?.iva      ?? "");
+  p.set("alq_eq_dia",       f.otros?.alq_eq_dia   ?? "");
+  p.set("tarifa_acceso",    f.tarifa_acceso    ?? "");
+  p.set("distribuidora",    f.distribuidora    ?? "");
+  p.set("pot_p1_kw", f.potencias_kw?.p1 ?? "");
+  p.set("pot_p2_kw", f.potencias_kw?.p2 ?? "");
+  p.set("pot_p3_kw", f.potencias_kw?.p3 ?? "");
+  p.set("pot_p4_kw", f.potencias_kw?.p4 ?? "");
+  p.set("pot_p5_kw", f.potencias_kw?.p5 ?? "");
+  p.set("pot_p6_kw", f.potencias_kw?.p6 ?? "");
+  p.set("consumo_p1_kwh", f.consumos_kwh?.p1 ?? "");
+  p.set("consumo_p2_kwh", f.consumos_kwh?.p2 ?? "");
+  p.set("consumo_p3_kwh", f.consumos_kwh?.p3 ?? "");
+  p.set("consumo_p4_kwh", f.consumos_kwh?.p4 ?? "");
+  p.set("consumo_p5_kwh", f.consumos_kwh?.p5 ?? "");
+  p.set("consumo_p6_kwh", f.consumos_kwh?.p6 ?? "");
+  p.set("dias_facturados", f.dias_facturados ?? "");
+  p.set("api_ok",    f.api?.api_ok    ?? "");
+  p.set("api_error", f.api?.api_error ?? "");
+  p.set("nombre",    c.nombre    ?? "");
+  p.set("apellidos", c.apellidos ?? "");
+  p.set("correo",    c.correo    ?? "");
+  p.set("direccion", c.direccion ?? "");
+  return `${baseUrl}?${p.toString()}`;
 }
 
 async function enviarLead(url, payload, onWarn) {
@@ -573,12 +616,8 @@ export default function FacturaUpload() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        if (ASESOR_REDIRECT_URL) {
-          window.location.href = ASESOR_REDIRECT_URL;
-        } else {
-          console.warn("[asesor] ASESOR_REDIRECT_URL não configurada — sem redirecionamento");
-          setStatus("sent");
-        }
+        const facturaAsesor = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
+        window.location.href = buildRedirectURL(PLAN_REDIRECT_URL, cliente, facturaAsesor);
       } catch (err) {
         console.error("[asesor] Erro no envío:", err);
         setError(err.message);
@@ -604,6 +643,9 @@ export default function FacturaUpload() {
           .catch(() => `HTTP ${res.status}`);
         throw new Error(detail);
       }
+
+      // Abrir quoting en nueva pestaña con los datos como query params
+      window.open(buildRedirectURL(PLAN_REDIRECT_URL, cliente, factura), "_blank");
 
       // Llamar al backend de quoting con los datos de la factura
       const quotingRes = await fetch(QUOTING_URL, {
