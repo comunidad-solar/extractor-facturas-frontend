@@ -79,7 +79,7 @@ const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserv
 const API_BASE        = "https://extractor.13.38.9.119.nip.io";
 const PLAN_REDIRECT_URL = "https://main.d3rqv6h66vhq03.amplifyapp.com/";
 const QUOTING_URL       = "https://dummyjson.com/test";
-const LEAD_URL        = "https://quoting-new.13.38.9.119.nip.io/api/asesores/factura-details-demo";
+const LEAD_URL        = "https://dummyjson.com/test";
 const NOMINATIM_URL   = "https://nominatim.openstreetmap.org";
 const CE_DETAIL_URL   = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu";
 
@@ -221,7 +221,8 @@ export default function FacturaUpload() {
   const [sending, setSending]         = useState(false);
   const [leadWarn, setLeadWarn]       = useState(false);
   const [planData, setPlanData]       = useState(null);
-  const [panelesSel, setPanelesSel]   = useState(3); // optimizador de paneles
+  const [panelesSel, setPanelesSel]         = useState(3); // valor confirmado — sección Tu plan
+  const [panelesPropuesta, setPanelesPropuesta] = useState(3); // valor provisional — stepper
   const [tabActiva, setTabActiva]     = useState("como"); // "como" | "plan" | "condiciones"
 
   // ── Modo asesor — detectar ?interno-asesores=true ────────────────────────
@@ -668,6 +669,7 @@ export default function FacturaUpload() {
       const plan = await quotingRes.json();
       setPlanData(plan ?? null);
       setPanelesSel(plan?.numeroPaneles ?? 3);
+      setPanelesPropuesta(plan?.numeroPaneles ?? 3);
       setStatus("sent");
     } catch (err) {
       setError(err.message);
@@ -906,15 +908,15 @@ export default function FacturaUpload() {
                   {/* Stepper */}
                   <div style={{ display:"flex", alignItems:"center", gap:0, background:"#fff", borderRadius:10, border:"1.5px solid #000000", overflow:"hidden" }}>
                     <button
-                      onClick={() => setPanelesSel(p => Math.max(1, p - 1))}
+                      onClick={() => setPanelesPropuesta(p => Math.max(1, p - 1))}
                       style={{ background:"none", border:"none", padding:"8px 14px", fontSize:18, fontWeight:700, cursor:"pointer", color:"#E48409", fontFamily:"inherit" }}>
                       −
                     </button>
                     <span style={{ fontSize:20, fontWeight:700, color:"#121212", minWidth:32, textAlign:"center" }}>
-                      {panelesSel}
+                      {panelesPropuesta}
                     </span>
                     <button
-                      onClick={() => setPanelesSel(p => p + 1)}
+                      onClick={() => setPanelesPropuesta(p => p + 1)}
                       style={{ background:"none", border:"none", padding:"8px 14px", fontSize:18, fontWeight:700, cursor:"pointer", color:"#E48409", fontFamily:"inherit" }}>
                       +
                     </button>
@@ -926,7 +928,7 @@ optimizando tu plan de
 participación con un asesor
 energético.</p>
                   <button
-                    onClick={() => {}}
+                    onClick={() => setPanelesSel(panelesPropuesta)}
                     style={{ background:"#fff", color:"#E48409", border:"2px solid #E48409", borderRadius:8, padding:"8px 20px", fontSize:12, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.05em", width:"100%" }}>
                     OPTIMIZAR
                   </button>
