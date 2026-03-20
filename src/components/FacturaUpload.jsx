@@ -683,15 +683,17 @@ export default function FacturaUpload() {
   const handleOptimizar = async () => {
     setModalOptimizar("loading");
     const factura = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
+    const payload = {
+      cliente, factura, Fsmstate, FsmPrevious: fsmPrevious,
+      ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta },
+      numeroPaneles: panelesPropuesta,
+    };
+    console.log("[optimizar] payload enviado:", payload);
     try {
       const res = await fetch(QUOTING_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cliente, factura, Fsmstate, FsmPrevious: fsmPrevious,
-          ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta },
-          numeroPaneles: panelesPropuesta,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const plan = await res.json();
@@ -1108,54 +1110,6 @@ energético.</p>
               </p>
             </div>
           </div>
-
-          {/* ── MODAL OPTIMIZAR ── */}
-          {modalOptimizar !== null && (
-            <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
-              <div style={{ background:"#fff", borderRadius:16, padding:"32px 28px", maxWidth:560, width:"100%", maxHeight:"90vh", overflowY:"auto", boxShadow:"0 8px 40px rgba(0,0,0,0.18)" }}>
-                {modalOptimizar === "loading" ? (
-                  <div style={{ textAlign:"center", padding:"40px 0" }}>
-                    <div style={{ fontSize:40, marginBottom:20 }}>☀️</div>
-                    <p style={{ fontSize:15, fontWeight:700, color:"#111", marginBottom:8 }}>Calculando tu nueva propuesta…</p>
-                    <p style={{ fontSize:13, color:"#777", marginBottom:28 }}>Esto puede tardar unos segundos.</p>
-                    <div style={{ display:"flex", justifyContent:"center", gap:8 }}>
-                      {[0,1,2].map(i => (
-                        <div key={i} style={{ width:10, height:10, borderRadius:"50%", background:"#E48409", animation:"cs-bounce 1s infinite", animationDelay:`${i*0.2}s` }} />
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <h3 style={{ fontSize:16, fontWeight:700, color:"#111", marginBottom:20 }}>
-                      Propuesta con {panelesPropuesta} paneles
-                    </h3>
-                    {/* Tabla propuesta */}
-                    <table className="cs-table" style={{ marginBottom:20 }}>
-                      <tbody>
-                        <tr><td>Numero de paneles</td><td>{panelesPropuesta}</td></tr>
-                        <tr><td>Potencia total</td><td>{parseInt(fmtES(modalOptimizar?.potenciaTotal ?? 0))} kWh</td></tr>
-                        <tr><td>Producción de energía anual estimada*</td><td>{fmtES(modalOptimizar?.produccionAnual ?? 0)} kWh</td></tr>
-                        <tr><td>Ahorro anual medio estimado*</td><td>{fmtES(modalOptimizar?.ahorroAnual ?? 0)} €</td></tr>
-                        <tr><td>Ahorro total estimado durante 25 años*</td><td>{fmtES(modalOptimizar?.ahorro25Anos ?? 0)} €</td></tr>
-                        <tr><td>Coeficiente de distribución</td><td>{fmtES(modalOptimizar?.coeficienteDistribucion ?? 0, 0)} %</td></tr>
-                        <tr><td>Pago al contado</td><td>{fmtES(modalOptimizar?.pagoUnico ?? 0)} €</td></tr>
-                        <tr><td>Plazo estimado de recuperación*</td><td>{fmtES(modalOptimizar?.plazoRecuperacion ?? 0, 1)} años</td></tr>
-                      </tbody>
-                    </table>
-                    {/* Botones */}
-                    <div style={{ display:"flex", gap:12 }}>
-                      <button className="cs-btn-ghost" style={{ flex:1, marginTop:0 }} onClick={() => setModalOptimizar(null)}>
-                        ← Volver
-                      </button>
-                      <button className="cs-btn-primary" style={{ flex:1, marginTop:0 }} onClick={handleAceptarPropuesta}>
-                        Aceptar propuesta
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
 
           </>
         )}
@@ -1575,6 +1529,65 @@ energético.</p>
         )}
 
       </div>
+
+      {/* ── MODAL OPTIMIZAR ── */}
+      {modalOptimizar !== null && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+          <div style={{ background:"#fff", borderRadius:16, padding:"32px 28px", maxWidth:560, width:"100%", maxHeight:"90vh", overflowY:"auto", boxShadow:"0 8px 40px rgba(0,0,0,0.18)" }}>
+            {modalOptimizar === "loading" ? (
+              <div style={{ textAlign:"center", padding:"40px 0" }}>
+                <div style={{ fontSize:40, marginBottom:20 }}>☀️</div>
+                <p style={{ fontSize:15, fontWeight:700, color:"#111", marginBottom:8 }}>Calculando tu nueva propuesta…</p>
+                <p style={{ fontSize:13, color:"#777", marginBottom:28 }}>Esto puede tardar unos segundos.</p>
+                <div style={{ display:"flex", justifyContent:"center", gap:8 }}>
+                  {[0,1,2].map(i => (
+                    <div key={i} style={{ width:10, height:10, borderRadius:"50%", background:"#E48409", animation:"cs-bounce 1s infinite", animationDelay:`${i*0.2}s` }} />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                <h3 style={{ fontSize:16, fontWeight:700, color:"#111", marginBottom:20 }}>
+                  Propuesta con {panelesPropuesta} paneles
+                </h3>
+                <table className="cs-table" style={{ marginBottom:20 }}>
+                  <tbody>
+                    <tr><td>Numero de paneles</td><td>{panelesPropuesta}</td></tr>
+                    <tr><td>Potencia total</td><td>{parseInt(fmtES(modalOptimizar?.potenciaTotal ?? 0))} kWh</td></tr>
+                    <tr><td>Producción de energía anual estimada*</td><td>{fmtES(modalOptimizar?.produccionAnual ?? 0)} kWh</td></tr>
+                    <tr><td>Ahorro anual medio estimado*</td><td>{fmtES(modalOptimizar?.ahorroAnual ?? 0)} €</td></tr>
+                    <tr><td>Ahorro total estimado durante 25 años*</td><td>{fmtES(modalOptimizar?.ahorro25Anos ?? 0)} €</td></tr>
+                    <tr><td>Coeficiente de distribución</td><td>{fmtES(modalOptimizar?.coeficienteDistribucion ?? 0, 0)} %</td></tr>
+                    <tr><td>Pago al contado</td><td>{fmtES(modalOptimizar?.pagoUnico ?? 0)} €</td></tr>
+                    <tr><td>Plazo estimado de recuperación*</td><td>{fmtES(modalOptimizar?.plazoRecuperacion ?? 0, 1)} años</td></tr>
+                  </tbody>
+                </table>
+                <div style={{ display:"flex", gap:12, justifyContent:"center", marginBottom:28 }}>
+                  {[
+                    { label:"Al mes",     val: fmtES(modalOptimizar?.ahorroMensual ?? 0) },
+                    { label:"Al año",     val: fmtES(modalOptimizar?.ahorroAnual ?? 0) },
+                    { label:"En 25 años", val: fmtES(modalOptimizar?.ahorro25Anos ?? 0) },
+                  ].map(({ label, val }) => (
+                    <div key={label} style={{ flex:1, border:"2px solid #E48409", borderRadius:12, padding:"12px 8px", textAlign:"center" }}>
+                      <p style={{ fontSize:18, fontWeight:800, color:"#E48409" }}>{val}€</p>
+                      <p style={{ fontSize:11, color:"#555", marginTop:4 }}>{label}</p>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display:"flex", gap:12 }}>
+                  <button className="cs-btn-ghost" style={{ flex:1, marginTop:0 }} onClick={() => setModalOptimizar(null)}>
+                    ← Volver
+                  </button>
+                  <button className="cs-btn-primary" style={{ flex:1, marginTop:0 }} onClick={handleAceptarPropuesta}>
+                    Aceptar propuesta
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── FOOTER ── */}
           <footer style={{ background:"#121212", color:"#fff", padding:"48px 40px 0", width:"100vw", marginLeft:"calc(-50vw + 50%)" }}>
             <div style={{ maxWidth:1000, margin:"0 auto" }}>
