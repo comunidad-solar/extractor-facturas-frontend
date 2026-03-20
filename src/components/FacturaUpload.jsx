@@ -680,9 +680,16 @@ export default function FacturaUpload() {
 
         {/* Header */}
         <div className="cs-header">
-          <a href="https://comunidad.solar" className="cs-logo" target="_blank" rel="noreferrer">
-            🌤️ Comunidad Solar
+          <a href="https://comunidad.solar" target="_blank" rel="noreferrer" className="cs-header-logo">
+            <img src="/logo.png" alt="Comunidad Solar" style={{ height:38 }} />
           </a>
+          <nav className="cs-header-nav">
+            <span>🏘️ 3072 comuneros</span>
+            <span>🚩 Misión</span>
+            <span>📊 Soluciones ∨</span>
+            <span>👥 Nosotros</span>
+            <span>🎧 Contacto</span>
+          </nav>
         </div>
 
         {/* Indicador modo asesor */}
@@ -1413,8 +1420,7 @@ energético.</p>
                 {/* Columna logo */}
                 <div style={{ minWidth:160 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:20 }}>
-                    <span style={{ fontSize:20 }}>🌤️</span>
-                    <span style={{ fontWeight:700, fontSize:15 }}>Comunidad Solar</span>
+                    <img src="/logo.png" alt="Comunidad Solar" style={{ height:32 }} />
                   </div>
                   <div style={{ display:"flex", gap:12, marginBottom:16 }}>
                     {["f", "▶", "in", "ig"].map((icon, i) => (
