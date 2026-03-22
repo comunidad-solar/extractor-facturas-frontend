@@ -69,6 +69,12 @@ function resolverIdGeneracion(idGeneracionParam, ceNombre) {
   return CE_ID_MAP[ceNombre] || null;
 }
 
+// Lookup inverso: dado un id_generacion devuelve el nombre de la CE o null
+function getCeNombreById(id) {
+  if (!id) return null;
+  return Object.keys(CE_ID_MAP).find(nombre => CE_ID_MAP[nombre] === id) || null;
+}
+
 function haversineDistance(lat1, lon1, lat2, lon2) {
   const R = 6371000;
   const toRad = (deg) => (deg * Math.PI) / 180;
@@ -202,6 +208,7 @@ export default function FacturaUpload() {
   const [fsmPrevious, setFsmPrevious] = useState(null);
   const [ceNombre, setCeNombre]       = useState("");
   const [idGeneracion, setIdGeneracion] = useState("");
+  const [ceFijada, setCeFijada]         = useState(null); // nombre CE fijada por id_generacion en URL
   const [ceDireccion, setCeDireccion] = useState("");
   const [ceStatus, setCeStatus]       = useState("");
   const [ceEtiqueta, setCeEtiqueta]   = useState("");
@@ -242,7 +249,11 @@ export default function FacturaUpload() {
       setModoAsesor(true);
     }
     const idGen = params.get("id_generacion");
-    if (idGen) setIdGeneracion(idGen);
+    if (idGen) {
+      setIdGeneracion(idGen);
+      const nombre = getCeNombreById(idGen);
+      if (nombre) setCeFijada(nombre);
+    }
   }, []);
 
   // ── Pre-fetch lista CE al montar ──────────────────────────────────────────
@@ -472,7 +483,8 @@ export default function FacturaUpload() {
       });
 
       // 3. Calcular proximidad con Haversine
-      const ceResult = await runZonaCheck(userLat, userLon, ces);
+      const cesFiltradas = ceFijada ? ces.filter(ce => ce.name === ceFijada || ce.addressName === ceFijada) : ces;
+      const ceResult = await runZonaCheck(userLat, userLon, cesFiltradas.length ? cesFiltradas : ces);
       enviarLead(LEAD_URL, { cliente, ...ceResult, id_generacion: resolverIdGeneracion(idGeneracion, ceResult?.ceNombre) }, () => setLeadWarn(true)); // fire-and-forget
       if (ceResult?.fsmstate === "02_FUERA_ZONA") {
         setStatus("fuera_zona");
@@ -1187,6 +1199,12 @@ energético.</p>
               <div className="cs-step-dot inactive">2</div>
               <span className="cs-step-label inactive">Factura</span>
             </div>
+
+            {ceFijada && (
+              <p style={{ fontSize:12, color:"#aaa", marginBottom:16, textAlign:"center" }}>
+                Comunidad Energética: <strong style={{ color:"#888" }}>{ceFijada}</strong>
+              </p>
+            )}
 
             <h1 style={{ fontSize:22, fontWeight:700, color:"#111", marginBottom:6 }}>
               Tus datos de contacto
