@@ -6,6 +6,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import "./FacturaUpload.css";
+import { CE_ID_MAP } from "../constants/ceMappings";
 
 
 const FIELD_LABELS = {
@@ -62,6 +63,12 @@ const emptyManual = () =>
   );
 
 // ── Helpers — proximidad CE ───────────────────────────────────────────────────
+// Resolve el id_generacion: prioriza query param, luego mapa por nombre
+function resolverIdGeneracion(idGeneracionParam, ceNombre) {
+  if (idGeneracionParam) return idGeneracionParam;
+  return CE_ID_MAP[ceNombre] || null;
+}
+
 function haversineDistance(lat1, lon1, lat2, lon2) {
   const R = 6371000;
   const toRad = (deg) => (deg * Math.PI) / 180;
@@ -115,7 +122,7 @@ function buildPayloadAsesor(mode, facturaData, cupsData, manualFields) {
 }
 
 // Construye la URL de redirección al quoting con todos los datos como query params
-function buildRedirectURL(baseUrl, cliente, factura) {
+function buildRedirectURL(baseUrl, cliente, factura, idGen) {
   const f = factura ?? {};
   const c = cliente ?? {};
   const p = new URLSearchParams();
@@ -153,6 +160,7 @@ function buildRedirectURL(baseUrl, cliente, factura) {
   p.set("apellidos", c.apellidos ?? "");
   p.set("correo",    c.correo    ?? "");
   p.set("direccion", c.direccion ?? "");
+  if (idGen) p.set("id_generacion", idGen);
   return `${baseUrl}?${p.toString()}`;
 }
 
@@ -193,6 +201,7 @@ export default function FacturaUpload() {
   const [Fsmstate, setFsmstate]       = useState(""); // "01_DENTRO_ZONA" | "02_FUERA_ZONA"
   const [fsmPrevious, setFsmPrevious] = useState(null);
   const [ceNombre, setCeNombre]       = useState("");
+  const [idGeneracion, setIdGeneracion] = useState("");
   const [ceDireccion, setCeDireccion] = useState("");
   const [ceStatus, setCeStatus]       = useState("");
   const [ceEtiqueta, setCeEtiqueta]   = useState("");
@@ -232,6 +241,8 @@ export default function FacturaUpload() {
     if (params.get("interno-asesores") === "true") {
       setModoAsesor(true);
     }
+    const idGen = params.get("id_generacion");
+    if (idGen) setIdGeneracion(idGen);
   }, []);
 
   // ── Pre-fetch lista CE al montar ──────────────────────────────────────────
@@ -462,7 +473,7 @@ export default function FacturaUpload() {
 
       // 3. Calcular proximidad con Haversine
       const ceResult = await runZonaCheck(userLat, userLon, ces);
-      enviarLead(LEAD_URL, { cliente, ...ceResult }, () => setLeadWarn(true)); // fire-and-forget
+      enviarLead(LEAD_URL, { cliente, ...ceResult, id_generacion: resolverIdGeneracion(idGeneracion, ceResult?.ceNombre) }, () => setLeadWarn(true)); // fire-and-forget
       if (ceResult?.fsmstate === "02_FUERA_ZONA") {
         setStatus("fuera_zona");
       } else {
@@ -579,7 +590,7 @@ export default function FacturaUpload() {
       const fd = new FormData();
       fd.append("data", JSON.stringify({
         cliente, Fsmstate, FsmPrevious: fsmPrevious,
-        ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta },
+        ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) },
       }));
       const res = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
       if (!res.ok) {
@@ -618,7 +629,7 @@ export default function FacturaUpload() {
           body: JSON.stringify(payload),
         });
         const facturaAsesor = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
-        window.location.href = buildRedirectURL(PLAN_REDIRECT_URL, cliente, facturaAsesor);
+        window.location.href = buildRedirectURL(PLAN_REDIRECT_URL, cliente, facturaAsesor, resolverIdGeneracion(idGeneracion, ceNombre));
       } catch (err) {
         console.error("[asesor] Erro no envío:", err);
         setError(err.message);
@@ -634,7 +645,7 @@ export default function FacturaUpload() {
       const fd = new FormData();
       fd.append("data", JSON.stringify({
         cliente, factura, Fsmstate, FsmPrevious: fsmPrevious,
-        ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta },
+        ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) },
       }));
       if (mode === "pdf" && file) fd.append("file", file, file.name);
       const res = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
@@ -646,7 +657,7 @@ export default function FacturaUpload() {
       }
 
       // Abrir quoting en nueva pestaña con los datos como query params
-      window.open(buildRedirectURL(PLAN_REDIRECT_URL, cliente, factura), "_blank");
+      window.open(buildRedirectURL(PLAN_REDIRECT_URL, cliente, factura, resolverIdGeneracion(idGeneracion, ceNombre)), "_blank");
 
       // Llamar al backend de quoting con los datos de la factura
       const quotingRes = await fetch(QUOTING_URL, {
@@ -657,7 +668,7 @@ export default function FacturaUpload() {
           factura,
           Fsmstate,
           FsmPrevious: fsmPrevious,
-          ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta },
+          ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) },
         }),
       });
       if (!quotingRes.ok) {
@@ -684,7 +695,7 @@ export default function FacturaUpload() {
     const factura = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
     const payload = {
       cliente, factura, Fsmstate, FsmPrevious: fsmPrevious,
-      ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta },
+      ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) },
       numeroPaneles: panelesPropuesta,
     };
     console.log("[optimizar] payload enviado:", payload);
