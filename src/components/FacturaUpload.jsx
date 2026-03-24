@@ -254,6 +254,38 @@ export default function FacturaUpload() {
       const nombre = getCeNombreById(idGen);
       if (nombre) setCeFijada(nombre);
     }
+
+    // ── Demo plan-demo ────────────────────────────────────────────────────────
+    if (params.get("demo") === "true" && params.get("fase") === "plan-demo") {
+      const p = (key, fallback = null) => {
+        const v = params.get(key);
+        return v !== null ? parseFloat(v) : fallback;
+      };
+      const s = (key, fallback = "") => params.get(key) ?? fallback;
+
+      setCliente(c => ({
+        ...c,
+        nombre:    s("cliente.nombre"),
+        direccion: s("cliente.direccion"),
+      }));
+      setCeNombre(s("ceNombre"));
+      setCeStatus(s("ceStatus"));
+      setPanelesSel(p("panelesSel", 3));
+      setPanelesPropuesta(p("panelesSel", 3));
+      setPlanData({
+        ahorro25Anos:           p("ahorro25Anos",           1575.35),
+        pagoUnico:              p("pagoUnico",              3480.75),
+        pagoFinanciado:         p("pagoFinanciado",         41.33),
+        ahorroMensual:          p("ahorroMensual",          38.35),
+        ahorroAnual:            p("ahorroAnual",            460.20),
+        produccionAnual:        p("produccionAnual",        4101.25),
+        potenciaTotal:          p("potenciaTotal",          3),
+        coeficienteDistribucion:p("coeficienteDistribucion",5),
+        plazoRecuperacion:      p("plazoRecuperacion",      6.7),
+      });
+      setStatus("sent");
+      setLoading(false);
+    }
   }, []);
 
   // ── Pre-fetch lista CE al montar ──────────────────────────────────────────
