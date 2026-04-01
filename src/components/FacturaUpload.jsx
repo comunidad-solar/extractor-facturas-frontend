@@ -920,7 +920,7 @@ export default function FacturaUpload() {
                         {fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)}€
                         <span style={{ fontSize:14, fontWeight:400 }}>&nbsp;(IVA incluido)</span>
                       </p>
-                      <button className="cs-btn-primary" style={{ marginTop:16, width:"100%" }} onClick={() => {}}>
+                      <button style={{ marginTop:16, width:"100%", background:"#E48409", color:"#fff", border:"none", borderRadius:8, padding:"10px", fontSize:13, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.08em" }} onClick={() => {}}>
                         Contratar
                       </button>
                     </div>
