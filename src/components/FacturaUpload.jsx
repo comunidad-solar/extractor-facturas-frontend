@@ -44,11 +44,12 @@ const FIELD_LABELS = {
   pe_p4:            "Precio energía P4 (€/kWh)",
   pe_p5:            "Precio energía P5 (€/kWh)",
   pe_p6:            "Precio energía P6 (€/kWh)",
+  importe_factura:  "Importe factura (€)",
 };
 
 const MANUAL_FIELD_KEYS = [
   "periodo_inicio", "periodo_fin", "comercializadora",
-  "pp_p1", "pp_p2", "imp_ele", "iva", "alq_eq_dia",
+  "pp_p1", "pp_p2", "imp_ele", "iva", "alq_eq_dia", "importe_factura",
 ];
 
 const PRECIOS_POT_3TD_KEYS      = ["pp_p3", "pp_p4", "pp_p5", "pp_p6"];
@@ -160,6 +161,7 @@ function buildRedirectURL(baseUrl, cliente, factura, idGen, manualFields, rawDat
   p.set("imp_ele",          f.impuestos?.imp_ele  ?? "");
   p.set("iva",              f.impuestos?.iva      ?? "");
   p.set("alq_eq_dia",       f.otros?.alq_eq_dia   ?? "");
+  if (hasValue(rd?.importe_factura)) p.set("importe_factura", rd.importe_factura);
   p.set("tarifa_acceso",    f.tarifa_acceso    ?? "");
   p.set("distribuidora",    f.distribuidora    ?? "");
   p.set("pot_p1_kw", f.potencias_kw?.p1 ?? "");
@@ -631,7 +633,10 @@ export default function FacturaUpload() {
       p4: d.pp_p4 || null, p5: d.pp_p5 || null, p6: d.pp_p6 || null,
     },
     impuestos: { imp_ele: d.imp_ele || null, iva: d.iva || null },
-    otros: { alq_eq_dia: d.alq_eq_dia || null },
+    otros: {
+      alq_eq_dia:       d.alq_eq_dia       || null,
+      importe_factura:  d.importe_factura   ?? null,
+    },
     archivo: {},
     api: { api_ok: d.api_ok ?? null, api_error: d.api_error || "" },
   });
