@@ -1059,21 +1059,21 @@ export default function FacturaUpload() {
               <div className="cs-plan-tabla">
                 {/* Tabla */}
                 <div>
-                  <p className="cs-section-label" style={{ marginTop:0, color:"#000000" }}>Tu plan</p>
-                  <table className="cs-table">
+                  <p className="cs-section-label" style={{ marginTop:0, color:"#000000", fontSize:14 }}>Tu plan</p>
+                  <table className="cs-table" style={{ fontSize:16 }}>
                     <tbody>
-                      <tr><td style={{color:"#000000"}}>Numero de paneles</td><td>{panelesSel}</td></tr>
-                      <tr><td style={{color:"#000000"}}>Potencia total</td><td>{parseInt(fmtES(planData?.potenciaTotal ?? 3))} kWh</td></tr>
-                      <tr><td style={{color:"#000000"}}>Producción de energía anual estimada*</td><td>{fmtES(planData?.produccionAnual ?? 4101.25)} kWh</td></tr>
-                      <tr><td style={{color:"#000000"}}>Ahorro anual medio estimado*</td><td>{fmtES(planData?.ahorroAnual ?? 522.48)} €</td></tr>
+                      <tr><td style={{color:"#000000", fontSize:16}}>Numero de paneles</td><td  style={{ fontSize:16 }}>{panelesSel}</td></tr>
+                      <tr><td style={{color:"#000000", fontSize:16}}>Potencia total</td><td  style={{ fontSize:16 }}>{parseInt(fmtES(planData?.potenciaTotal ?? 3))} kWh</td></tr>
+                      <tr><td style={{color:"#000000", fontSize:16}}>Producción de energía anual estimada*</td><td  style={{ fontSize:16 }}>{fmtES(planData?.produccionAnual ?? 4101.25)} kWh</td></tr>
+                      <tr><td style={{color:"#000000", fontSize:16}}>Ahorro anual medio estimado*</td><td  style={{ fontSize:16 }}>{fmtES(planData?.ahorroAnual ?? 522.48)} €</td></tr>
                       {modoAlquiler ? (
-                        <tr><td style={{color:"#000000"}}>Precio mensual</td><td>{fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)} €</td></tr>
+                        <tr><td style={{color:"#000000", fontSize:16}}>Precio mensual</td><td  style={{ fontSize:16 }}>{fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)} €</td></tr>
                       ) : (
                         <>
-                          <tr><td style={{color:"#000000"}}>Ahorro total estimado durante 25 años*</td><td>{fmtES(planData?.ahorro25Anos ?? 15707.25)} €</td></tr>
-                          <tr><td style={{color:"#000000"}}>Coeficiente de distribución sobre total de la instalación</td><td>{fmtES(planData?.coeficienteDistribucion ?? 5, 0)} %</td></tr>
-                          <tr><td style={{color:"#000000"}}>Pago al contado</td><td>{fmtES(planData?.pagoUnico ?? 3480.75)} €</td></tr>
-                          <tr><td style={{color:"#000000"}}>Plazo estimado de recuperación del coste inicial*</td><td>{fmtES(planData?.plazoRecuperacion ?? 6.7, 1)} años</td></tr>
+                          <tr><td style={{color:"#000000", fontSize:16}}>Ahorro total estimado durante 25 años*</td><td  style={{ fontSize:16 }}>{fmtES(planData?.ahorro25Anos ?? 15707.25)} €</td></tr>
+                          <tr><td style={{color:"#000000", fontSize:16}}>Coeficiente de distribución sobre total de la instalación</td><td  style={{ fontSize:16 }}>{fmtES(planData?.coeficienteDistribucion ?? 5, 0)} %</td></tr>
+                          <tr><td style={{color:"#000000", fontSize:16}}>Pago al contado</td><td  style={{ fontSize:16 }}>{fmtES(planData?.pagoUnico ?? 3480.75)} €</td></tr>
+                          <tr><td style={{color:"#000000", fontSize:16}}>Plazo estimado de recuperación del coste inicial*</td><td  style={{ fontSize:16 }}>{fmtES(planData?.plazoRecuperacion ?? 6.7, 1)} años</td></tr>
                         </>
                       )}
                     </tbody>
@@ -1729,7 +1729,7 @@ energético.</p>
                 <h3 style={{ fontSize:16, fontWeight:700, color:"#111", marginBottom:20 }}>
                   Propuesta con {panelesPropuesta} paneles
                 </h3>
-                <table className="cs-table" style={{ marginBottom:20 }}>
+                <table className="cs-table" style={{ marginBottom:20, fontSize:16 }}>
                   <tbody>
                     <tr><td>Numero de paneles</td><td>{panelesPropuesta}</td></tr>
                     <tr><td>Potencia total</td><td>{parseInt(fmtES(modalOptimizar?.potenciaTotal ?? 0))} kWh</td></tr>
