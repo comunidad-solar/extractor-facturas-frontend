@@ -1026,29 +1026,32 @@ export default function FacturaUpload() {
                 </div>
 
                 {/* Métricas de ahorro */}
-                <div className="cs-plan-ahorro" style={{ flexShrink:0, marginLeft:16, border:"2px solid #E48409", borderRadius:14, padding:"20px 20px", display:"flex", flexDirection:"column", gap:12, background:"#fff", minWidth:160, justifyContent:"center", alignItems:"center" }}>
-                  <p style={{ fontSize:12, fontWeight:700, color:"#E48409", textTransform:"uppercase", letterSpacing:"0.08em", textAlign:"center" }}>AHORRO*</p>
-                  <div style={{ textAlign:"center" }}>
-                    <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroMensual ?? 38.35)}€</p>
-                    <p style={{ fontSize:11, color:"#555", marginTop:4 }}>Al mes</p>
-                  </div>
-                  <div style={{ textAlign:"center" }}>
-                    <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroAnual ?? 460.20)}€</p>
-                    <p style={{ fontSize:11, color:"#555", marginTop:4 }}>Al año</p>
-                  </div>
-                  <div style={{ textAlign:"center" }}>
-                    {modoAlquiler ? (
-                      <>
-                        <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES((cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0) * 2)}€</p>
-                        <p style={{ fontSize:11, color:"#555", marginTop:4 }}>Fianza</p>
-                      </>
-                    ) : (
-                      <>
+                <div className="cs-plan-ahorro" style={{ flexShrink:0, marginLeft:16, display:"flex", flexDirection:"column", gap:8, minWidth:160 }}>
+                  {/* Card principal: Al mes + Al año (+ En 25 años si venta) */}
+                  <div style={{ border:"2px solid #E48409", borderRadius:14, padding:"20px 20px", display:"flex", flexDirection:"column", gap:12, background:"#fff", justifyContent:"center", alignItems:"center" }}>
+                    <p style={{ fontSize:12, fontWeight:700, color:"#E48409", textTransform:"uppercase", letterSpacing:"0.08em", textAlign:"center" }}>AHORRO*</p>
+                    <div style={{ textAlign:"center" }}>
+                      <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroMensual ?? 38.35)}€</p>
+                      <p style={{ fontSize:11, color:"#555", marginTop:4 }}>Al mes</p>
+                    </div>
+                    <div style={{ textAlign:"center" }}>
+                      <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroAnual ?? 460.20)}€</p>
+                      <p style={{ fontSize:11, color:"#555", marginTop:4 }}>Al año</p>
+                    </div>
+                    {!modoAlquiler && (
+                      <div style={{ textAlign:"center" }}>
                         <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorro25Anos ?? 1575.35)}€</p>
                         <p style={{ fontSize:11, color:"#555", marginTop:4 }}>En 25 años (estimado)</p>
-                      </>
+                      </div>
                     )}
                   </div>
+                  {/* Card Fianza — solo en modo alquiler */}
+                  {modoAlquiler && (
+                    <div style={{ border:"2px solid #E48409", borderRadius:14, padding:"16px 20px", display:"flex", flexDirection:"column", gap:4, background:"#fff", justifyContent:"center", alignItems:"center" }}>
+                      <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES((cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0) * 2)}€</p>
+                      <p style={{ fontSize:11, color:"#555", marginTop:4 }}>Fianza</p>
+                    </div>
+                  )}
                 </div>
               </div>
 
