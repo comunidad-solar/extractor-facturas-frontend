@@ -38,6 +38,12 @@ const FIELD_LABELS = {
   consumo_p5_kwh:   "Consumo P5 (kWh)",
   consumo_p6_kwh:   "Consumo P6 (kWh)",
   dias_facturados:  "Días facturados",
+  pe_p1:            "Precio energía P1 (€/kWh)",
+  pe_p2:            "Precio energía P2 (€/kWh)",
+  pe_p3:            "Precio energía P3 (€/kWh)",
+  pe_p4:            "Precio energía P4 (€/kWh)",
+  pe_p5:            "Precio energía P5 (€/kWh)",
+  pe_p6:            "Precio energía P6 (€/kWh)",
 };
 
 const MANUAL_FIELD_KEYS = [
@@ -45,7 +51,9 @@ const MANUAL_FIELD_KEYS = [
   "pp_p1", "pp_p2", "imp_ele", "iva", "alq_eq_dia",
 ];
 
-const PRECIOS_POT_3TD_KEYS = ["pp_p3", "pp_p4", "pp_p5", "pp_p6"];
+const PRECIOS_POT_3TD_KEYS      = ["pp_p3", "pp_p4", "pp_p5", "pp_p6"];
+const PRECIOS_ENERGIA_BASE_KEYS = ["pe_p1", "pe_p2", "pe_p3"];
+const PRECIOS_ENERGIA_3TD_KEYS  = ["pe_p4", "pe_p5", "pe_p6"];
 
 const API_AUTO_KEYS = [
   "tarifa_acceso", "distribuidora",
@@ -59,7 +67,12 @@ const hasValue = (v) => v !== null && v !== undefined && v !== "" && v != 0;
 
 const emptyManual = () =>
   Object.fromEntries(
-    [...MANUAL_FIELD_KEYS, ...PRECIOS_POT_3TD_KEYS].map((k) => [k, ""])
+    [
+      ...MANUAL_FIELD_KEYS,
+      ...PRECIOS_POT_3TD_KEYS,
+      ...PRECIOS_ENERGIA_BASE_KEYS,
+      ...PRECIOS_ENERGIA_3TD_KEYS,
+    ].map((k) => [k, ""])
   );
 
 // ── Helpers — proximidad CE ───────────────────────────────────────────────────
@@ -128,9 +141,10 @@ function buildPayloadAsesor(mode, facturaData, cupsData, manualFields) {
 }
 
 // Construye la URL de redirección al quoting con todos los datos como query params
-function buildRedirectURL(baseUrl, cliente, factura, idGen) {
+function buildRedirectURL(baseUrl, cliente, factura, idGen, manualFields) {
   const f = factura ?? {};
   const c = cliente ?? {};
+  const mf = manualFields ?? {};
   const p = new URLSearchParams();
   p.set("cups",             f.cups             ?? "");
   p.set("periodo_inicio",   f.periodo_inicio   ?? "");
@@ -166,6 +180,11 @@ function buildRedirectURL(baseUrl, cliente, factura, idGen) {
   p.set("apellidos", c.apellidos ?? "");
   p.set("correo",    c.correo    ?? "");
   p.set("direccion", c.direccion ?? "");
+  // pe_p* — desde manualFields o facturaData
+  [...PRECIOS_ENERGIA_BASE_KEYS, ...PRECIOS_ENERGIA_3TD_KEYS].forEach((k) => {
+    const val = mf[k] || f[k] || "";
+    if (val) p.set(k, val);
+  });
   if (idGen) p.set("id_generacion", idGen);
   return `${baseUrl}?${p.toString()}`;
 }
@@ -673,7 +692,7 @@ export default function FacturaUpload() {
           body: JSON.stringify(payload),
         });
         const facturaAsesor = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
-        window.location.href = buildRedirectURL(PLAN_REDIRECT_URL, cliente, facturaAsesor, resolverIdGeneracion(idGeneracion, ceNombre));
+        window.location.href = buildRedirectURL(PLAN_REDIRECT_URL, cliente, facturaAsesor, resolverIdGeneracion(idGeneracion, ceNombre), manualFields);
       } catch (err) {
         console.error("[asesor] Erro no envío:", err);
         setError(err.message);
@@ -701,7 +720,7 @@ export default function FacturaUpload() {
       }
 
       // Abrir quoting en nueva pestaña con los datos como query params
-      window.open(buildRedirectURL(PLAN_REDIRECT_URL, cliente, factura, resolverIdGeneracion(idGeneracion, ceNombre)), "_blank");
+      window.open(buildRedirectURL(PLAN_REDIRECT_URL, cliente, factura, resolverIdGeneracion(idGeneracion, ceNombre), manualFields), "_blank");
 
       // Llamar al backend de quoting con los datos de la factura
       const quotingRes = await fetch(QUOTING_URL, {
@@ -1492,6 +1511,30 @@ energético.</p>
                   </tbody>
                 </table>
 
+                <p className="cs-section-label">Precios de energía</p>
+                <div className="cs-manual-grid">
+                  {PRECIOS_ENERGIA_BASE_KEYS.map((k) => (
+                    <div key={k} className="cs-field-group">
+                      <label className="cs-label">{FIELD_LABELS[k]}</label>
+                      <input className="cs-input" name={k}
+                        placeholder="Introduce el valor"
+                        value={manualFields[k] || facturaData?.[k] || ""}
+                        onChange={handleManual} />
+                    </div>
+                  ))}
+                  {facturaData?.tarifa_acceso !== "2.0TD" &&
+                    PRECIOS_ENERGIA_3TD_KEYS.map((k) => (
+                      <div key={k} className="cs-field-group">
+                        <label className="cs-label">{FIELD_LABELS[k]}</label>
+                        <input className="cs-input" name={k}
+                          placeholder="Introduce el valor"
+                          value={manualFields[k] || facturaData?.[k] || ""}
+                          onChange={handleManual} />
+                      </div>
+                    ))
+                  }
+                </div>
+
                 <button className="cs-btn-primary" style={{ marginTop:0 }} onClick={handleEnviar} disabled={sending}>
                   {sending ? "Enviando..." : "Enviar datos →"}
                 </button>
@@ -1567,10 +1610,12 @@ energético.</p>
 
                 <p className="cs-section-label">Completa los datos restantes</p>
                 <div className="cs-manual-grid">
-                  {(cupsData?.tarifa_acceso !== "2.0TD"
-                    ? [...MANUAL_FIELD_KEYS, ...PRECIOS_POT_3TD_KEYS]
-                    : MANUAL_FIELD_KEYS
-                  ).map((k) => (
+                  {[
+                    ...MANUAL_FIELD_KEYS,
+                    ...(cupsData?.tarifa_acceso !== "2.0TD" ? PRECIOS_POT_3TD_KEYS : []),
+                    ...PRECIOS_ENERGIA_BASE_KEYS,
+                    ...(cupsData?.tarifa_acceso !== "2.0TD" ? PRECIOS_ENERGIA_3TD_KEYS : []),
+                  ].map((k) => (
                     <div key={k} className="cs-field-group">
                       <label className="cs-label">{FIELD_LABELS[k]}</label>
                       <input className="cs-input" name={k}
