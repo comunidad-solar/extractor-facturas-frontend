@@ -142,7 +142,7 @@ function buildPayloadAsesor(mode, facturaData, cupsData, manualFields) {
 }
 
 // Construye la URL de redirección al quoting con todos los datos como query params
-function buildRedirectURL(baseUrl, cliente, factura, idGen, manualFields, rawData) {
+function buildRedirectURL(baseUrl, cliente, factura, idGen, manualFields, rawData, modoAlquiler, cuotaAlquilerMes) {
   const f = factura ?? {};
   const c = cliente ?? {};
   const mf = manualFields ?? {};
@@ -189,6 +189,8 @@ function buildRedirectURL(baseUrl, cliente, factura, idGen, manualFields, rawDat
     if (val) p.set(k, val);
   });
   if (idGen) p.set("id_generacion", idGen);
+  p.set("modo", modoAlquiler ? "alquiler" : "venta");
+  if (hasValue(cuotaAlquilerMes)) p.set("cuotaAlquilerMes", cuotaAlquilerMes);
   return `${baseUrl}?${p.toString()}`;
 }
 
@@ -263,6 +265,8 @@ export default function FacturaUpload() {
   const [panelesPropuesta, setPanelesPropuesta] = useState(3); // valor provisional — stepper
   const [modalOptimizar, setModalOptimizar]     = useState(null); // null | "loading" | planProposta
   const [tabActiva, setTabActiva]     = useState("como"); // "como" | "plan" | "condiciones"
+  const [modoAlquiler, setModoAlquiler]         = useState(false);
+  const [cuotaAlquilerMes, setCuotaAlquilerMes] = useState(null);
 
   // ── Modo asesor — detectar ?interno-asesores=true ────────────────────────
   useEffect(() => {
@@ -308,6 +312,12 @@ export default function FacturaUpload() {
       setStatus("sent");
       setLoading(false);
     }
+
+    const modoParam = params.get("modo");
+    setModoAlquiler(modoParam === "alquiler");
+
+    const cuotaRaw = parseFloat(params.get("cuotaAlquilerMes"));
+    if (!isNaN(cuotaRaw)) setCuotaAlquilerMes(cuotaRaw);
   }, []);
 
   // ── Pre-fetch lista CE al montar ──────────────────────────────────────────
@@ -634,8 +644,10 @@ export default function FacturaUpload() {
     },
     impuestos: { imp_ele: d.imp_ele || null, iva: d.iva || null },
     otros: {
-      alq_eq_dia:       d.alq_eq_dia       || null,
-      importe_factura:  d.importe_factura   ?? null,
+      alq_eq_dia:        d.alq_eq_dia        || null,
+      importe_factura:   d.importe_factura    ?? null,
+      modo:              d.modo              ?? null,
+      cuotaAlquilerMes:  d.cuotaAlquilerMes  ?? null,
     },
     archivo: {},
     api: { api_ok: d.api_ok ?? null, api_error: d.api_error || "" },
@@ -645,12 +657,12 @@ export default function FacturaUpload() {
     if (!facturaData) return {};
     const merged = { ...facturaData, ...Object.fromEntries(
       Object.entries(manualFields).filter(([, v]) => v !== "")
-    )};
+    ), modo: modoAlquiler ? "alquiler" : "venta", cuotaAlquilerMes: cuotaAlquilerMes ?? null };
     return buildFactura(merged);
   };
 
   const buildFacturaCUPS = () =>
-    buildFactura({ cups, ...cupsData, ...manualFields });
+    buildFactura({ cups, ...cupsData, ...manualFields, modo: modoAlquiler ? "alquiler" : "venta", cuotaAlquilerMes: cuotaAlquilerMes ?? null });
 
   const handleEnviarAsesor = async () => {
     if (sending) return;
@@ -698,7 +710,7 @@ export default function FacturaUpload() {
           body: JSON.stringify(payload),
         });
         const facturaAsesor = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
-        window.location.href = buildRedirectURL(PLAN_REDIRECT_URL, cliente, facturaAsesor, resolverIdGeneracion(idGeneracion, ceNombre), manualFields, facturaData ?? cupsData);
+        window.location.href = buildRedirectURL(PLAN_REDIRECT_URL, cliente, facturaAsesor, resolverIdGeneracion(idGeneracion, ceNombre), manualFields, facturaData ?? cupsData, modoAlquiler, cuotaAlquilerMes);
       } catch (err) {
         console.error("[asesor] Erro no envío:", err);
         setError(err.message);
@@ -726,7 +738,7 @@ export default function FacturaUpload() {
       }
 
       // Abrir quoting en nueva pestaña con los datos como query params
-      window.open(buildRedirectURL(PLAN_REDIRECT_URL, cliente, factura, resolverIdGeneracion(idGeneracion, ceNombre), manualFields, facturaData ?? cupsData), "_blank");
+      window.open(buildRedirectURL(PLAN_REDIRECT_URL, cliente, factura, resolverIdGeneracion(idGeneracion, ceNombre), manualFields, facturaData ?? cupsData, modoAlquiler, cuotaAlquilerMes), "_blank");
 
       // Llamar al backend de quoting con los datos de la factura
       const quotingRes = await fetch(QUOTING_URL, {
@@ -886,26 +898,54 @@ export default function FacturaUpload() {
             {/* ── HERO ── */}
             <div style={{borderRadius:"16px 16px 0 0", padding:"36px 48px 32px", color:"#fff", marginBottom:0 }}>
               <div className="cs-plan-hero">
-                {/* Columna izquierda: texto + ahorro */}
-                <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column", gap:0 }}>
-                  <p style={{ fontSize:22, fontWeight:400, opacity:0.9, marginBottom:4, color:"#000000" }}>
-                    Hola <strong>{cliente.nombre}</strong>, estás a un paso de tener
-                  </p>
-                  <p className="cs-plan-hero-title" style={{ fontSize:46, fontWeight:800, lineHeight:1.1, marginBottom:12, color:"#E48409" }}>
-                    tu propia energía a 0€
-                  </p>
-                  <p style={{ fontSize:18, opacity:0.8, marginBottom:4, color:"#000000"}}>
-                    Este es tu fantástico plan en la Comunidad Energética de
-                  </p>
-                  <p style={{ fontSize:18, fontWeight:700, color:"#000000", marginBottom:20 }}>{ceNombre || "—"}</p>
-                  {/* Ahorro destacado — abaixo do texto */}
-                  <div style={{ background:"rgb(255, 255, 255)", borderRadius:12, padding:"20px 28px", display:"inline-block", maxWidth:400, boxShadow:"0 2px 12px rgba(0,0,0,0.1)" }}>
-                    <p style={{ fontSize:11, opacity:0.8, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6, color:"#000000" }}>Ahorro previsto en 25 años</p>
-                    <p style={{ fontSize:48, fontWeight:800, lineHeight:1, color:"#000000"}}>
-                      {fmtES(planData?.ahorro25Anos ?? 1575.35 /* TODO: confirmar nombre del campo con el backend */)}€<span style={{ fontSize:22 }}>*</span>
+                {modoAlquiler ? (
+                  /* HERO ALQUILER */
+                  <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column", gap:0 }}>
+                    <p style={{ fontSize:22, fontWeight:400, marginBottom:4, color:"#000000" }}>
+                      Hola <strong>{cliente.nombre}</strong>, estás a un paso de
                     </p>
+                    <p className="cs-plan-hero-title" style={{ fontSize:46, fontWeight:800, lineHeight:1.1, marginBottom:12, color:"#E48409" }}>
+                      ahorrar un 30% en tu<br />factura de la luz
+                    </p>
+                    <p style={{ fontSize:18, opacity:0.8, marginBottom:4, color:"#000000" }}>
+                      Este es tu fantástico plan en la Comunidad Energética de
+                    </p>
+                    <p style={{ fontSize:18, fontWeight:700, color:"#000000", marginBottom:20 }}>{ceNombre || "—"}</p>
+                    <div style={{ background:"#fff", borderRadius:12, padding:"20px 28px", display:"inline-block", maxWidth:340, boxShadow:"0 2px 12px rgba(0,0,0,0.1)" }}>
+                      <p style={{ fontSize:13, color:"#888", marginBottom:8 }}>
+                        ⊙ Cuota mensual &nbsp;
+                        <strong style={{ color:"#E48409" }}>{panelesSel} paneles</strong>
+                      </p>
+                      <p style={{ fontSize:48, fontWeight:800, lineHeight:1, color:"#000" }}>
+                        {fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)}€
+                        <span style={{ fontSize:14, fontWeight:400 }}>&nbsp;(IVA incluido)</span>
+                      </p>
+                      <button className="cs-btn-primary" style={{ marginTop:16, width:"100%" }} onClick={() => {}}>
+                        Contratar
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  /* HERO VENTA */
+                  <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column", gap:0 }}>
+                    <p style={{ fontSize:22, fontWeight:400, opacity:0.9, marginBottom:4, color:"#000000" }}>
+                      Hola <strong>{cliente.nombre}</strong>, estás a un paso de tener
+                    </p>
+                    <p className="cs-plan-hero-title" style={{ fontSize:46, fontWeight:800, lineHeight:1.1, marginBottom:12, color:"#E48409" }}>
+                      tu propia energía a 0€
+                    </p>
+                    <p style={{ fontSize:18, opacity:0.8, marginBottom:4, color:"#000000"}}>
+                      Este es tu fantástico plan en la Comunidad Energética de
+                    </p>
+                    <p style={{ fontSize:18, fontWeight:700, color:"#000000", marginBottom:20 }}>{ceNombre || "—"}</p>
+                    <div style={{ background:"rgb(255, 255, 255)", borderRadius:12, padding:"20px 28px", display:"inline-block", maxWidth:400, boxShadow:"0 2px 12px rgba(0,0,0,0.1)" }}>
+                      <p style={{ fontSize:11, opacity:0.8, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6, color:"#000000" }}>Ahorro previsto en 25 años</p>
+                      <p style={{ fontSize:48, fontWeight:800, lineHeight:1, color:"#000000"}}>
+                        {fmtES(planData?.ahorro25Anos ?? 1575.35)}€<span style={{ fontSize:22 }}>*</span>
+                      </p>
+                    </div>
+                  </div>
+                )}
                 {/* Columna derecha: imagen del edificio */}
                 <div className="cs-plan-hero-img" style={{ flex:"0 0 auto", display:"flex", alignItems:"flex-start"}}>
                   <img
@@ -920,31 +960,35 @@ export default function FacturaUpload() {
             <div className="cs-plan-inner">
 
               {/* ── IMPORTE A PAGAR ── */}
-              <p className="cs-section-label" style={{ marginTop:0, color:"#000000" }}>Importe a pagar</p>
-              <div className="cs-plan-pagos">
-                {/* Pago único */}
-                <div style={{ background:"#fff", border:"2px solid #EEECE8", borderRadius:14, padding:"24px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, boxShadow:"0 2px 12px rgba(0,0,0,0.03)" }}>
-                  <p style={{ fontSize:11, fontWeight:700, color:"#000000", textTransform:"uppercase", letterSpacing:"0.08em" }}>Pago único</p>
-                  <p style={{ fontSize:38, fontWeight:800, color:"#121212", lineHeight:1.1 }}>
-                    {fmtES(planData?.pagoUnico ?? 3480.75 /* TODO: confirmar nombre del campo con el backend */)}€
-                  </p>
-                  <p style={{ fontSize:11, color:"#aaa" }}>(IVA 21% incluido)</p>
-                  <button
-                    style={{ marginTop:10, background:"#E48409", color:"#fff", border:"none", borderRadius:24, padding:"10px 28px", fontSize:13, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.05em" }}
-                    onClick={() => {}}>
-                    CONTRATAR
-                  </button>
-                </div>
-                {/* Financiado */}
-                <div style={{ background:"#fff", border:"2px solid #EEECE8", borderRadius:14, padding:"24px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, boxShadow:"0 2px 12px rgba(0,0,0,0.03)"}}>
-                  <p style={{ fontSize:11, fontWeight:700, color:"#000000", textTransform:"uppercase", letterSpacing:"0.08em" }}>Financiado</p>
-                  <p style={{ fontSize:12, color:"#000000", marginBottom:2 }}>Hasta 120 cuotas mensuales</p>
-                  <p style={{ fontSize:38, fontWeight:800, color:"#121212", lineHeight:1.1 }}>
-                    {fmtES(planData?.pagoFinanciado ?? 41.33/* TODO: confirmar nombre del campo con el backend */)}€
-                  </p>
-                  <p style={{ fontSize:11, color:"#aaa" }}>(IVA 21% incluido)</p>
-                </div>
-              </div>
+              {!modoAlquiler && (
+                <>
+                  <p className="cs-section-label" style={{ marginTop:0, color:"#000000" }}>Importe a pagar</p>
+                  <div className="cs-plan-pagos">
+                    {/* Pago único */}
+                    <div style={{ background:"#fff", border:"2px solid #EEECE8", borderRadius:14, padding:"24px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, boxShadow:"0 2px 12px rgba(0,0,0,0.03)" }}>
+                      <p style={{ fontSize:11, fontWeight:700, color:"#000000", textTransform:"uppercase", letterSpacing:"0.08em" }}>Pago único</p>
+                      <p style={{ fontSize:38, fontWeight:800, color:"#121212", lineHeight:1.1 }}>
+                        {fmtES(planData?.pagoUnico ?? 3480.75)}€
+                      </p>
+                      <p style={{ fontSize:11, color:"#aaa" }}>(IVA 21% incluido)</p>
+                      <button
+                        style={{ marginTop:10, background:"#E48409", color:"#fff", border:"none", borderRadius:24, padding:"10px 28px", fontSize:13, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.05em" }}
+                        onClick={() => {}}>
+                        CONTRATAR
+                      </button>
+                    </div>
+                    {/* Financiado */}
+                    <div style={{ background:"#fff", border:"2px solid #EEECE8", borderRadius:14, padding:"24px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, boxShadow:"0 2px 12px rgba(0,0,0,0.03)"}}>
+                      <p style={{ fontSize:11, fontWeight:700, color:"#000000", textTransform:"uppercase", letterSpacing:"0.08em" }}>Financiado</p>
+                      <p style={{ fontSize:12, color:"#000000", marginBottom:2 }}>Hasta 120 cuotas mensuales</p>
+                      <p style={{ fontSize:38, fontWeight:800, color:"#121212", lineHeight:1.1 }}>
+                        {fmtES(planData?.pagoFinanciado ?? 41.33)}€
+                      </p>
+                      <p style={{ fontSize:11, color:"#aaa" }}>(IVA 21% incluido)</p>
+                    </div>
+                  </div>
+                </>
+              )}
               {/* ── ORIGEN / DESTINO ── */}
               <div className="cs-plan-origen">
                 {/* Tarjeta Origen — CE */}
@@ -993,8 +1037,17 @@ export default function FacturaUpload() {
                     <p style={{ fontSize:11, color:"#555", marginTop:4 }}>Al año</p>
                   </div>
                   <div style={{ textAlign:"center" }}>
-                    <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorro25Anos ?? 1575.35)}€</p>
-                    <p style={{ fontSize:11, color:"#555", marginTop:4 }}>En 25 años (estimado)</p>
+                    {modoAlquiler ? (
+                      <>
+                        <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES((cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0) * 2)}€</p>
+                        <p style={{ fontSize:11, color:"#555", marginTop:4 }}>Fianza</p>
+                      </>
+                    ) : (
+                      <>
+                        <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorro25Anos ?? 1575.35)}€</p>
+                        <p style={{ fontSize:11, color:"#555", marginTop:4 }}>En 25 años (estimado)</p>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1005,15 +1058,21 @@ export default function FacturaUpload() {
                 <div>
                   <p className="cs-section-label" style={{ marginTop:0, color:"#000000" }}>Tu plan</p>
                   <table className="cs-table">
-                    <tbody >
-                      <tr ><td style={{color:"#000000"}}>Numero de paneles</td><td>{panelesSel}</td></tr>
-                      <tr><td style={{color:"#000000"}}>Potencia total</td><td>{parseInt(fmtES(planData?.potenciaTotal ?? 3) /* TODO: confirmar nombre del campo con el backend */)} kWh</td></tr>
-                      <tr><td style={{color:"#000000"}}>Producción de energía anual estimada*</td><td>{fmtES(planData?.produccionAnual ?? 4101.25 /* TODO: confirmar nombre del campo con el backend */)} kWh</td></tr>
-                      <tr><td style={{color:"#000000"}}>Ahorro anual medio estimado*</td><td>{fmtES(planData?.ahorroAnual ?? 522.48 /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
-                      <tr><td style={{color:"#000000"}}>Ahorro total estimado durante 25 años*</td><td>{fmtES(planData?.ahorro25Anos ?? 15707.25 /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
-                      <tr><td style={{color:"#000000"}}>Coeficiente de distribución sobre total de la instalación</td><td>{fmtES(planData?.coeficienteDistribucion ?? 5  /* TODO: confirmar nombre del campo con el backend */, 0)} %</td></tr>
-                      <tr><td style={{color:"#000000"}}>Pago al contado</td><td>{fmtES(planData?.pagoUnico ?? 3480.75 /* TODO: confirmar nombre del campo con el backend */)} €</td></tr>
-                      <tr><td style={{color:"#000000"}}>Plazo estimado de recuperación del coste inicial*</td><td>{fmtES(planData?.plazoRecuperacion ?? 6.7 /* TODO: confirmar nombre del campo con el backend */, 1)} años</td></tr>
+                    <tbody>
+                      <tr><td style={{color:"#000000"}}>Numero de paneles</td><td>{panelesSel}</td></tr>
+                      <tr><td style={{color:"#000000"}}>Potencia total</td><td>{parseInt(fmtES(planData?.potenciaTotal ?? 3))} kWh</td></tr>
+                      <tr><td style={{color:"#000000"}}>Producción de energía anual estimada*</td><td>{fmtES(planData?.produccionAnual ?? 4101.25)} kWh</td></tr>
+                      <tr><td style={{color:"#000000"}}>Ahorro anual medio estimado*</td><td>{fmtES(planData?.ahorroAnual ?? 522.48)} €</td></tr>
+                      {modoAlquiler ? (
+                        <tr><td style={{color:"#000000"}}>Precio mensual</td><td>{fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)} €</td></tr>
+                      ) : (
+                        <>
+                          <tr><td style={{color:"#000000"}}>Ahorro total estimado durante 25 años*</td><td>{fmtES(planData?.ahorro25Anos ?? 15707.25)} €</td></tr>
+                          <tr><td style={{color:"#000000"}}>Coeficiente de distribución sobre total de la instalación</td><td>{fmtES(planData?.coeficienteDistribucion ?? 5, 0)} %</td></tr>
+                          <tr><td style={{color:"#000000"}}>Pago al contado</td><td>{fmtES(planData?.pagoUnico ?? 3480.75)} €</td></tr>
+                          <tr><td style={{color:"#000000"}}>Plazo estimado de recuperación del coste inicial*</td><td>{fmtES(planData?.plazoRecuperacion ?? 6.7, 1)} años</td></tr>
+                        </>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1132,22 +1191,24 @@ energético.</p>
               </div>
 
               {/* ── MÉTRICAS DE AHORRO ── */}
-              <div style={{ background:"#ffffff", borderRadius:12, padding:"20px 28px", marginBottom:65, display:"flex", justifyContent:"space-around", alignItems:"center", textAlign:"center", gap:8, boxShadow:"0 2px 12px rgba(0,0,0,0.05)" }}>
-                <div>
-                  <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroMensual ?? 38.35 /* TODO: confirmar nombre del campo con el backend */)}€</p>
-                  <p style={{ fontSize:11, color:"#000000", marginTop:4 }}>Al mes</p>
+              {!modoAlquiler && (
+                <div style={{ background:"#ffffff", borderRadius:12, padding:"20px 28px", marginBottom:65, display:"flex", justifyContent:"space-around", alignItems:"center", textAlign:"center", gap:8, boxShadow:"0 2px 12px rgba(0,0,0,0.05)" }}>
+                  <div>
+                    <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroMensual ?? 38.35)}€</p>
+                    <p style={{ fontSize:11, color:"#000000", marginTop:4 }}>Al mes</p>
+                  </div>
+                  <div style={{ width:1, background:"#d0cfc9", alignSelf:"stretch" }} />
+                  <div>
+                    <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroAnual ?? 460.20)}€</p>
+                    <p style={{ fontSize:11, color:"#000000", marginTop:4 }}>Al año</p>
+                  </div>
+                  <div style={{ width:1, background:"#d0cfc9", alignSelf:"stretch" }} />
+                  <div>
+                    <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorro25Anos ?? 1575.35)}€</p>
+                    <p style={{ fontSize:11, color:"#000000", marginTop:4 }}>En 25 años (estimado)</p>
+                  </div>
                 </div>
-                <div style={{ width:1, background:"#d0cfc9", alignSelf:"stretch" }} />
-                <div>
-                  <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroAnual ?? 460.20 /* TODO: confirmar nombre del campo con el backend */)}€</p>
-                  <p style={{ fontSize:11, color:"#000000", marginTop:4 }}>Al año</p>
-                </div>
-                <div style={{ width:1, background:"#d0cfc9", alignSelf:"stretch" }} />
-                <div>
-                  <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorro25Anos ?? 1575.35 /* TODO: confirmar nombre del campo con el backend */)}€</p>
-                  <p style={{ fontSize:11, color:"#000000", marginTop:4 }}>En 25 años (estimado)</p>
-                </div>
-              </div>
+              )}
 
               {/* ── REGALO APP ── */}
               <div className="cs-plan-regalo" style={{ background:"#ffffff", boxShadow:"0 2px 12px rgba(0,0,0,0.05)" }}>
