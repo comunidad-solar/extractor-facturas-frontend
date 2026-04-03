@@ -100,6 +100,7 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+
 // CE API proxiada por Vite (evita CORS en dev)
 const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu/server/api/get-ce-info-lat-lng";
 
@@ -267,6 +268,7 @@ export default function FacturaUpload() {
   const [tabActiva, setTabActiva]     = useState("como"); // "como" | "plan" | "condiciones"
   const [modoAlquiler, setModoAlquiler]         = useState(false);
   const [cuotaAlquilerMes, setCuotaAlquilerMes] = useState(null);
+  const [dealId, setDealId]                     = useState(null);
 
   // ── Modo asesor — detectar ?interno-asesores=true ────────────────────────
   useEffect(() => {
@@ -622,6 +624,23 @@ export default function FacturaUpload() {
   };
 
   // ── Final send ───────────────────────────────────────────────────────────
+  // Builds the cliente object for all outgoing payloads.
+  // Pass overrideDealId right after receiving it from /enviar so the value
+  // is used in the same tick — state update (setDealId) is async.
+  const buildClientePayload = (overrideDealId = null) => ({
+    nombre:     cliente.nombre,
+    apellidos:  cliente.apellidos,
+    correo:     cliente.correo,
+    telefono:   cliente.telefono,
+    direccion:  cliente.direccion,
+    dealId:     overrideDealId ?? dealId,
+    databaseId: "",
+    dni:        "",
+    mpklogId:   "",
+    // TODO: elegir dinámicamente entre "Alquiler" y "Venta" según modoAlquiler
+    tipoVenta:  "Alquiler",
+  });
+
   const buildFactura = (d) => ({
     cups:             d.cups             || "",
     comercializadora: d.comercializadora || "",
@@ -630,6 +649,7 @@ export default function FacturaUpload() {
     periodo_inicio:   d.periodo_inicio   || "",
     periodo_fin:      d.periodo_fin      || "",
     dias_facturados:  d.dias_facturados  || null,
+    importe_factura:  parseFloat(d.importe_factura) || null,
     potencias_kw: {
       p1: d.pot_p1_kw || null, p2: d.pot_p2_kw || null, p3: d.pot_p3_kw || null,
       p4: d.pot_p4_kw || null, p5: d.pot_p5_kw || null, p6: d.pot_p6_kw || null,
@@ -642,12 +662,14 @@ export default function FacturaUpload() {
       p1: d.pp_p1 || null, p2: d.pp_p2 || null, p3: d.pp_p3 || null,
       p4: d.pp_p4 || null, p5: d.pp_p5 || null, p6: d.pp_p6 || null,
     },
+    precios_energia: {
+      pe_p1: parseFloat(d.pe_p1) || null, pe_p2: parseFloat(d.pe_p2) || null, pe_p3: parseFloat(d.pe_p3) || null,
+      pe_p4: parseFloat(d.pe_p4) || null, pe_p5: parseFloat(d.pe_p5) || null, pe_p6: parseFloat(d.pe_p6) || null,
+    },
     impuestos: { imp_ele: d.imp_ele || null, iva: d.iva || null },
     otros: {
-      alq_eq_dia:        d.alq_eq_dia        || null,
-      importe_factura:   d.importe_factura    ?? null,
-      modo:              d.modo              ?? null,
-      cuotaAlquilerMes:  d.cuotaAlquilerMes  ?? null,
+      alq_eq_dia:       d.alq_eq_dia       || null,
+      cuotaAlquilerMes: d.cuotaAlquilerMes ?? null,
     },
     archivo: {},
     api: { api_ok: d.api_ok ?? null, api_error: d.api_error || "" },
@@ -670,17 +692,24 @@ export default function FacturaUpload() {
     try {
       const fd = new FormData();
       fd.append("data", JSON.stringify({
-        cliente, Fsmstate, FsmPrevious: fsmPrevious,
+        cliente: buildClientePayload(),
+        Fsmstate, FsmPrevious: fsmPrevious,
         ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) },
       }));
-      const res = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
-      if (!res.ok) {
-        const detail = await res.json()
-          .then((d) => typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail))
-          .catch(() => `HTTP ${res.status}`);
+      const resAsesor  = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
+      const dataAsesor = await resAsesor.json().catch(() => ({}));
+      if (!resAsesor.ok) {
+        const detail = typeof dataAsesor.detail === "string" ? dataAsesor.detail : JSON.stringify(dataAsesor.detail) || `HTTP ${resAsesor.status}`;
         throw new Error(detail);
       }
-      setStatus("asesor_solicitado");
+      const dealIdRecebido = dataAsesor?.dealId ?? null;
+      if (dealIdRecebido) setDealId(dealIdRecebido);
+      const redirectParams = [
+        cliente.correo    ? `correo=${encodeURIComponent(cliente.correo)}`          : null,
+        dealIdRecebido    ? `dealId=${encodeURIComponent(dealIdRecebido)}`           : null,
+        idGeneracion      ? `id_generacion=${encodeURIComponent(idGeneracion)}`     : null,
+      ].filter(Boolean).join("&");
+      window.location.href = `${ASESOR_REDIRECT_URL}?${redirectParams}`;
     } catch (err) {
       setError(err.message);
     } finally {
@@ -703,14 +732,35 @@ export default function FacturaUpload() {
       }
       setSending(true); setError("");
       try {
-        const payload = buildPayloadAsesor(mode, facturaData, cupsData, manualFields);
-        await fetch(ASESOR_ENVIO_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
         const facturaAsesor = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
-        window.location.href = buildRedirectURL(PLAN_REDIRECT_URL, cliente, facturaAsesor, resolverIdGeneracion(idGeneracion, ceNombre), manualFields, facturaData ?? cupsData, modoAlquiler, cuotaAlquilerMes);
+        const cePayload = { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) };
+
+        // Enviar ao Zoho Flow via /enviar (igual ao fluxo normal)
+        const fd = new FormData();
+        fd.append("data", JSON.stringify({ cliente: buildClientePayload(), factura: facturaAsesor, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload }));
+        if (mode === "pdf" && file) fd.append("file", file, file.name);
+
+        // Enviar em paralelo: /enviar (Zoho Flow) + ASESOR_ENVIO_URL
+        const [resEnviar] = await Promise.all([
+          fetch(`${API_BASE}/enviar`, { method: "POST", body: fd }),
+          fetch(ASESOR_ENVIO_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(buildPayloadAsesor(mode, facturaData, cupsData, manualFields)),
+          }),
+        ]);
+        const dataEnviar     = await resEnviar.json().catch(() => ({}));
+        const dealIdRecebido = dataEnviar?.dealId ?? null;
+        if (dealIdRecebido) setDealId(dealIdRecebido);
+
+        const redirectParams = [
+          cups                              ? `cups=${encodeURIComponent(cups)}`                     : null,
+          cliente.nombre                    ? `nombre=${encodeURIComponent(cliente.nombre)}`         : null,
+          cliente.correo                    ? `correo=${encodeURIComponent(cliente.correo)}`         : null,
+          dealIdRecebido                    ? `dealId=${encodeURIComponent(dealIdRecebido)}`         : null,
+          idGeneracion                      ? `id_generacion=${encodeURIComponent(idGeneracion)}`   : null,
+        ].filter(Boolean).join("&");
+        window.location.href = `${ASESOR_REDIRECT_URL}?${redirectParams}`;
       } catch (err) {
         console.error("[asesor] Erro no envío:", err);
         setError(err.message);
@@ -722,34 +772,33 @@ export default function FacturaUpload() {
 
     setSending(true); setError(""); setStatus("loading_plan");
     const factura = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
+    const cePayload = { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) };
     try {
       const fd = new FormData();
-      fd.append("data", JSON.stringify({
-        cliente, factura, Fsmstate, FsmPrevious: fsmPrevious,
-        ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) },
-      }));
+      fd.append("data", JSON.stringify({ cliente: buildClientePayload(), factura, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload }));
       if (mode === "pdf" && file) fd.append("file", file, file.name);
-      const res = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
-      if (!res.ok) {
-        const detail = await res.json()
-          .then((d) => typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail))
-          .catch(() => `HTTP ${res.status}`);
+      const resEnviar  = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
+      const dataEnviar = await resEnviar.json().catch(() => ({}));
+      if (!resEnviar.ok) {
+        const detail = typeof dataEnviar.detail === "string" ? dataEnviar.detail : JSON.stringify(dataEnviar.detail) || `HTTP ${resEnviar.status}`;
         throw new Error(detail);
       }
+      const dealIdRecebido = dataEnviar?.dealId ?? null;
+      if (dealIdRecebido) setDealId(dealIdRecebido);
 
       // Abrir quoting en nueva pestaña con los datos como query params
       window.open(buildRedirectURL(PLAN_REDIRECT_URL, cliente, factura, resolverIdGeneracion(idGeneracion, ceNombre), manualFields, facturaData ?? cupsData, modoAlquiler, cuotaAlquilerMes), "_blank");
 
-      // Llamar al backend de quoting con los datos de la factura
+      // Llamar al backend de quoting con los datos de la factura (cliente ya con dealId)
       const quotingRes = await fetch(QUOTING_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          cliente,
+          cliente: buildClientePayload(dealIdRecebido),
           factura,
           Fsmstate,
           FsmPrevious: fsmPrevious,
-          ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) },
+          ce: cePayload,
         }),
       });
       if (!quotingRes.ok) {
