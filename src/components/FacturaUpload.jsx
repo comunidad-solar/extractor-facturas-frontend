@@ -92,9 +92,62 @@ export default function FacturaUpload() {
   const [dniError, setDniError]                 = useState("");
   const [enviandoContrato, setEnviandoContrato] = useState(false);
 
-  // ── Modo asesor — detectar ?interno-asesores=true ────────────────────────
+  // ── Leitura inicial da URL ────────────────────────────────────────────────
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const s = (key, fallback = "") => params.get(key) ?? fallback;
+    const n = (key) => parseFloat(params.get(key)) || null;
+
+    // ── Preencher urlParamsRef SEMPRE — independente do modo ─────────────────
+    urlParamsRef.current = {
+      cliente: {
+        nombre:    s("cliente.nombre")    || s("nombre"),
+        apellidos: s("cliente.apellidos") || s("apellidos"),
+        correo:    s("cliente.correo")    || s("correo"),
+        telefono:  s("cliente.telefono")  || s("telefono"),
+        direccion: s("cliente.direccion") || s("direccion"),
+      },
+      ce: {
+        nombre:    s("ceNombre")    || s("ce.nombre"),
+        status:    s("ceStatus")    || s("ce.status"),
+        etiqueta:  s("ceEtiqueta")  || s("ce.etiqueta"),
+        direccion: s("ceDireccion") || s("ce.direccion"),
+      },
+      dealId:      s("dealId")        || null,
+      mpklogId:    s("mpklogId")      || null,
+      idGen:       s("id_generacion") || null,
+      fsmstate:    s("Fsmstate")      || s("fsmstate")    || null,
+      fsmPrevious: s("FsmPrevious")   || s("fsmPrevious") || null,
+      facturaLS:   null,
+      modeLS:      null,
+      factura: {
+        cups:             s("cups"),
+        comercializadora: s("comercializadora"),
+        distribuidora:    s("distribuidora"),
+        tarifa_acceso:    s("tarifa_acceso"),
+        periodo_inicio:   s("periodo_inicio"),
+        periodo_fin:      s("periodo_fin"),
+        dias_facturados:  n("dias_facturados"),
+        importe_factura:  n("importe_factura"),
+        pot_p1_kw: n("pot_p1_kw"), pot_p2_kw: n("pot_p2_kw"),
+        pot_p3_kw: n("pot_p3_kw"), pot_p4_kw: n("pot_p4_kw"),
+        pot_p5_kw: n("pot_p5_kw"), pot_p6_kw: n("pot_p6_kw"),
+        consumo_p1_kwh: n("consumo_p1_kwh"), consumo_p2_kwh: n("consumo_p2_kwh"),
+        consumo_p3_kwh: n("consumo_p3_kwh"), consumo_p4_kwh: n("consumo_p4_kwh"),
+        consumo_p5_kwh: n("consumo_p5_kwh"), consumo_p6_kwh: n("consumo_p6_kwh"),
+        pp_p1: n("pp_p1"), pp_p2: n("pp_p2"), pp_p3: n("pp_p3"),
+        pp_p4: n("pp_p4"), pp_p5: n("pp_p5"), pp_p6: n("pp_p6"),
+        pe_p1: n("pe_p1"), pe_p2: n("pe_p2"), pe_p3: n("pe_p3"),
+        pe_p4: n("pe_p4"), pe_p5: n("pe_p5"), pe_p6: n("pe_p6"),
+        imp_ele:    n("imp_ele"),
+        iva:        n("iva"),
+        alq_eq_dia: n("alq_eq_dia"),
+        api_ok:    params.get("api_ok") === "true"  ? true
+                 : params.get("api_ok") === "false" ? false : null,
+        api_error: s("api_error"),
+      },
+    };
+
     if (params.get("interno-asesores") === "true") {
       setModoAsesor(true);
     }
@@ -103,58 +156,6 @@ export default function FacturaUpload() {
       setIdGeneracion(idGen);
       const nombre = getCeNombreById(idGen);
       if (nombre) setCeFijada(nombre);
-    }
-
-    // ── Preencher ref com dados da URL — síncrono, disponível em handlers ────
-    {
-      const s = (key, fallback = "") => params.get(key) ?? fallback;
-      const n = (key) => parseFloat(params.get(key)) || null;
-      urlParamsRef.current = {
-        cliente: {
-          nombre:    s("cliente.nombre")    || s("nombre"),
-          apellidos: s("cliente.apellidos") || s("apellidos"),
-          correo:    s("cliente.correo")    || s("correo"),
-          telefono:  s("cliente.telefono")  || s("telefono"),
-          direccion: s("cliente.direccion") || s("direccion"),
-        },
-        ce: {
-          nombre:    s("ceNombre")    || s("ce.nombre"),
-          status:    s("ceStatus")    || s("ce.status"),
-          etiqueta:  s("ceEtiqueta")  || s("ce.etiqueta"),
-          direccion: s("ceDireccion") || s("ce.direccion"),
-        },
-        dealId:      s("dealId")        || null,
-        mpklogId:    s("mpklogId")      || null,
-        idGen:       s("id_generacion") || null,
-        fsmstate:    s("Fsmstate")    || s("fsmstate")    || null,
-        fsmPrevious: s("FsmPrevious") || s("fsmPrevious") || null,
-        factura: {
-          cups:             s("cups"),
-          comercializadora: s("comercializadora"),
-          distribuidora:    s("distribuidora"),
-          tarifa_acceso:    s("tarifa_acceso"),
-          periodo_inicio:   s("periodo_inicio"),
-          periodo_fin:      s("periodo_fin"),
-          dias_facturados:  n("dias_facturados"),
-          importe_factura:  n("importe_factura"),
-          pot_p1_kw: n("pot_p1_kw"), pot_p2_kw: n("pot_p2_kw"),
-          pot_p3_kw: n("pot_p3_kw"), pot_p4_kw: n("pot_p4_kw"),
-          pot_p5_kw: n("pot_p5_kw"), pot_p6_kw: n("pot_p6_kw"),
-          consumo_p1_kwh: n("consumo_p1_kwh"), consumo_p2_kwh: n("consumo_p2_kwh"),
-          consumo_p3_kwh: n("consumo_p3_kwh"), consumo_p4_kwh: n("consumo_p4_kwh"),
-          consumo_p5_kwh: n("consumo_p5_kwh"), consumo_p6_kwh: n("consumo_p6_kwh"),
-          pp_p1: n("pp_p1"), pp_p2: n("pp_p2"), pp_p3: n("pp_p3"),
-          pp_p4: n("pp_p4"), pp_p5: n("pp_p5"), pp_p6: n("pp_p6"),
-          pe_p1: n("pe_p1"), pe_p2: n("pe_p2"), pe_p3: n("pe_p3"),
-          pe_p4: n("pe_p4"), pe_p5: n("pe_p5"), pe_p6: n("pe_p6"),
-          imp_ele:    n("imp_ele"),
-          iva:        n("iva"),
-          alq_eq_dia: n("alq_eq_dia"),
-          api_ok:    params.get("api_ok") === "true"  ? true
-                   : params.get("api_ok") === "false" ? false : null,
-          api_error: s("api_error"),
-        },
-      };
     }
 
     // ── Demo plan-demo ────────────────────────────────────────────────────────
@@ -739,34 +740,13 @@ export default function FacturaUpload() {
       localStorage.setItem("cs_fsmstate", Fsmstate         ?? "");
       localStorage.setItem("cs_mode",     mode             ?? "");
 
-      // Abrir quoting en nueva pestaña con los datos como query params
-     const redirectUrl = buildRedirectURL(PLAN_REDIRECT_URL, cliente, factura, resolverIdGeneracion(idGeneracion, ceNombre), manualFields, facturaData ?? cupsData, modoAlquiler, cuotaAlquilerMes);
+      // Abrir Cotizador em nova aba com todos os dados da factura como query params
+      const redirectUrl = buildRedirectURL(PLAN_REDIRECT_URL, cliente, factura, resolverIdGeneracion(idGeneracion, ceNombre), manualFields, facturaData ?? cupsData, modoAlquiler, cuotaAlquilerMes);
       console.log("[handleEnviar] redirect URL:", redirectUrl);
       window.open(redirectUrl, "_blank");
 
-      // Llamar al backend de quoting con los datos de la factura (cliente ya con dealId)
-      const quotingRes = await fetch(QUOTING_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cliente: buildClientePayload(dealIdRecebido, mpklogIdRecebido),
-          factura,
-          Fsmstate,
-          FsmPrevious: fsmPrevious,
-          ce: cePayload,
-        }),
-      });
-      if (!quotingRes.ok) {
-        const detail = await quotingRes.json()
-          .then((d) => typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail))
-          .catch(() => `HTTP ${quotingRes.status}`);
-        throw new Error(detail);
-      }
-      const plan = await quotingRes.json();
-      setPlanData(plan ?? null);
-      setPanelesSel(plan?.numeroPaneles ?? 3);
-      setPanelesPropuesta(plan?.numeroPaneles ?? 3);
-      setStatus("sent");
+      // O plano é calculado e mostrado no Cotizador (nova aba) — não chamar QUOTING_URL aqui
+      setStatus("loading_plan");
     } catch (err) {
       setError(err.message);
       setStatus("analyzed");
