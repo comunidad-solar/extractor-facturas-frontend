@@ -6,208 +6,19 @@
 
 import { useState, useRef, useEffect } from "react";
 import "./FacturaUpload.css";
-import { CE_ID_MAP } from "../constants/ceMappings";
-
-
-const FIELD_LABELS = {
-  cups:             "CUPS",
-  periodo_inicio:   "Período inicio",
-  periodo_fin:      "Período fin",
-  comercializadora: "Comercializadora",
-  pp_p1:            "Precio potencia P1 (€/kW·día)",
-  pp_p2:            "Precio potencia P2 (€/kW·día)",
-  pp_p3:            "Precio potencia P3 (€/kW·día)",
-  pp_p4:            "Precio potencia P4 (€/kW·día)",
-  pp_p5:            "Precio potencia P5 (€/kW·día)",
-  pp_p6:            "Precio potencia P6 (€/kW·día)",
-  imp_ele:          "Impuesto eléctrico (%)",
-  iva:              "IVA (%)",
-  alq_eq_dia:       "Alquiler equipo (€/día)",
-  tarifa_acceso:    "Tarifa de acceso",
-  distribuidora:    "Distribuidora",
-  pot_p1_kw:        "Potencia contratada P1 (kW)",
-  pot_p2_kw:        "Potencia contratada P2 (kW)",
-  pot_p3_kw:        "Potencia contratada P3 (kW)",
-  pot_p4_kw:        "Potencia contratada P4 (kW)",
-  pot_p5_kw:        "Potencia contratada P5 (kW)",
-  pot_p6_kw:        "Potencia contratada P6 (kW)",
-  consumo_p1_kwh:   "Consumo P1 (kWh)",
-  consumo_p2_kwh:   "Consumo P2 (kWh)",
-  consumo_p3_kwh:   "Consumo P3 (kWh)",
-  consumo_p4_kwh:   "Consumo P4 (kWh)",
-  consumo_p5_kwh:   "Consumo P5 (kWh)",
-  consumo_p6_kwh:   "Consumo P6 (kWh)",
-  dias_facturados:  "Días facturados",
-  pe_p1:            "Precio energía P1 (€/kWh)",
-  pe_p2:            "Precio energía P2 (€/kWh)",
-  pe_p3:            "Precio energía P3 (€/kWh)",
-  pe_p4:            "Precio energía P4 (€/kWh)",
-  pe_p5:            "Precio energía P5 (€/kWh)",
-  pe_p6:            "Precio energía P6 (€/kWh)",
-  importe_factura:  "Importe factura (€)",
-};
-
-const MANUAL_FIELD_KEYS = [
-  "periodo_inicio", "periodo_fin", "comercializadora",
-  "pp_p1", "pp_p2", "imp_ele", "iva", "alq_eq_dia", "importe_factura",
-];
-
-const PRECIOS_POT_3TD_KEYS      = ["pp_p3", "pp_p4", "pp_p5", "pp_p6"];
-const PRECIOS_ENERGIA_BASE_KEYS = ["pe_p1", "pe_p2", "pe_p3"];
-const PRECIOS_ENERGIA_3TD_KEYS  = ["pe_p4", "pe_p5", "pe_p6"];
-
-const API_AUTO_KEYS = [
-  "tarifa_acceso", "distribuidora",
-  "pot_p1_kw", "pot_p2_kw", "pot_p3_kw", "pot_p4_kw", "pot_p5_kw", "pot_p6_kw",
-  "consumo_p1_kwh", "consumo_p2_kwh", "consumo_p3_kwh",
-  "consumo_p4_kwh", "consumo_p5_kwh", "consumo_p6_kwh",
-  "dias_facturados",
-];
-
-const hasValue = (v) => v !== null && v !== undefined && v !== "" && v != 0;
-
-const emptyManual = () =>
-  Object.fromEntries(
-    [
-      ...MANUAL_FIELD_KEYS,
-      ...PRECIOS_POT_3TD_KEYS,
-      ...PRECIOS_ENERGIA_BASE_KEYS,
-      ...PRECIOS_ENERGIA_3TD_KEYS,
-    ].map((k) => [k, ""])
-  );
-
-// ── Helpers — proximidad CE ───────────────────────────────────────────────────
-// Resolve el id_generacion: prioriza query param, luego mapa por nombre
-function resolverIdGeneracion(idGeneracionParam, ceNombre) {
-  if (idGeneracionParam) return idGeneracionParam;
-  return CE_ID_MAP[ceNombre] || null;
-}
-
-// Lookup inverso: dado un id_generacion devuelve el nombre de la CE o null
-function getCeNombreById(id) {
-  if (!id) return null;
-  return Object.keys(CE_ID_MAP).find(nombre => CE_ID_MAP[nombre] === id) || null;
-}
-
-function haversineDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const toRad = (deg) => (deg * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-
-// CE API proxiada por Vite (evita CORS en dev)
-const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu/server/api/get-ce-info-lat-lng";
-
-const API_BASE        = "https://extractor.13.38.9.119.nip.io";
-const PLAN_REDIRECT_URL = "https://main.d3rqv6h66vhq03.amplifyapp.com/";
-const QUOTING_URL       = "https://dummyjson.com/test";
-const LEAD_URL        = "https://dummyjson.com/test";
-const NOMINATIM_URL   = "https://nominatim.openstreetmap.org";
-const CE_DETAIL_URL   = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu";
-
-// Mapa de estados de la CE a etiquetas visibles
-const CE_STATUS_LABELS = {
-  "Waiting list": "En Espera",
-  "Available":    "En Contratación",
-};
-
-// TODO: confirmar endpoint com o backend
-const ASESOR_ENVIO_URL    = "https://dummyjson.com/test";
-// TODO: confirmar URL de redirecionamento após envío
-const ASESOR_REDIRECT_URL = "https://main.d3rqv6h66vhq03.amplifyapp.com?cups={{cups}}";
-
-function fmtES(valor, decimais = 2) {
-  if (valor == null) return "0";
-  return Number(valor).toLocaleString("es-ES", {
-    minimumFractionDigits: decimais,
-    maximumFractionDigits: decimais,
-  });
-}
-
-// Monta el payload para el endpoint interno de asesores
-// TODO: ajustar campos conforme especificación del backend
-function buildPayloadAsesor(mode, facturaData, cupsData, manualFields) {
-  if (mode === "pdf") {
-    return { origen: "pdf", ...facturaData };
-  }
-  if (mode === "cups") {
-    return { origen: "cups", ...cupsData, ...manualFields };
-  }
-  return {};
-}
-
-// Construye la URL de redirección al quoting con todos los datos como query params
-function buildRedirectURL(baseUrl, cliente, factura, idGen, manualFields, rawData, modoAlquiler, cuotaAlquilerMes) {
-  const f = factura ?? {};
-  const c = cliente ?? {};
-  const mf = manualFields ?? {};
-  const rd = rawData ?? {};
-  const p = new URLSearchParams();
-  p.set("cups",             f.cups             ?? "");
-  p.set("periodo_inicio",   f.periodo_inicio   ?? "");
-  p.set("periodo_fin",      f.periodo_fin      ?? "");
-  p.set("comercializadora", f.comercializadora ?? "");
-  p.set("pp_p1",  f.precios_potencia?.p1 ?? "");
-  p.set("pp_p2",  f.precios_potencia?.p2 ?? "");
-  p.set("pp_p3",  f.precios_potencia?.p3 ?? "");
-  p.set("pp_p4",  f.precios_potencia?.p4 ?? "");
-  p.set("pp_p5",  f.precios_potencia?.p5 ?? "");
-  p.set("pp_p6",  f.precios_potencia?.p6 ?? "");
-  p.set("imp_ele",          f.impuestos?.imp_ele  ?? "");
-  p.set("iva",              f.impuestos?.iva      ?? "");
-  p.set("alq_eq_dia",       f.otros?.alq_eq_dia   ?? "");
-  if (hasValue(rd?.importe_factura)) p.set("importe_factura", rd.importe_factura);
-  p.set("tarifa_acceso",    f.tarifa_acceso    ?? "");
-  p.set("distribuidora",    f.distribuidora    ?? "");
-  p.set("pot_p1_kw", f.potencias_kw?.p1 ?? "");
-  p.set("pot_p2_kw", f.potencias_kw?.p2 ?? "");
-  p.set("pot_p3_kw", f.potencias_kw?.p3 ?? "");
-  p.set("pot_p4_kw", f.potencias_kw?.p4 ?? "");
-  p.set("pot_p5_kw", f.potencias_kw?.p5 ?? "");
-  p.set("pot_p6_kw", f.potencias_kw?.p6 ?? "");
-  p.set("consumo_p1_kwh", f.consumos_kwh?.p1 ?? "");
-  p.set("consumo_p2_kwh", f.consumos_kwh?.p2 ?? "");
-  p.set("consumo_p3_kwh", f.consumos_kwh?.p3 ?? "");
-  p.set("consumo_p4_kwh", f.consumos_kwh?.p4 ?? "");
-  p.set("consumo_p5_kwh", f.consumos_kwh?.p5 ?? "");
-  p.set("consumo_p6_kwh", f.consumos_kwh?.p6 ?? "");
-  p.set("dias_facturados", f.dias_facturados ?? "");
-  p.set("api_ok",    f.api?.api_ok    ?? "");
-  p.set("api_error", f.api?.api_error ?? "");
-  p.set("nombre",    c.nombre    ?? "");
-  p.set("apellidos", c.apellidos ?? "");
-  p.set("correo",    c.correo    ?? "");
-  p.set("direccion", c.direccion ?? "");
-  // pe_p* — prioridad: manualFields → rawData (facturaData/cupsData)
-  [...PRECIOS_ENERGIA_BASE_KEYS, ...PRECIOS_ENERGIA_3TD_KEYS].forEach((k) => {
-    const val = mf[k] || rd[k] || "";
-    if (val) p.set(k, val);
-  });
-  if (idGen) p.set("id_generacion", idGen);
-  p.set("modo", modoAlquiler ? "alquiler" : "venta");
-  if (hasValue(cuotaAlquilerMes)) p.set("cuotaAlquilerMes", cuotaAlquilerMes);
-  return `${baseUrl}?${p.toString()}`;
-}
-
-async function enviarLead(url, payload, onWarn) {
-  if (!url) { onWarn?.(); return; }
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    console.log("📤 Lead enviado al backend:", { status: res.status, payload });
-  } catch (e) {
-    console.warn("⚠️ Error enviando lead al backend:", e);
-  }
-}
+import {
+  FIELD_LABELS, MANUAL_FIELD_KEYS, PRECIOS_POT_3TD_KEYS,
+  PRECIOS_ENERGIA_BASE_KEYS, PRECIOS_ENERGIA_3TD_KEYS, API_AUTO_KEYS,
+  CE_API_URL, API_BASE, PLAN_REDIRECT_URL, QUOTING_URL, LEAD_URL,
+  NOMINATIM_URL, CE_DETAIL_URL, CE_STATUS_LABELS,
+  ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL,
+} from "../constants/appConstants";
+import {
+  hasValue, emptyManual, resolverIdGeneracion, getCeNombreById,
+  haversineDistance, buildPayloadAsesor, buildRedirectURL, enviarLead,
+} from "../utils/facturaUtils";
+import OptimizerModal from "./OptimizerModal";
+import PlanScreen from "./PlanScreen";
 
 export default function FacturaUpload() {
   // ── Steps & navigation ───────────────────────────────────────────────────
@@ -703,7 +514,7 @@ export default function FacturaUpload() {
         throw new Error(detail);
       }
       const dealIdRecebido = dataAsesor?.dealId ?? null;
-      if (dealIdRecebido) setDealId(dealIdRecebido);
+      if (dealIdRecebido) { setDealId(dealIdRecebido); console.log("[handleEnviarAsesor] dealId recebido:", dealIdRecebido); }
       const redirectParams = [
         cliente.correo    ? `correo=${encodeURIComponent(cliente.correo)}`          : null,
         dealIdRecebido    ? `dealId=${encodeURIComponent(dealIdRecebido)}`           : null,
@@ -751,7 +562,7 @@ export default function FacturaUpload() {
         ]);
         const dataEnviar     = await resEnviar.json().catch(() => ({}));
         const dealIdRecebido = dataEnviar?.dealId ?? null;
-        if (dealIdRecebido) setDealId(dealIdRecebido);
+        if (dealIdRecebido) { setDealId(dealIdRecebido); console.log("[handleEnviar/asesor] dealId recebido:", dealIdRecebido); }
 
         const redirectParams = [
           cups                              ? `cups=${encodeURIComponent(cups)}`                     : null,
@@ -784,7 +595,7 @@ export default function FacturaUpload() {
         throw new Error(detail);
       }
       const dealIdRecebido = dataEnviar?.dealId ?? null;
-      if (dealIdRecebido) setDealId(dealIdRecebido);
+      if (dealIdRecebido) { setDealId(dealIdRecebido); console.log("[handleEnviar] dealId recebido:", dealIdRecebido); }
 
       // Abrir quoting en nueva pestaña con los datos como query params
       window.open(buildRedirectURL(PLAN_REDIRECT_URL, cliente, factura, resolverIdGeneracion(idGeneracion, ceNombre), manualFields, facturaData ?? cupsData, modoAlquiler, cuotaAlquilerMes), "_blank");
@@ -941,369 +752,22 @@ export default function FacturaUpload() {
 
         {/* ── PLAN PERSONALIZADO ── */}
         {!loading && status === "sent" && (
-          <>
-          <div className="cs-results-card fade-in" style={{ maxWidth:1000, padding:"0 0 40px", backgroundColor:"#EEECE8" }}>
-
-            {/* ── HERO ── */}
-            <div style={{borderRadius:"16px 16px 0 0", padding:"36px 48px 32px", color:"#fff", marginBottom:0 }}>
-              <div className="cs-plan-hero">
-                {modoAlquiler ? (
-                  /* HERO ALQUILER */
-                  <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column", gap:0 }}>
-                    <p style={{ fontSize:22, fontWeight:400, marginBottom:4, color:"#000000" }}>
-                      Hola <strong>{cliente.nombre}</strong>, estás a un paso de
-                    </p>
-                    <p className="cs-plan-hero-title" style={{ fontSize:46, fontWeight:800, lineHeight:1.1, marginBottom:12, color:"#E48409" }}>
-                      ahorrar un 30% en tu<br />factura de la luz
-                    </p>
-                    <p style={{ fontSize:18, opacity:0.8, marginBottom:4, color:"#000000" }}>
-                      Este es tu fantástico plan en la Comunidad Energética de
-                    </p>
-                    <p style={{ fontSize:18, fontWeight:700, color:"#000000", marginBottom:20 }}>{ceNombre || "—"}</p>
-                    <div style={{ background:"#fff", borderRadius:12, padding:"20px 28px", display:"inline-block", maxWidth:340, boxShadow:"0 2px 12px rgba(0,0,0,0.1)" }}>
-                      <p style={{ fontSize:13, color:"#888", marginBottom:8 }}>
-                        ⊙ Cuota mensual &nbsp;
-                        <strong style={{ color:"#E48409" }}>{panelesSel} paneles</strong>
-                      </p>
-                      <p style={{ fontSize:48, fontWeight:800, lineHeight:1, color:"#000" }}>
-                        {fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)}€
-                        <span style={{ fontSize:14, fontWeight:400 }}>&nbsp;(IVA incluido)</span>
-                      </p>
-                      <button style={{ marginTop:16, width:"100%", background:"#E48409", color:"#fff", border:"none", borderRadius:8, padding:"10px", fontSize:13, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.08em" }} onClick={() => {}}>
-                        Contratar
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  /* HERO VENTA */
-                  <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column", gap:0 }}>
-                    <p style={{ fontSize:22, fontWeight:400, opacity:0.9, marginBottom:4, color:"#000000" }}>
-                      Hola <strong>{cliente.nombre}</strong>, estás a un paso de tener
-                    </p>
-                    <p className="cs-plan-hero-title" style={{ fontSize:46, fontWeight:800, lineHeight:1.1, marginBottom:12, color:"#E48409" }}>
-                      tu propia energía a 0€
-                    </p>
-                    <p style={{ fontSize:18, opacity:0.8, marginBottom:4, color:"#000000"}}>
-                      Este es tu fantástico plan en la Comunidad Energética de
-                    </p>
-                    <p style={{ fontSize:18, fontWeight:700, color:"#000000", marginBottom:20 }}>{ceNombre || "—"}</p>
-                    <div style={{ background:"rgb(255, 255, 255)", borderRadius:12, padding:"20px 28px", display:"inline-block", maxWidth:400, boxShadow:"0 2px 12px rgba(0,0,0,0.1)" }}>
-                      <p style={{ fontSize:11, opacity:0.8, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6, color:"#000000" }}>Ahorro previsto en 25 años</p>
-                      <p style={{ fontSize:48, fontWeight:800, lineHeight:1, color:"#000000"}}>
-                        {fmtES(planData?.ahorro25Anos ?? 1575.35)}€<span style={{ fontSize:22 }}>*</span>
-                      </p>
-                    </div>
-                  </div>
-                )}
-                {/* Columna derecha: imagen del edificio */}
-                <div className="cs-plan-hero-img" style={{ flex:"0 0 auto", display:"flex", alignItems:"flex-start"}}>
-                  <img
-                    src="/Intersect.png"
-                    alt="Instalación solar"
-                    style={{ width:300, height:340, objectFit:"cover", borderRadius:20, display:"block" }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="cs-plan-inner">
-
-              {/* ── IMPORTE A PAGAR ── */}
-              {!modoAlquiler && (
-                <>
-                  <p className="cs-section-label" style={{ marginTop:0, color:"#000000" }}>Importe a pagar</p>
-                  <div className="cs-plan-pagos">
-                    {/* Pago único */}
-                    <div style={{ background:"#fff", border:"2px solid #EEECE8", borderRadius:14, padding:"24px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, boxShadow:"0 2px 12px rgba(0,0,0,0.03)" }}>
-                      <p style={{ fontSize:11, fontWeight:700, color:"#000000", textTransform:"uppercase", letterSpacing:"0.08em" }}>Pago único</p>
-                      <p style={{ fontSize:38, fontWeight:800, color:"#121212", lineHeight:1.1 }}>
-                        {fmtES(planData?.pagoUnico ?? 3480.75)}€
-                      </p>
-                      <p style={{ fontSize:11, color:"#aaa" }}>(IVA 21% incluido)</p>
-                      <button
-                        style={{ marginTop:10, background:"#E48409", color:"#fff", border:"none", borderRadius:24, padding:"10px 28px", fontSize:13, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.05em" }}
-                        onClick={() => {}}>
-                        CONTRATAR
-                      </button>
-                    </div>
-                    {/* Financiado */}
-                    <div style={{ background:"#fff", border:"2px solid #EEECE8", borderRadius:14, padding:"24px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, boxShadow:"0 2px 12px rgba(0,0,0,0.03)"}}>
-                      <p style={{ fontSize:11, fontWeight:700, color:"#000000", textTransform:"uppercase", letterSpacing:"0.08em" }}>Financiado</p>
-                      <p style={{ fontSize:12, color:"#000000", marginBottom:2 }}>Hasta 120 cuotas mensuales</p>
-                      <p style={{ fontSize:38, fontWeight:800, color:"#121212", lineHeight:1.1 }}>
-                        {fmtES(planData?.pagoFinanciado ?? 41.33)}€
-                      </p>
-                      <p style={{ fontSize:11, color:"#aaa" }}>(IVA 21% incluido)</p>
-                    </div>
-                  </div>
-                </>
-              )}
-              {/* ── ORIGEN / DESTINO ── */}
-              <div className="cs-plan-origen">
-                {/* Tarjeta Origen — CE */}
-                <div style={{ flex:1, background:"#fff", borderRadius:14, overflow:"hidden", boxShadow:"0 2px 12px rgba(0,0,0,0.06)" }}>
-                  <div style={{ position:"relative" }}>
-                    <img src="/Intersect.png" alt="Comunidad Energética" style={{ width:"100%", height:160, objectFit:"cover", display:"block" }} />
-                    <span style={{ position:"absolute", top:10, left:10, background:"#E48409", color:"#fff", fontSize:11, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase", padding:"4px 10px", borderRadius:6 }}>
-                      {CE_STATUS_LABELS[ceStatus] || ceStatus || "—"}
-                    </span>
-                  </div>
-                  <div style={{ padding:"14px 16px" }}>
-                    <p style={{ fontSize:11, color:"#aaa", marginBottom:2 }}>Origen</p>
-                    <p style={{ fontSize:12, color:"#555", marginBottom:2 }}>Comunidad Energética</p>
-                    <p style={{ fontSize:14, fontWeight:700, color:"#111", marginBottom:12 }}><strong>{ceNombre || "—"}</strong></p>
-                    <button style={{ width:"100%", background:"#E48409", color:"#fff", border:"none", borderRadius:8, padding:"10px", fontSize:13, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.08em" }}>
-                      VER MÁS
-                    </button>
-                  </div>
-                </div>
-
-                {/* Conector */}
-                <div className="cs-plan-connector">
-                  <div style={{ width:12, height:12, borderRadius:"50%", background:"#E48409", flexShrink:0 }} />
-                  <div style={{ width:30, height:2, background:"#E48409" }} />
-                  <div style={{ width:12, height:12, borderRadius:"50%", background:"#E48409", flexShrink:0 }} />
-                </div>
-
-                {/* Tarjeta Destino — domicilio */}
-                <div style={{ flex:1, background:"#fff", borderRadius:14, overflow:"hidden", boxShadow:"0 2px 12px rgba(0,0,0,0.06)" }}>
-                  <img src="/domicilio.png" alt="Domicilio" style={{ width:"100%", height:160, objectFit:"cover", display:"block" }} />
-                  <div style={{ padding:"14px 16px" }}>
-                    <p style={{ fontSize:11, color:"#aaa", marginBottom:4 }}>Destino</p>
-                    <p style={{ fontSize:20, fontWeight:500, color:"#111" }}>{cliente.direccion || "—"}</p>
-                  </div>
-                </div>
-
-                {/* Métricas de ahorro */}
-                <div className="cs-plan-ahorro" style={{ flexShrink:0, marginLeft:16, display:"flex", flexDirection:"column", gap:8, minWidth:160 }}>
-                  {/* Card principal: Al mes + Al año (+ En 25 años si venta) */}
-                  <div style={{ border:"2px solid #E48409", borderRadius:14, padding:"20px 20px", display:"flex", flexDirection:"column", gap:12, background:"#fff", justifyContent:"center", alignItems:"center" }}>
-                    <p style={{ fontSize:12, fontWeight:700, color:"#E48409", textTransform:"uppercase", letterSpacing:"0.08em", textAlign:"center" }}>AHORRO*</p>
-                    <div style={{ textAlign:"center" }}>
-                      <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroMensual ?? 38.35)}€</p>
-                      <p style={{ fontSize:11, color:"#555", marginTop:4 }}>Al mes</p>
-                    </div>
-                    <div style={{ textAlign:"center" }}>
-                      <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroAnual ?? 460.20)}€</p>
-                      <p style={{ fontSize:11, color:"#555", marginTop:4 }}>Al año</p>
-                    </div>
-                    {!modoAlquiler && (
-                      <div style={{ textAlign:"center" }}>
-                        <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorro25Anos ?? 1575.35)}€</p>
-                        <p style={{ fontSize:11, color:"#555", marginTop:4 }}>En 25 años (estimado)</p>
-                      </div>
-                    )}
-                  </div>
-                  {/* Card Fianza — solo en modo alquiler */}
-                  {modoAlquiler && (
-                    <div style={{ border:"2px solid #E48409", borderRadius:14, padding:"16px 20px", display:"flex", flexDirection:"column", gap:4, background:"#fff", justifyContent:"center", alignItems:"center" }}>
-                      <p style={{ fontSize:22, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES((cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0) * 2)}€</p>
-                      <p style={{ fontSize:11, color:"#555", marginTop:4 }}>Fianza</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* ── TU PLAN + OPTIMIZADOR ── */}
-              <div className="cs-plan-tabla">
-                {/* Tabla */}
-                <div>
-                  <p className="cs-section-label" style={{ marginTop:0, color:"#000000", fontSize:14 }}>Tu plan</p>
-                  <table className="cs-table" style={{ fontSize:16 }}>
-                    <tbody>
-                      <tr><td style={{color:"#000000", fontSize:16}}>Numero de paneles</td><td  style={{ fontSize:16 }}>{panelesSel}</td></tr>
-                      <tr><td style={{color:"#000000", fontSize:16}}>Potencia total</td><td  style={{ fontSize:16 }}>{parseInt(fmtES(planData?.potenciaTotal ?? 3))} kWh</td></tr>
-                      <tr><td style={{color:"#000000", fontSize:16}}>Producción de energía anual estimada*</td><td  style={{ fontSize:16 }}>{fmtES(planData?.produccionAnual ?? 4101.25)} kWh</td></tr>
-                      <tr><td style={{color:"#000000", fontSize:16}}>Ahorro anual medio estimado*</td><td  style={{ fontSize:16 }}>{fmtES(planData?.ahorroAnual ?? 522.48)} €</td></tr>
-                      {modoAlquiler ? (
-                        <tr><td style={{color:"#000000", fontSize:16}}>Precio mensual</td><td  style={{ fontSize:16 }}>{fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)} €</td></tr>
-                      ) : (
-                        <>
-                          <tr><td style={{color:"#000000", fontSize:16}}>Ahorro total estimado durante 25 años*</td><td  style={{ fontSize:16 }}>{fmtES(planData?.ahorro25Anos ?? 15707.25)} €</td></tr>
-                          <tr><td style={{color:"#000000", fontSize:16}}>Coeficiente de distribución sobre total de la instalación</td><td  style={{ fontSize:16 }}>{fmtES(planData?.coeficienteDistribucion ?? 5, 0)} %</td></tr>
-                          <tr><td style={{color:"#000000", fontSize:16}}>Pago al contado</td><td  style={{ fontSize:16 }}>{fmtES(planData?.pagoUnico ?? 3480.75)} €</td></tr>
-                          <tr><td style={{color:"#000000", fontSize:16}}>Plazo estimado de recuperación del coste inicial*</td><td  style={{ fontSize:16 }}>{fmtES(planData?.plazoRecuperacion ?? 6.7, 1)} años</td></tr>
-                        </>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Optimizador de paneles */}
-                <div style={{ background:"#F3D5A9", borderRadius:12, padding:"20px 18px", textAlign:"center", minWidth:160, maxWidth:180, display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
-                  <p style={{ fontSize:12, fontWeight:700, color:"#000000", textTransform:"uppercase", letterSpacing:"0.06em" }}>Optimiza tu plan</p>
-                  <p style={{ fontSize:11, color:"#000000", lineHeight:1.4 }}>Añade o quita paneles solares</p>
-                  {/* Stepper */}
-                  <div style={{ display:"flex", alignItems:"center", gap:0, background:"#fff", borderRadius:10, border:"1.5px solid #000000", overflow:"hidden" }}>
-                    <button
-                      onClick={() => setPanelesPropuesta(p => Math.max(1, p - 1))}
-                      style={{ background:"none", border:"none", padding:"8px 14px", fontSize:18, fontWeight:700, cursor:"pointer", color:"#E48409", fontFamily:"inherit" }}>
-                      −
-                    </button>
-                    <span style={{ fontSize:20, fontWeight:700, color:"#121212", minWidth:32, textAlign:"center" }}>
-                      {panelesPropuesta}
-                    </span>
-                    <button
-                      onClick={() => setPanelesPropuesta(p => p + 1)}
-                      style={{ background:"none", border:"none", padding:"8px 14px", fontSize:18, fontWeight:700, cursor:"pointer", color:"#E48409", fontFamily:"inherit" }}>
-                      +
-                    </button>
-                  </div>
-                  <p style={{ fontSize:11, color:"#000000", lineHeight:1.4 }}>Te recomendamos 3 paneles
-solares, pero puedes solicitar
-una cantidad diferente
-optimizando tu plan de
-participación con un asesor
-energético.</p>
-                  <button
-                    onClick={handleOptimizar}
-                    style={{ background:"#fff", color:"#E48409", border:"2px solid #E48409", borderRadius:8, padding:"8px 20px", fontSize:12, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.05em", width:"100%" }}>
-                    OPTIMIZAR
-                  </button>
-                </div>
-              </div>
-
-              {/* ── TABS: CÓMO FUNCIONA / TU PLAN / CONDICIONES ── */}
-              <div style={{ borderRadius:14, overflow:"hidden", marginBottom:65, boxShadow:"0 2px 12px rgba(0,0,0,0.06)" }}>
-                {/* Cabecera de tabs */}
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr" }}>
-                  {[
-                    { id:"como",         label:"Cómo funciona" },
-                    { id:"plan",         label:"Tu plan" },
-                    { id:"condiciones",  label:"Condiciones" },
-                  ].map(({ id, label }) => (
-                    <button
-                      key={id}
-                      className="cs-tab-btn"
-                      onClick={() => setTabActiva(id)}
-                      style={{
-                        background: tabActiva === id ? "#fff" : "#F2C080",
-                        border: "none",
-                        borderBottom: tabActiva === id ? "none" : "2px solid #F3D5A9",
-                        padding: "14px 8px",
-                        fontSize: 14,
-                        fontWeight: 700,
-                        fontFamily: "inherit",
-                        cursor: "pointer",
-                        color: "#111",
-                      }}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Contenido */}
-                <div style={{ background:"#fff", padding:"24px 28px", fontSize:13, color:"#333", lineHeight:1.7 }}>
-
-                  {/* ── Cómo funciona ── */}
-                  {tabActiva === "como" && (
-                    <div>
-                      <p style={{ fontWeight:700, color:"#E48409", marginBottom:12 }}>Abierta la fase de Contratación:</p>
-                      <p style={{ marginBottom:8 }}>Al pulsar "Contratar", comenzaremos a generar tres documentos:</p>
-                      <ul style={{ paddingLeft:20, marginBottom:8 }}>
-                        <li>La orden de compra de tus paneles.</li>
-                        <li>La participación en la asociación Light for Humanity.</li>
-                        <li>Tu alta en la comercializadora de Comunidad Solar, para recibir electricidad a coste cero.</li>
-                      </ul>
-                      <p style={{ marginBottom:8 }}>Es muy importante que tengas a mano una factura actual de la luz.</p>
-                      <p style={{ marginBottom:8 }}>Tus paneles quedarán reservados durante 48 horas; si no firmas la documentación en ese plazo, la reserva quedará sin efecto y volverás a lista de espera. Tras la firma de la documentación, dispondrás de 5 días para realizar el primer pago.</p>
-                      <p>Si estás interesado en financiación, podrás solicitarla después de firmar el contrato. En caso de que la entidad bancaria no apruebe la financiación, el contrato no entrará en vigor.</p>
-                    </div>
-                  )}
-
-                  {/* ── Tu plan ── */}
-                  {tabActiva === "plan" && (
-                    <div>
-                      <p style={{ marginBottom:8 }}>A continuación detallamos tu plan recomendado de participación de autoconsumo en la Comunidad Energética <strong>{ceNombre || "—"}</strong>. Este plan está basado en el consumo eléctrico que nos has facilitado y que te permitirá ahorrar hasta un 70% en tu factura de la luz.</p>
-                      <p style={{ marginBottom:8 }}>El plan incluye la compra de <strong>{panelesSel} paneles solares</strong> que generarán un total aproximado de <strong>{fmtES(planData?.produccionAnual)} kWh</strong> de electricidad en un periodo de <strong>{fmtES(planData?.plazoRecuperacion, 0)} años</strong> con un coste inicial de <strong>{fmtES(planData?.pagoUnico)}€</strong>. (El precio podría ser mayor en función del coste final de la instalación para verter a la red eléctrica, de lo que se informaría claramente por anticipado antes de cualquier contratación)</p>
-                      <p style={{ marginBottom:8 }}>Al unirte a la Comunidad Energética de <strong>{ceNombre || "—"}</strong>, podrás disfrutar de la electricidad a <strong>0€ por kWh</strong> en tu factura de la luz.</p>
-                      <p style={{ marginBottom:4 }}>Basándonos en los precios de energía de los últimos años, obtendrás los siguientes beneficios:</p>
-                      <ul style={{ paddingLeft:20, marginBottom:8 }}>
-                        <li>Ahorro promedio de <strong>{fmtES(planData?.ahorroAnual)}€</strong> al año.</li>
-                        <li>Recuperación de la inversión inicial en solo <strong>{fmtES(planData?.plazoRecuperacion, 1)} años</strong>.</li>
-                        <li>Ahorro total estimado de <strong>{fmtES(planData?.ahorro25Anos)}€</strong> en 25 años (considerando una subida del precio de la energía del 0% anual).</li>
-                      </ul>
-                      <p>Los <strong>{panelesSel} paneles</strong> contienen una potencia nominal total de <strong>{fmtES(planData?.potenciaTotal)} kW</strong>. Lo que quiere decir que el coeficiente de reparto que te pertenece es del <strong>{fmtES(planData?.coeficienteDistribucion, 0)}%</strong> de toda la Comunidad Energética.</p>
-                    </div>
-                  )}
-
-                  {/* ── Condiciones ── */}
-                  {tabActiva === "condiciones" && (
-                    <div>
-                      <p style={{ marginBottom:8 }}>Al adquirir tu participación en la comunidad energética <strong>{ceNombre || "—"}</strong>, verás reflejada la electricidad generada por tus paneles en tu hogar a través de tu comercializadora. Durante los próximos 25 años, verás reflejada en tu factura de la luz la energía producida por tus paneles solares, con un coste de <strong>0€/kWh</strong>.</p>
-                      <p style={{ marginBottom:8 }}>Para el mantenimiento y seguro de tus paneles solares, pagarás una cuota mensual de <strong>0€ + IVA</strong> por cada panel solar. Estos paneles están diseñados para tener una vida útil de 25 años, y esta cuota es necesaria para asegurar su buen funcionamiento.</p>
-                      <p style={{ marginBottom:8 }}>Una vez firmada la documentación, el pago se realizará en 3 fases: 50% del total se abonará tras la firma de los documentos, un 25% al finalizar la instalación y el 25% restante al comenzar la producción de la planta.</p>
-                      <p style={{ marginBottom:8 }}>Podrás cambiarte a otra comercializadora en cualquier momento, ya que no hay permanencia con la comercializadora de Comunidad Solar. La distribuidora de electricidad ya conoce el porcentaje de producción solar que te corresponde, y la nueva comercializadora deberá descontarte esa producción en tu factura de la luz. Debes tener en cuenta que aunque te cambies de comercializadora, tendrás que seguir abonando la cuota de mantenimiento de tus paneles.</p>
-                      <p style={{ marginBottom:8 }}>Toda la electricidad que no consumas será vendida a la red pública a precio de mercado, y ese valor se descontará de tu factura. Para cualquier energía adicional que necesites, pagarás el precio de coste junto con los cargos regulados, sin ningún margen adicional.</p>
-                      <p style={{ marginBottom:8 }}>Comunidad Solar no busca obtener beneficios a través de la comercializadora; este es simplemente el mecanismo necesario para llevar la energía a tu hogar.</p>
-                      <p>Este es un resumen de las condiciones. Te recomendamos leer toda la documentación para conocer todos los términos y detalles antes de proceder con la contratación.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* ── MÉTRICAS DE AHORRO ── */}
-              {!modoAlquiler && (
-                <div style={{ background:"#ffffff", borderRadius:12, padding:"20px 28px", marginBottom:65, display:"flex", justifyContent:"space-around", alignItems:"center", textAlign:"center", gap:8, boxShadow:"0 2px 12px rgba(0,0,0,0.05)" }}>
-                  <div>
-                    <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroMensual ?? 38.35)}€</p>
-                    <p style={{ fontSize:11, color:"#000000", marginTop:4 }}>Al mes</p>
-                  </div>
-                  <div style={{ width:1, background:"#d0cfc9", alignSelf:"stretch" }} />
-                  <div>
-                    <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorroAnual ?? 460.20)}€</p>
-                    <p style={{ fontSize:11, color:"#000000", marginTop:4 }}>Al año</p>
-                  </div>
-                  <div style={{ width:1, background:"#d0cfc9", alignSelf:"stretch" }} />
-                  <div>
-                    <p style={{ fontSize:26, fontWeight:800, color:"#E48409", lineHeight:1 }}>{fmtES(planData?.ahorro25Anos ?? 1575.35)}€</p>
-                    <p style={{ fontSize:11, color:"#000000", marginTop:4 }}>En 25 años (estimado)</p>
-                  </div>
-                </div>
-              )}
-
-              {/* ── REGALO APP ── */}
-              <div className="cs-plan-regalo" style={{ background:"#ffffff", boxShadow:"0 2px 12px rgba(0,0,0,0.05)" }}>
-                {/* Columna texto */}
-                <div style={{ flex:1, minWidth:240 }}>
-                  <p style={{ fontSize:30, fontWeight:800, color:"#000000", lineHeight:1.2, marginBottom:16 }}>
-                    Tenemos un regalo para ti
-                  </p>
-                  <p style={{ fontSize:17, fontWeight:700, color:"#000000", lineHeight:1.4, marginBottom:20 }}>
-                    Aunque no nos contrates puedes descargarte gratis el asistente energético
-                  </p>
-                  <p style={{ fontSize:13, color:"rgba(0, 0, 0, 0.75)", lineHeight:1.7, marginBottom:32 }}>
-                    Nuestra aplicación te permitirá <strong style={{ color:"#000000" }}>optimizar el uso de energía</strong> en tu hogar, proporcionándote toda la información necesaria para ahorrar y mejorar tu eficiencia energética.
-                  </p>
-                  <button style={{ background:"#E48409", color:"#000000", border:"none", borderRadius:28, padding:"14px 36px", fontSize:14, fontWeight:800, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.08em" }}>
-                    DESCARGAR
-                  </button>
-                </div>
-                {/* Columna imagen */}
-                <div style={{ flex:"0 0 auto" }}>
-                  <img src="/App.png" alt="App Comunidad Solar" style={{ height:280, display:"block", objectFit:"contain" }} />
-                </div>
-              </div>
-
-              {/* ── CONTACTAR CON ASESOR ── */}
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"#fff", border:"1.5px solid #EEECE8", borderRadius:12, padding:"16px 20px", marginBottom:50, boxShadow:"0 2px 12px rgba(0,0,0,0.03)" }}>
-                <span style={{ fontSize:13, color:"#555" }}>¿Tienes dudas?</span>
-                <button style={{ background:"transparent", color:"#121212", border:"1.5px solid #121212", borderRadius:24, padding:"8px 20px", fontSize:12, fontWeight:700, fontFamily:"inherit", cursor:"pointer" }} onClick={() => {}}>
-                  Contacta con TU asesor
-                </button>
-              </div>
-
-              {/* ── VOLVER ── */}
-              <button className="cs-btn-ghost" onClick={handleReset}>← Volver al inicio</button>
-
-              {/* ── FOOTNOTE ── */}
-              <p style={{ fontSize:11, color:"#aaa", marginTop:16, lineHeight:1.6 }}>
-                * La electricidad a 0€ es la producida por tus paneles solares, seguirás pagando la energía que no produzcas.
-              </p>
-            </div>
-          </div>
-
-          </>
+          <PlanScreen
+            cliente={cliente}
+            ceNombre={ceNombre}
+            ceStatus={ceStatus}
+            modoAlquiler={modoAlquiler}
+            cuotaAlquilerMes={cuotaAlquilerMes}
+            planData={planData}
+            panelesSel={panelesSel}
+            panelesPropuesta={panelesPropuesta}
+            tabActiva={tabActiva}
+            onContratar={handleEnviar}
+            onVolver={handleReset}
+            onOptimizar={handleOptimizar}
+            onSetPanelesPropuesta={setPanelesPropuesta}
+            onSetTabActiva={setTabActiva}
+          />
         )}
 
         {/* ── FUERA DE ZONA ── */}
@@ -1759,56 +1223,14 @@ energético.</p>
       </div>
 
       {/* ── MODAL OPTIMIZAR ── */}
-      {modalOptimizar !== null && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
-          <div style={{ background:"#fff", borderRadius:16, padding:"32px 28px", maxWidth:560, width:"100%", maxHeight:"90vh", overflowY:"auto", boxShadow:"0 8px 40px rgba(0,0,0,0.18)" }}>
-            {modalOptimizar === "loading" ? (
-              <div style={{ textAlign:"center", padding:"40px 0" }}>
-                <div style={{ fontSize:40, marginBottom:20 }}>☀️</div>
-                <p style={{ fontSize:15, fontWeight:700, color:"#111", marginBottom:8 }}>Calculando tu nueva propuesta…</p>
-                <p style={{ fontSize:13, color:"#777", marginBottom:28 }}>Esto puede tardar unos segundos.</p>
-                <div style={{ display:"flex", justifyContent:"center", gap:8 }}>
-                  {[0,1,2].map(i => (
-                    <div key={i} style={{ width:10, height:10, borderRadius:"50%", background:"#E48409", animation:"cs-bounce 1s infinite", animationDelay:`${i*0.2}s` }} />
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <>
-                <h3 style={{ fontSize:16, fontWeight:700, color:"#111", marginBottom:20 }}>
-                  Propuesta con {panelesPropuesta} paneles
-                </h3>
-                <table className="cs-table" style={{ marginBottom:20, fontSize:16 }}>
-                  <tbody>
-                    <tr><td>Numero de paneles</td><td>{panelesPropuesta}</td></tr>
-                    <tr><td>Potencia total</td><td>{parseInt(fmtES(modalOptimizar?.potenciaTotal ?? 0))} kWh</td></tr>
-                    <tr><td>Producción de energía anual estimada*</td><td>{fmtES(modalOptimizar?.produccionAnual ?? 0)} kWh</td></tr>
-                    <tr><td>Ahorro anual medio estimado*</td><td>{fmtES(modalOptimizar?.ahorroAnual ?? 0)} €</td></tr>
-                    {modoAlquiler ? (
-                      <tr><td>Precio mensual</td><td>{fmtES(cuotaAlquilerMes ?? modalOptimizar?.cuotaAlquilerMes ?? 0)} €</td></tr>
-                    ) : (
-                      <>
-                        <tr><td>Ahorro total estimado durante 25 años*</td><td>{fmtES(modalOptimizar?.ahorro25Anos ?? 0)} €</td></tr>
-                        <tr><td>Coeficiente de distribución</td><td>{fmtES(modalOptimizar?.coeficienteDistribucion ?? 0, 0)} %</td></tr>
-                        <tr><td>Pago al contado</td><td>{fmtES(modalOptimizar?.pagoUnico ?? 0)} €</td></tr>
-                        <tr><td>Plazo estimado de recuperación*</td><td>{fmtES(modalOptimizar?.plazoRecuperacion ?? 0, 1)} años</td></tr>
-                      </>
-                    )}
-                  </tbody>
-                </table>
-                <div style={{ display:"flex", gap:12 }}>
-                  <button className="cs-btn-ghost" style={{ flex:1, marginTop:0 }} onClick={() => setModalOptimizar(null)}>
-                    ← Volver
-                  </button>
-                  <button className="cs-btn-primary" style={{ flex:1, marginTop:0 }} onClick={handleAceptarPropuesta}>
-                    Aceptar propuesta
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      <OptimizerModal
+        modalOptimizar={modalOptimizar}
+        panelesPropuesta={panelesPropuesta}
+        modoAlquiler={modoAlquiler}
+        cuotaAlquilerMes={cuotaAlquilerMes}
+        onVolver={() => setModalOptimizar(null)}
+        onAceptar={handleAceptarPropuesta}
+      />
 
       {/* ── FOOTER ── */}
           <footer style={{ background:"#121212", color:"#fff", padding:"48px 40px 0", width:"100vw", marginLeft:"calc(-50vw + 50%)" }}>
