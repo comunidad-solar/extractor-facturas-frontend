@@ -80,6 +80,11 @@ export default function FacturaUpload() {
   const [modoAlquiler, setModoAlquiler]         = useState(false);
   const [cuotaAlquilerMes, setCuotaAlquilerMes] = useState(null);
   const [dealId, setDealId]                     = useState(null);
+  const [mpklogId, setMpklogId]                 = useState(null);
+  const [modalContratar, setModalContratar]     = useState(false);
+  const [dniContrato, setDniContrato]           = useState("");
+  const [dniError, setDniError]                 = useState("");
+  const [enviandoContrato, setEnviandoContrato] = useState(false);
 
   // ── Modo asesor — detectar ?interno-asesores=true ────────────────────────
   useEffect(() => {
@@ -438,16 +443,16 @@ export default function FacturaUpload() {
   // Builds the cliente object for all outgoing payloads.
   // Pass overrideDealId right after receiving it from /enviar so the value
   // is used in the same tick — state update (setDealId) is async.
-  const buildClientePayload = (overrideDealId = null) => ({
+  const buildClientePayload = (overrideDealId = null, overrideMpklogId = null) => ({
     nombre:     cliente.nombre,
     apellidos:  cliente.apellidos,
     correo:     cliente.correo,
     telefono:   cliente.telefono,
     direccion:  cliente.direccion,
-    dealId:     overrideDealId ?? dealId,
+    dealId:     overrideDealId   ?? dealId,
+    mpklogId:   overrideMpklogId ?? mpklogId,
     databaseId: "",
     dni:        "",
-    mpklogId:   "",
     // TODO: elegir dinámicamente entre "Alquiler" y "Venta" según modoAlquiler
     tipoVenta:  "Alquiler",
   });
@@ -503,24 +508,21 @@ export default function FacturaUpload() {
     try {
       const fd = new FormData();
       fd.append("data", JSON.stringify({
-        cliente: buildClientePayload(),
+        cliente,
         Fsmstate, FsmPrevious: fsmPrevious,
         ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) },
       }));
-      const resAsesor  = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
-      const dataAsesor = await resAsesor.json().catch(() => ({}));
-      if (!resAsesor.ok) {
-        const detail = typeof dataAsesor.detail === "string" ? dataAsesor.detail : JSON.stringify(dataAsesor.detail) || `HTTP ${resAsesor.status}`;
+      const res = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
+      const dataAsesor = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail = typeof dataAsesor.detail === "string" ? dataAsesor.detail : JSON.stringify(dataAsesor.detail) || `HTTP ${res.status}`;
         throw new Error(detail);
       }
-      const dealIdRecebido = dataAsesor?.dealId ?? null;
-      if (dealIdRecebido) { setDealId(dealIdRecebido); console.log("[handleEnviarAsesor] dealId recebido:", dealIdRecebido); }
-      const redirectParams = [
-        cliente.correo    ? `correo=${encodeURIComponent(cliente.correo)}`          : null,
-        dealIdRecebido    ? `dealId=${encodeURIComponent(dealIdRecebido)}`           : null,
-        idGeneracion      ? `id_generacion=${encodeURIComponent(idGeneracion)}`     : null,
-      ].filter(Boolean).join("&");
-      window.location.href = `${ASESOR_REDIRECT_URL}?${redirectParams}`;
+      const dealIdRecebido   = dataAsesor?.dealId   ?? null;
+      const mpklogIdRecebido = dataAsesor?.mpklogId ?? null;
+      if (dealIdRecebido)   { setDealId(dealIdRecebido);     console.log("[handleEnviarAsesor] dealId recebido:", dealIdRecebido);     }
+      if (mpklogIdRecebido) { setMpklogId(mpklogIdRecebido); console.log("[handleEnviarAsesor] mpklogId recebido:", mpklogIdRecebido); }
+      setStatus("asesor_solicitado");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -561,17 +563,14 @@ export default function FacturaUpload() {
           }),
         ]);
         const dataEnviar     = await resEnviar.json().catch(() => ({}));
-        const dealIdRecebido = dataEnviar?.dealId ?? null;
-        if (dealIdRecebido) { setDealId(dealIdRecebido); console.log("[handleEnviar/asesor] dealId recebido:", dealIdRecebido); }
+        const dealIdRecebido   = dataEnviar?.dealId   ?? null;
+        const mpklogIdRecebido = dataEnviar?.mpklogId ?? null;
+        if (dealIdRecebido)   { setDealId(dealIdRecebido);     console.log("[handleEnviar/asesor] dealId recebido:", dealIdRecebido);     }
+        if (mpklogIdRecebido) { setMpklogId(mpklogIdRecebido); console.log("[handleEnviar/asesor] mpklogId recebido:", mpklogIdRecebido); }
 
-        const redirectParams = [
-          cups                              ? `cups=${encodeURIComponent(cups)}`                     : null,
-          cliente.nombre                    ? `nombre=${encodeURIComponent(cliente.nombre)}`         : null,
-          cliente.correo                    ? `correo=${encodeURIComponent(cliente.correo)}`         : null,
-          dealIdRecebido                    ? `dealId=${encodeURIComponent(dealIdRecebido)}`         : null,
-          idGeneracion                      ? `id_generacion=${encodeURIComponent(idGeneracion)}`   : null,
-        ].filter(Boolean).join("&");
-        window.location.href = `${ASESOR_REDIRECT_URL}?${redirectParams}`;
+        const redirectUrl = buildRedirectURL(PLAN_REDIRECT_URL, cliente, facturaAsesor, resolverIdGeneracion(idGeneracion, ceNombre), manualFields, facturaData ?? cupsData, modoAlquiler, cuotaAlquilerMes);
+        const redirectUrlWithDeal = dealIdRecebido ? `${redirectUrl}&dealId=${encodeURIComponent(dealIdRecebido)}` : redirectUrl;
+        window.location.href = redirectUrlWithDeal;
       } catch (err) {
         console.error("[asesor] Erro no envío:", err);
         setError(err.message);
@@ -594,18 +593,22 @@ export default function FacturaUpload() {
         const detail = typeof dataEnviar.detail === "string" ? dataEnviar.detail : JSON.stringify(dataEnviar.detail) || `HTTP ${resEnviar.status}`;
         throw new Error(detail);
       }
-      const dealIdRecebido = dataEnviar?.dealId ?? null;
-      if (dealIdRecebido) { setDealId(dealIdRecebido); console.log("[handleEnviar] dealId recebido:", dealIdRecebido); }
+      const dealIdRecebido   = dataEnviar?.dealId   ?? null;
+      const mpklogIdRecebido = dataEnviar?.mpklogId ?? null;
+      if (dealIdRecebido)   { setDealId(dealIdRecebido);     console.log("[handleEnviar] dealId recebido:", dealIdRecebido);     }
+      if (mpklogIdRecebido) { setMpklogId(mpklogIdRecebido); console.log("[handleEnviar] mpklogId recebido:", mpklogIdRecebido); }
 
       // Abrir quoting en nueva pestaña con los datos como query params
-      window.open(buildRedirectURL(PLAN_REDIRECT_URL, cliente, factura, resolverIdGeneracion(idGeneracion, ceNombre), manualFields, facturaData ?? cupsData, modoAlquiler, cuotaAlquilerMes), "_blank");
+     //const redirectUrl = buildRedirectURL(PLAN_REDIRECT_URL, cliente, factura, resolverIdGeneracion(idGeneracion, ceNombre), manualFields, facturaData ?? cupsData, modoAlquiler, cuotaAlquilerMes);
+     // console.log("[handleEnviar] redirect URL:", redirectUrl);
+      // window.open(redirectUrl, "_blank");
 
       // Llamar al backend de quoting con los datos de la factura (cliente ya con dealId)
       const quotingRes = await fetch(QUOTING_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          cliente: buildClientePayload(dealIdRecebido),
+          cliente: buildClientePayload(dealIdRecebido, mpklogIdRecebido),
           factura,
           Fsmstate,
           FsmPrevious: fsmPrevious,
@@ -666,6 +669,90 @@ export default function FacturaUpload() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...proposta, numeroPaneles: panelesPropuesta, aceptado: true }),
     }).catch(() => {});
+  };
+
+  const handleContratar = async () => {
+    const dniRegex = /^[0-9]{8}[A-Za-z]$/;
+    if (!dniContrato.trim()) {
+      setDniError("El DNI es obligatorio");
+      return;
+    }
+    if (!dniRegex.test(dniContrato.trim())) {
+      setDniError("Introduce un DNI válido (ej: 12345678A)");
+      return;
+    }
+    setDniError("");
+    setEnviandoContrato(true);
+
+    // Usar dados disponíveis independentemente do modo
+    const factura = mode === "pdf"
+      ? buildFacturaPDF()
+      : mode === "cups"
+        ? buildFacturaCUPS()
+        : {}; // modo demo — sem dados de factura
+
+    // Fonte de dados raw para pe_p* e importe_factura
+    const rawData = facturaData ?? cupsData ?? {};
+
+    const payload = {
+      cliente: {
+        nombre:         cliente.nombre     || "",
+        apellidos:      cliente.apellidos  || "",
+        correo:         cliente.correo     || "",
+        telefono:       cliente.telefono   || "",
+        direccion:      cliente.direccion  || "",
+        dealId:         dealId             ?? null,
+        mpklogId:       mpklogId           ?? null,
+        databaseId:     "00001",
+        dni:            dniContrato.trim().toUpperCase(),
+        tipoVenta:      modoAlquiler ? "Alquiler" : "Venta",
+        planContratado: true,
+      },
+      factura: {
+        ...factura,
+        precios_energia: {
+          pe_p1: parseFloat(manualFields.pe_p1 || rawData.pe_p1) || null,
+          pe_p2: parseFloat(manualFields.pe_p2 || rawData.pe_p2) || null,
+          pe_p3: parseFloat(manualFields.pe_p3 || rawData.pe_p3) || null,
+          pe_p4: parseFloat(manualFields.pe_p4 || rawData.pe_p4) || null,
+          pe_p5: parseFloat(manualFields.pe_p5 || rawData.pe_p5) || null,
+          pe_p6: parseFloat(manualFields.pe_p6 || rawData.pe_p6) || null,
+        },
+        importe_factura: parseFloat(
+          manualFields.importe_factura || rawData.importe_factura
+        ) || null,
+      },
+      Fsmstate:    "08_PROPUESTA_ALQ",
+      FsmPrevious: Fsmstate || null,
+      ce: {
+        nombre:        ceNombre,
+        direccion:     ceDireccion,
+        status:        ceStatus,
+        etiqueta:      ceEtiqueta,
+        id_generacion: resolverIdGeneracion(idGeneracion, ceNombre),
+      },
+    };
+
+    try {
+      const fd = new FormData();
+      fd.append("data", JSON.stringify(payload));
+      if (mode === "pdf" && file) fd.append("file", file, file.name);
+
+      const res = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
+      if (!res.ok) {
+        const detail = await res.json()
+          .then((d) => typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail))
+          .catch(() => `HTTP ${res.status}`);
+        throw new Error(detail);
+      }
+      setModalContratar(false);
+      setDniContrato("");
+      setStatus("asesor_solicitado");
+    } catch (err) {
+      setDniError(err.message);
+    } finally {
+      setEnviandoContrato(false);
+    }
   };
 
   const handleReset = () => {
@@ -762,7 +849,7 @@ export default function FacturaUpload() {
             panelesSel={panelesSel}
             panelesPropuesta={panelesPropuesta}
             tabActiva={tabActiva}
-            onContratar={handleEnviar}
+            onContratar={() => setModalContratar(true)}
             onVolver={handleReset}
             onOptimizar={handleOptimizar}
             onSetPanelesPropuesta={setPanelesPropuesta}
@@ -1231,6 +1318,60 @@ export default function FacturaUpload() {
         onVolver={() => setModalOptimizar(null)}
         onAceptar={handleAceptarPropuesta}
       />
+
+      {/* ── MODAL CONTRATAR ── */}
+      {modalContratar && (
+        <div style={{
+          position:"fixed", inset:0, background:"rgba(0,0,0,0.55)",
+          zIndex:1000, display:"flex", alignItems:"center",
+          justifyContent:"center", padding:16,
+        }}>
+          <div style={{
+            background:"#fff", borderRadius:16, padding:"32px 28px",
+            maxWidth:400, width:"100%",
+            boxShadow:"0 8px 40px rgba(0,0,0,0.18)",
+          }}>
+            <h3 style={{ fontSize:18, fontWeight:700, color:"#111", marginBottom:8 }}>
+              Confirmar contratación
+            </h3>
+            <p style={{ fontSize:13, color:"#777", marginBottom:24 }}>
+              Introduce tu DNI para completar la contratación.
+            </p>
+
+            <div className="cs-field-group" style={{ marginBottom:16 }}>
+              <label className="cs-label">DNI</label>
+              <input
+                className={`cs-input${dniError ? " error" : ""}`}
+                placeholder="12345678A"
+                value={dniContrato}
+                onChange={(e) => { setDniContrato(e.target.value); setDniError(""); }}
+                onKeyDown={(e) => e.key === "Enter" && handleContratar()}
+                autoFocus
+              />
+              {dniError && <span className="cs-field-error">{dniError}</span>}
+            </div>
+
+            <div style={{ display:"flex", gap:12 }}>
+              <button
+                className="cs-btn-ghost"
+                style={{ flex:1, marginTop:0 }}
+                onClick={() => { setModalContratar(false); setDniContrato(""); setDniError(""); }}
+                disabled={enviandoContrato}
+              >
+                ← Volver
+              </button>
+              <button
+                className="cs-btn-primary"
+                style={{ flex:1, marginTop:0 }}
+                onClick={handleContratar}
+                disabled={enviandoContrato}
+              >
+                {enviandoContrato ? "Enviando..." : "Contratar ahora →"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── FOOTER ── */}
           <footer style={{ background:"#121212", color:"#fff", padding:"48px 40px 0", width:"100vw", marginLeft:"calc(-50vw + 50%)" }}>
