@@ -38,6 +38,12 @@ export default function FacturaUpload() {
   const [userCoords, setUserCoords]                     = useState(null); // {lat, lon}
   const nominatimTimerRef = useRef(null);
   const dropdownRef       = useRef(null);
+  const urlParamsRef      = useRef({
+    cliente: {}, factura: null, ce: {},
+    dealId: null, mpklogId: null, idGen: null,
+    fsmstate: null, fsmPrevious: null,
+    facturaLS: null, modeLS: null,
+  });
 
   // ── Zona check result ─────────────────────────────────────────────────────
   const [Fsmstate, setFsmstate]       = useState(""); // "01_DENTRO_ZONA" | "02_FUERA_ZONA"
@@ -99,6 +105,58 @@ export default function FacturaUpload() {
       if (nombre) setCeFijada(nombre);
     }
 
+    // ── Preencher ref com dados da URL — síncrono, disponível em handlers ────
+    {
+      const s = (key, fallback = "") => params.get(key) ?? fallback;
+      const n = (key) => parseFloat(params.get(key)) || null;
+      urlParamsRef.current = {
+        cliente: {
+          nombre:    s("cliente.nombre")    || s("nombre"),
+          apellidos: s("cliente.apellidos") || s("apellidos"),
+          correo:    s("cliente.correo")    || s("correo"),
+          telefono:  s("cliente.telefono")  || s("telefono"),
+          direccion: s("cliente.direccion") || s("direccion"),
+        },
+        ce: {
+          nombre:    s("ceNombre")    || s("ce.nombre"),
+          status:    s("ceStatus")    || s("ce.status"),
+          etiqueta:  s("ceEtiqueta")  || s("ce.etiqueta"),
+          direccion: s("ceDireccion") || s("ce.direccion"),
+        },
+        dealId:      s("dealId")        || null,
+        mpklogId:    s("mpklogId")      || null,
+        idGen:       s("id_generacion") || null,
+        fsmstate:    s("Fsmstate")    || s("fsmstate")    || null,
+        fsmPrevious: s("FsmPrevious") || s("fsmPrevious") || null,
+        factura: {
+          cups:             s("cups"),
+          comercializadora: s("comercializadora"),
+          distribuidora:    s("distribuidora"),
+          tarifa_acceso:    s("tarifa_acceso"),
+          periodo_inicio:   s("periodo_inicio"),
+          periodo_fin:      s("periodo_fin"),
+          dias_facturados:  n("dias_facturados"),
+          importe_factura:  n("importe_factura"),
+          pot_p1_kw: n("pot_p1_kw"), pot_p2_kw: n("pot_p2_kw"),
+          pot_p3_kw: n("pot_p3_kw"), pot_p4_kw: n("pot_p4_kw"),
+          pot_p5_kw: n("pot_p5_kw"), pot_p6_kw: n("pot_p6_kw"),
+          consumo_p1_kwh: n("consumo_p1_kwh"), consumo_p2_kwh: n("consumo_p2_kwh"),
+          consumo_p3_kwh: n("consumo_p3_kwh"), consumo_p4_kwh: n("consumo_p4_kwh"),
+          consumo_p5_kwh: n("consumo_p5_kwh"), consumo_p6_kwh: n("consumo_p6_kwh"),
+          pp_p1: n("pp_p1"), pp_p2: n("pp_p2"), pp_p3: n("pp_p3"),
+          pp_p4: n("pp_p4"), pp_p5: n("pp_p5"), pp_p6: n("pp_p6"),
+          pe_p1: n("pe_p1"), pe_p2: n("pe_p2"), pe_p3: n("pe_p3"),
+          pe_p4: n("pe_p4"), pe_p5: n("pe_p5"), pe_p6: n("pe_p6"),
+          imp_ele:    n("imp_ele"),
+          iva:        n("iva"),
+          alq_eq_dia: n("alq_eq_dia"),
+          api_ok:    params.get("api_ok") === "true"  ? true
+                   : params.get("api_ok") === "false" ? false : null,
+          api_error: s("api_error"),
+        },
+      };
+    }
+
     // ── Demo plan-demo ────────────────────────────────────────────────────────
     if (params.get("demo") === "true" && params.get("fase") === "plan-demo") {
       const p = (key, fallback = null) => {
@@ -107,13 +165,6 @@ export default function FacturaUpload() {
       };
       const s = (key, fallback = "") => params.get(key) ?? fallback;
 
-      setCliente(c => ({
-        ...c,
-        nombre:    s("cliente.nombre"),
-        direccion: s("cliente.direccion"),
-      }));
-      setCeNombre(s("ceNombre"));
-      setCeStatus(s("ceStatus"));
       setPanelesSel(p("panelesSel", 3));
       setPanelesPropuesta(p("panelesSel", 3));
       setPlanData({
@@ -127,8 +178,89 @@ export default function FacturaUpload() {
         coeficienteDistribucion:p("coeficienteDistribucion",5),
         plazoRecuperacion:      p("plazoRecuperacion",      6.7),
       });
-      setStatus("sent");
       setLoading(false);
+
+      setCliente(c => ({
+        nombre:    c.nombre    || s("cliente.nombre")    || s("nombre")    || "",
+        apellidos: c.apellidos || s("cliente.apellidos") || s("apellidos") || "",
+        correo:    c.correo    || s("cliente.correo")    || s("correo")    || "",
+        telefono:  c.telefono  || s("cliente.telefono")  || s("telefono")  || "",
+        direccion: c.direccion || s("cliente.direccion") || s("direccion") || "",
+      }));
+
+      setCeNombre(prev    => prev || s("ceNombre")    || "");
+      setCeStatus(prev    => prev || s("ceStatus")    || "");
+      setCeEtiqueta(prev  => prev || s("ceEtiqueta")  || "");
+      setCeDireccion(prev => prev || s("ceDireccion") || "");
+
+      const urlDealId   = s("dealId");
+      const urlMpklogId = s("mpklogId");
+      const urlIdGen    = s("id_generacion");
+      if (urlDealId)   setDealId(prev        => prev || urlDealId);
+      if (urlMpklogId) setMpklogId(prev      => prev || urlMpklogId);
+      if (urlIdGen)    setIdGeneracion(prev   => prev || urlIdGen);
+
+      const urlFsmstate    = s("Fsmstate")    || s("fsmstate");
+      const urlFsmPrevious = s("FsmPrevious") || s("fsmPrevious");
+      if (urlFsmstate)    setFsmstate(prev    => prev || urlFsmstate);
+      if (urlFsmPrevious) setFsmPrevious(prev => prev || urlFsmPrevious);
+
+      // Restaurar dados guardados antes do redirect
+      const csCliente  = localStorage.getItem("cs_cliente");
+      const csFactura  = localStorage.getItem("cs_factura");
+      const csCe       = localStorage.getItem("cs_ce");
+      const csDealId   = localStorage.getItem("cs_dealId");
+      const csMpklogId = localStorage.getItem("cs_mpklogId");
+      const csFsmstate = localStorage.getItem("cs_fsmstate");
+      const csMode     = localStorage.getItem("cs_mode");
+
+      if (csCliente) {
+        const c = JSON.parse(csCliente);
+        setCliente(prev => ({
+          nombre:    prev.nombre    || c.nombre    || "",
+          apellidos: prev.apellidos || c.apellidos || "",
+          correo:    prev.correo    || c.correo    || "",
+          telefono:  prev.telefono  || c.telefono  || "",
+          direccion: prev.direccion || c.direccion || "",
+        }));
+        if (c.dealId)   setDealId(c.dealId);
+        if (c.mpklogId) setMpklogId(c.mpklogId);
+      }
+
+      if (csFactura) {
+        const f = JSON.parse(csFactura);
+        if (csMode === "pdf")  setFacturaData(f);
+        if (csMode === "cups") setCupsData(f);
+        if (csMode) setMode(csMode);
+        // Ref síncrono — setState é async, ref é imediato para handleContratar
+        urlParamsRef.current.facturaLS = f;
+        if (csMode) urlParamsRef.current.modeLS = csMode;
+      }
+
+      if (csCe) {
+        const ce = JSON.parse(csCe);
+        setCeNombre(prev    => prev || ce.nombre    || "");
+        setCeDireccion(prev => prev || ce.direccion || "");
+        setCeStatus(prev    => prev || ce.status    || "");
+        setCeEtiqueta(prev  => prev || ce.etiqueta  || "");
+        if (ce.id_generacion) setIdGeneracion(String(ce.id_generacion));
+      }
+
+      if (csDealId)   setDealId(prev   => prev || csDealId);
+      if (csMpklogId) setMpklogId(prev => prev || csMpklogId);
+      if (csFsmstate) setFsmstate(prev => prev || csFsmstate);
+
+      // Limpar localStorage após restaurar
+      localStorage.removeItem("cs_cliente");
+      localStorage.removeItem("cs_factura");
+      localStorage.removeItem("cs_ce");
+      localStorage.removeItem("cs_dealId");
+      localStorage.removeItem("cs_mpklogId");
+      localStorage.removeItem("cs_fsmstate");
+      localStorage.removeItem("cs_mode");
+
+      // Sempre no final — garante que os passos 1 e 2 já correram
+      setStatus("sent");
     }
 
     const modoParam = params.get("modo");
@@ -598,10 +730,19 @@ export default function FacturaUpload() {
       if (dealIdRecebido)   { setDealId(dealIdRecebido);     console.log("[handleEnviar] dealId recebido:", dealIdRecebido);     }
       if (mpklogIdRecebido) { setMpklogId(mpklogIdRecebido); console.log("[handleEnviar] mpklogId recebido:", mpklogIdRecebido); }
 
+      // Guardar dados para restaurar após redirect do Cotizador
+      localStorage.setItem("cs_cliente",  JSON.stringify({ ...buildClientePayload(dealIdRecebido, mpklogIdRecebido) }));
+      localStorage.setItem("cs_factura",  JSON.stringify(factura));
+      localStorage.setItem("cs_ce",       JSON.stringify({ nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) }));
+      localStorage.setItem("cs_dealId",   dealIdRecebido   ?? "");
+      localStorage.setItem("cs_mpklogId", mpklogIdRecebido ?? "");
+      localStorage.setItem("cs_fsmstate", Fsmstate         ?? "");
+      localStorage.setItem("cs_mode",     mode             ?? "");
+
       // Abrir quoting en nueva pestaña con los datos como query params
-     //const redirectUrl = buildRedirectURL(PLAN_REDIRECT_URL, cliente, factura, resolverIdGeneracion(idGeneracion, ceNombre), manualFields, facturaData ?? cupsData, modoAlquiler, cuotaAlquilerMes);
-     // console.log("[handleEnviar] redirect URL:", redirectUrl);
-      // window.open(redirectUrl, "_blank");
+     const redirectUrl = buildRedirectURL(PLAN_REDIRECT_URL, cliente, factura, resolverIdGeneracion(idGeneracion, ceNombre), manualFields, facturaData ?? cupsData, modoAlquiler, cuotaAlquilerMes);
+      console.log("[handleEnviar] redirect URL:", redirectUrl);
+      window.open(redirectUrl, "_blank");
 
       // Llamar al backend de quoting con los datos de la factura (cliente ya con dealId)
       const quotingRes = await fetch(QUOTING_URL, {
@@ -674,35 +815,119 @@ export default function FacturaUpload() {
   const handleContratar = async () => {
     const dniRegex = /^[0-9]{8}[A-Za-z]$/;
     if (!dniContrato.trim()) {
-      setDniError("El DNI es obligatorio");
-      return;
+      setDniError("El DNI es obligatorio"); return;
     }
     if (!dniRegex.test(dniContrato.trim())) {
-      setDniError("Introduce un DNI válido (ej: 12345678A)");
-      return;
+      setDniError("Introduce un DNI válido (ej: 12345678A)"); return;
     }
     setDniError("");
     setEnviandoContrato(true);
 
-    // Usar dados disponíveis independentemente do modo
-    const factura = mode === "pdf"
-      ? buildFacturaPDF()
-      : mode === "cups"
-        ? buildFacturaCUPS()
-        : {}; // modo demo — sem dados de factura
+    // Ref com dados da URL (modo demo) como fallback síncrono
+    const urlRef    = urlParamsRef.current;
+    const urlFact   = urlRef.factura   ?? {};
+    const urlCli    = urlRef.cliente   ?? {};
+    const facturaLS = urlRef.facturaLS ?? null;   // restaurada de localStorage (sync)
+    const modeEff   = mode ?? urlRef.modeLS ?? null; // mode restaurado de localStorage
 
-    // Fonte de dados raw para pe_p* e importe_factura
-    const rawData = facturaData ?? cupsData ?? {};
+    // rawData para overrides de pe_p* e importe (fluxo normal com step 2)
+    const rawData = facturaData ?? cupsData
+      ?? (urlFact.cups || urlFact.comercializadora ? urlFact : null)
+      ?? {};
+
+    // Factura estruturada:
+    //   PDF/CUPS com dados em state → builders padrão
+    //   Fallback: facturaLS (localStorage) → objeto direto sem re-build
+    //   Demo sem dados → rawData de URL params ou vazio
+    let factura;
+    if (modeEff === "pdf") {
+      factura = facturaData ? buildFacturaPDF() : (facturaLS ?? {});
+    } else if (modeEff === "cups") {
+      factura = cupsData ? buildFacturaCUPS() : (facturaLS ?? {});
+    } else {
+      factura = facturaLS ?? (rawData.cups || rawData.comercializadora ? {
+        cups:             rawData.cups             || "",
+        comercializadora: rawData.comercializadora || "",
+        distribuidora:    rawData.distribuidora    || "",
+        tarifa_acceso:    rawData.tarifa_acceso    || "",
+        periodo_inicio:   rawData.periodo_inicio   || "",
+        periodo_fin:      rawData.periodo_fin      || "",
+        dias_facturados:  rawData.dias_facturados  ?? null,
+        importe_factura:  rawData.importe_factura  ?? null,
+        potencias_kw: {
+          p1: rawData.pot_p1_kw ?? null, p2: rawData.pot_p2_kw ?? null,
+          p3: rawData.pot_p3_kw ?? null, p4: rawData.pot_p4_kw ?? null,
+          p5: rawData.pot_p5_kw ?? null, p6: rawData.pot_p6_kw ?? null,
+        },
+        consumos_kwh: {
+          p1: rawData.consumo_p1_kwh ?? null, p2: rawData.consumo_p2_kwh ?? null,
+          p3: rawData.consumo_p3_kwh ?? null, p4: rawData.consumo_p4_kwh ?? null,
+          p5: rawData.consumo_p5_kwh ?? null, p6: rawData.consumo_p6_kwh ?? null,
+        },
+        precios_potencia: {
+          p1: rawData.pp_p1 ?? null, p2: rawData.pp_p2 ?? null,
+          p3: rawData.pp_p3 ?? null, p4: rawData.pp_p4 ?? null,
+          p5: rawData.pp_p5 ?? null, p6: rawData.pp_p6 ?? null,
+        },
+        impuestos: { imp_ele: rawData.imp_ele ?? null, iva: rawData.iva ?? null },
+        otros: { alq_eq_dia: rawData.alq_eq_dia ?? null },
+        api: { api_ok: rawData.api_ok ?? null, api_error: rawData.api_error || "" },
+      } : {});
+    }
+
+    // Se dealId ainda não foi obtido, chamar /enviar primeiro
+    // para registar no Zoho e obter dealId + mpklogId
+    let dealIdFinal   = dealId   ?? urlRef.dealId   ?? null;
+    let mpklogIdFinal = mpklogId ?? urlRef.mpklogId ?? null;
+
+    if (!dealIdFinal) {
+      try {
+        const cePayloadPre = {
+          nombre:        ceNombre    || urlRef.ce?.nombre    || "",
+          direccion:     ceDireccion || urlRef.ce?.direccion || "",
+          status:        ceStatus    || urlRef.ce?.status    || "",
+          etiqueta:      ceEtiqueta  || urlRef.ce?.etiqueta  || "",
+          id_generacion: resolverIdGeneracion(idGeneracion || urlRef.idGen, ceNombre || urlRef.ce?.nombre),
+        };
+        const clientePre = {
+          nombre:    cliente.nombre    || urlCli.nombre    || "",
+          apellidos: cliente.apellidos || urlCli.apellidos || "",
+          correo:    cliente.correo    || urlCli.correo    || "",
+          telefono:  cliente.telefono  || urlCli.telefono  || "",
+          direccion: cliente.direccion || urlCli.direccion || "",
+          dealId: null, mpklogId: null, databaseId: "", dni: "",
+          tipoVenta: modoAlquiler ? "Alquiler" : "Venta",
+        };
+        const fdPre = new FormData();
+        fdPre.append("data", JSON.stringify({
+          cliente: clientePre,
+          factura,
+          Fsmstate: Fsmstate || urlRef.fsmstate || "",
+          FsmPrevious: fsmPrevious || urlRef.fsmPrevious || null,
+          ce: cePayloadPre,
+        }));
+        if (mode === "pdf" && file) fdPre.append("file", file, file.name);
+
+        const resEnviar  = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fdPre });
+        const dataEnviar = await resEnviar.json().catch(() => ({}));
+        dealIdFinal   = dataEnviar?.dealId   ?? null;
+        mpklogIdFinal = dataEnviar?.mpklogId ?? null;
+        if (dealIdFinal)   setDealId(dealIdFinal);
+        if (mpklogIdFinal) setMpklogId(mpklogIdFinal);
+      } catch (e) {
+        console.warn("[handleContratar] Erro ao obter dealId:", e);
+      }
+    }
 
     const payload = {
       cliente: {
-        nombre:         cliente.nombre     || "",
-        apellidos:      cliente.apellidos  || "",
-        correo:         cliente.correo     || "",
-        telefono:       cliente.telefono   || "",
-        direccion:      cliente.direccion  || "",
-        dealId:         dealId             ?? null,
-        mpklogId:       mpklogId           ?? null,
+        nombre:         cliente.nombre    || urlCli.nombre    || "",
+        apellidos:      cliente.apellidos || urlCli.apellidos || "",
+        correo:         cliente.correo    || urlCli.correo    || "",
+        telefono:       cliente.telefono  || urlCli.telefono  || "",
+        direccion:      cliente.direccion || urlCli.direccion || "",
+        dealId:         dealIdFinal       ?? null,
+        mpklogId:       mpklogIdFinal     ?? null,
         databaseId:     "00001",
         dni:            dniContrato.trim().toUpperCase(),
         tipoVenta:      modoAlquiler ? "Alquiler" : "Venta",
@@ -711,25 +936,25 @@ export default function FacturaUpload() {
       factura: {
         ...factura,
         precios_energia: {
-          pe_p1: parseFloat(manualFields.pe_p1 || rawData.pe_p1) || null,
-          pe_p2: parseFloat(manualFields.pe_p2 || rawData.pe_p2) || null,
-          pe_p3: parseFloat(manualFields.pe_p3 || rawData.pe_p3) || null,
-          pe_p4: parseFloat(manualFields.pe_p4 || rawData.pe_p4) || null,
-          pe_p5: parseFloat(manualFields.pe_p5 || rawData.pe_p5) || null,
-          pe_p6: parseFloat(manualFields.pe_p6 || rawData.pe_p6) || null,
+          pe_p1: parseFloat(manualFields.pe_p1 || rawData.pe_p1 || facturaLS?.precios_energia?.pe_p1) || null,
+          pe_p2: parseFloat(manualFields.pe_p2 || rawData.pe_p2 || facturaLS?.precios_energia?.pe_p2) || null,
+          pe_p3: parseFloat(manualFields.pe_p3 || rawData.pe_p3 || facturaLS?.precios_energia?.pe_p3) || null,
+          pe_p4: parseFloat(manualFields.pe_p4 || rawData.pe_p4 || facturaLS?.precios_energia?.pe_p4) || null,
+          pe_p5: parseFloat(manualFields.pe_p5 || rawData.pe_p5 || facturaLS?.precios_energia?.pe_p5) || null,
+          pe_p6: parseFloat(manualFields.pe_p6 || rawData.pe_p6 || facturaLS?.precios_energia?.pe_p6) || null,
         },
         importe_factura: parseFloat(
-          manualFields.importe_factura || rawData.importe_factura
+          manualFields.importe_factura || rawData.importe_factura || facturaLS?.importe_factura
         ) || null,
       },
       Fsmstate:    "08_PROPUESTA_ALQ",
-      FsmPrevious: Fsmstate || null,
+      FsmPrevious: Fsmstate || urlRef.fsmstate || null,
       ce: {
-        nombre:        ceNombre,
-        direccion:     ceDireccion,
-        status:        ceStatus,
-        etiqueta:      ceEtiqueta,
-        id_generacion: resolverIdGeneracion(idGeneracion, ceNombre),
+        nombre:        ceNombre    || urlRef.ce?.nombre    || "",
+        direccion:     ceDireccion || urlRef.ce?.direccion || "",
+        status:        ceStatus    || urlRef.ce?.status    || "",
+        etiqueta:      ceEtiqueta  || urlRef.ce?.etiqueta  || "",
+        id_generacion: resolverIdGeneracion(idGeneracion || urlRef.idGen, ceNombre || urlRef.ce?.nombre),
       },
     };
 
@@ -741,7 +966,8 @@ export default function FacturaUpload() {
       const res = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
       if (!res.ok) {
         const detail = await res.json()
-          .then((d) => typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail))
+          .then((d) => typeof d.detail === "string"
+            ? d.detail : JSON.stringify(d.detail))
           .catch(() => `HTTP ${res.status}`);
         throw new Error(detail);
       }
