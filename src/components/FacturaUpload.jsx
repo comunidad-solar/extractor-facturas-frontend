@@ -819,6 +819,14 @@ export default function FacturaUpload() {
     }
     setDniError("");
     setEnviandoContrato(true);
+    console.log("[handleContratar] DEBUG:", {mode,
+  modeLS: urlParamsRef.current.modeLS,
+  modeEff: mode ?? urlParamsRef.current.modeLS ?? null,
+  facturaDataExists: !!facturaData,
+  facturaDataKeys: facturaData ? Object.keys(facturaData).slice(0, 10) : null,
+  facturaLSExists: !!urlParamsRef.current.facturaLS,
+  facturaLSKeys: urlParamsRef.current.facturaLS ? Object.keys(urlParamsRef.current.facturaLS).slice(0, 10) : null,
+});
 
     // Ref com dados da URL (modo demo) como fallback síncrono
     const urlRef    = urlParamsRef.current;
