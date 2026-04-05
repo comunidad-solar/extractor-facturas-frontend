@@ -703,6 +703,19 @@ export default function FacturaUpload() {
 
         const redirectUrl = buildRedirectURL(PLAN_REDIRECT_URL, cliente, facturaAsesor, resolverIdGeneracion(idGeneracion, ceNombre), manualFields, facturaData ?? cupsData, modoAlquiler, cuotaAlquilerMes);
         const redirectUrlWithDeal = dealIdRecebido ? `${redirectUrl}&dealId=${encodeURIComponent(dealIdRecebido)}` : redirectUrl;
+
+        // Guardar dados flat para restaurar após redirect do Cotizador (modo asesor)
+        const facturaFlatAsesor = mode === "pdf"
+          ? { ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null }
+          : { cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null };
+        localStorage.setItem("cs_cliente",  JSON.stringify({ ...buildClientePayload(dealIdRecebido, mpklogIdRecebido) }));
+        localStorage.setItem("cs_factura",  JSON.stringify(facturaFlatAsesor));
+        localStorage.setItem("cs_ce",       JSON.stringify(cePayload));
+        localStorage.setItem("cs_dealId",   dealIdRecebido   ?? "");
+        localStorage.setItem("cs_mpklogId", mpklogIdRecebido ?? "");
+        localStorage.setItem("cs_fsmstate", Fsmstate         ?? "");
+        localStorage.setItem("cs_mode",     mode             ?? "");
+
         window.location.href = redirectUrlWithDeal;
       } catch (err) {
         console.error("[asesor] Erro no envío:", err);
@@ -732,8 +745,12 @@ export default function FacturaUpload() {
       if (mpklogIdRecebido) { setMpklogId(mpklogIdRecebido); console.log("[handleEnviar] mpklogId recebido:", mpklogIdRecebido); }
 
       // Guardar dados para restaurar após redirect do Cotizador
+      // cs_factura em formato flat (não estruturado) — buildFactura() espera pot_p1_kw, pe_p1, etc.
+      const facturaFlat = mode === "pdf"
+        ? { ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null }
+        : { cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null };
       localStorage.setItem("cs_cliente",  JSON.stringify({ ...buildClientePayload(dealIdRecebido, mpklogIdRecebido) }));
-      localStorage.setItem("cs_factura",  JSON.stringify(factura));
+      localStorage.setItem("cs_factura",  JSON.stringify(facturaFlat));
       localStorage.setItem("cs_ce",       JSON.stringify({ nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) }));
       localStorage.setItem("cs_dealId",   dealIdRecebido   ?? "");
       localStorage.setItem("cs_mpklogId", mpklogIdRecebido ?? "");
