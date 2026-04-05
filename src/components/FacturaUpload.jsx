@@ -961,6 +961,25 @@ export default function FacturaUpload() {
       setModalContratar(false);
       setDniContrato("");
       setStatus("asesor_solicitado");
+
+      // Descomentar para abrir contrato em nova aba quando backend enviar contractUrl via webhook
+      // setLoading(true);
+      // setLoadingMsg("Preparando tu contrato...");
+      // const MAX_INTENTOS = 15;
+      // for (let i = 0; i < MAX_INTENTOS; i++) {
+      //   await new Promise((r) => setTimeout(r, 2000));
+      //   try {
+      //     const contratoRes = await fetch(`${API_BASE}/contrato/${dealIdFinal}`);
+      //     if (contratoRes.ok) {
+      //       const data = await contratoRes.json();
+      //       if (data.found === true) {
+      //         window.open(data.contractUrl, "_blank");
+      //         break;
+      //       }
+      //     }
+      //   } catch { /* ignorar erros de rede no polling */ }
+      // }
+      // setLoading(false);
     } catch (err) {
       setDniError(err.message);
     } finally {
@@ -1112,12 +1131,12 @@ export default function FacturaUpload() {
         {/* ── ASESOR SOLICITADO ── */}
         {!loading && status === "asesor_solicitado" && (
           <div className="cs-card fade-in" style={{ textAlign:"center" }}>
-            <div style={{ fontSize:48, marginBottom:16 }}>✅</div>
+            <div style={{ fontSize:48, marginBottom:16 }}>🖊️</div>
             <h2 style={{ fontSize:20, fontWeight:700, color:"#111", marginBottom:8 }}>
               ¡Solicitud recibida!
             </h2>
             <p style={{ fontSize:14, color:"#555", marginBottom:28, lineHeight:1.7 }}>
-              En breve, uno de nuestros asesores se pondrá en contacto contigo.
+              El contrato ha sido enviado a tu email. Tienes 30 minutos para firmarlo.
             </p>
             <button className="cs-btn-ghost" onClick={handleReset}>← Volver al inicio</button>
           </div>
