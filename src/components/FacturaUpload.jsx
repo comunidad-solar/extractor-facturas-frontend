@@ -840,44 +840,26 @@ export default function FacturaUpload() {
       ?? (urlFact.cups || urlFact.comercializadora ? urlFact : null)
       ?? {};
 
-    // Factura estruturada:
-    //   PDF/CUPS com dados em state → builders padrão
-    //   Fallback: facturaLS (localStorage) → objeto direto sem re-build
-    //   Demo sem dados → rawData de URL params ou vazio
+    // Helper: normaliza para formato estruturado independentemente do formato de entrada.
+    // Se já tem chaves estruturadas (potencias_kw), devolve tal qual.
+    // Se tem chaves flat (pot_p1_kw), converte via buildFactura.
+    const ensureStructured = (obj) => {
+      if (!obj || Object.keys(obj).length === 0) return {};
+      if (obj.potencias_kw !== undefined) return obj;
+      return buildFactura(obj);
+    };
+
     let factura;
     if (modeEff === "pdf") {
-      factura = facturaData ? buildFacturaPDF() : (facturaLS ?? {});
+      factura = facturaData
+        ? ensureStructured({ ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null })
+        : ensureStructured(facturaLS);
     } else if (modeEff === "cups") {
-      factura = cupsData ? buildFacturaCUPS() : (facturaLS ?? {});
+      factura = cupsData
+        ? ensureStructured({ cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null })
+        : ensureStructured(facturaLS);
     } else {
-      factura = facturaLS ?? (rawData.cups || rawData.comercializadora ? {
-        cups:             rawData.cups             || "",
-        comercializadora: rawData.comercializadora || "",
-        distribuidora:    rawData.distribuidora    || "",
-        tarifa_acceso:    rawData.tarifa_acceso    || "",
-        periodo_inicio:   rawData.periodo_inicio   || "",
-        periodo_fin:      rawData.periodo_fin      || "",
-        dias_facturados:  rawData.dias_facturados  ?? null,
-        importe_factura:  rawData.importe_factura  ?? null,
-        potencias_kw: {
-          p1: rawData.pot_p1_kw ?? null, p2: rawData.pot_p2_kw ?? null,
-          p3: rawData.pot_p3_kw ?? null, p4: rawData.pot_p4_kw ?? null,
-          p5: rawData.pot_p5_kw ?? null, p6: rawData.pot_p6_kw ?? null,
-        },
-        consumos_kwh: {
-          p1: rawData.consumo_p1_kwh ?? null, p2: rawData.consumo_p2_kwh ?? null,
-          p3: rawData.consumo_p3_kwh ?? null, p4: rawData.consumo_p4_kwh ?? null,
-          p5: rawData.consumo_p5_kwh ?? null, p6: rawData.consumo_p6_kwh ?? null,
-        },
-        precios_potencia: {
-          p1: rawData.pp_p1 ?? null, p2: rawData.pp_p2 ?? null,
-          p3: rawData.pp_p3 ?? null, p4: rawData.pp_p4 ?? null,
-          p5: rawData.pp_p5 ?? null, p6: rawData.pp_p6 ?? null,
-        },
-        impuestos: { imp_ele: rawData.imp_ele ?? null, iva: rawData.iva ?? null },
-        otros: { alq_eq_dia: rawData.alq_eq_dia ?? null },
-        api: { api_ok: rawData.api_ok ?? null, api_error: rawData.api_error || "" },
-      } : {});
+      factura = ensureStructured(facturaLS ?? rawData);
     }
 
     // Se dealId ainda não foi obtido, chamar /enviar primeiro
