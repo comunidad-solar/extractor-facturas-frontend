@@ -91,6 +91,8 @@ export default function FacturaUpload() {
   const [dniContrato, setDniContrato]           = useState("");
   const [dniError, setDniError]                 = useState("");
   const [enviandoContrato, setEnviandoContrato] = useState(false);
+  const [ibanContrato, setIbanContrato]         = useState("");
+  const [ibanError, setIbanError]               = useState("");
 
   // ── Leitura inicial da URL ────────────────────────────────────────────────
   useEffect(() => {
@@ -817,6 +819,9 @@ export default function FacturaUpload() {
     if (!dniRegex.test(dniContrato.trim())) {
       setDniError("Introduce un DNI válido (ej: 12345678A)"); return;
     }
+    if (!ibanContrato.trim()) {
+      setIbanError("El IBAN es obligatorio"); return;
+    }
     setDniError("");
     setEnviandoContrato(true);
     console.log("[handleContratar] DEBUG:", {mode,
@@ -917,6 +922,7 @@ export default function FacturaUpload() {
         mpklogId:       mpklogIdFinal     ?? null,
         databaseId:     "00001",
         dni:            dniContrato.trim().toUpperCase(),
+        iban:           ibanContrato.trim().toUpperCase(),
         tipoVenta:      modoAlquiler ? "Alquiler" : "Venta",
         planContratado: true,
       },
@@ -995,6 +1001,7 @@ export default function FacturaUpload() {
     setFsmstate(""); setFsmPrevious(null); setCeNombre(""); setCeDireccion(""); setZonaWarn("");
     setUserCoords(null); setNominatimSuggestions([]); setShowDropdown(false);
     setCeDistancia(null); setCeRadio(null); setPlanData(null); setPanelesSel(3);
+    setIbanContrato(""); setIbanError("");
   };
 
   // ── Render helpers ────────────────────────────────────────────────────────
@@ -1583,11 +1590,22 @@ export default function FacturaUpload() {
               {dniError && <span className="cs-field-error">{dniError}</span>}
             </div>
 
+            <div className="cs-field-group" style={{ marginBottom:16 }}>
+              <label className="cs-label">IBAN</label>
+              <input
+                className={`cs-input${ibanError ? " error" : ""}`}
+                placeholder="ES00 0000 0000 0000 0000 0000"
+                value={ibanContrato}
+                onChange={(e) => { setIbanContrato(e.target.value); setIbanError(""); }}
+              />
+              {ibanError && <span className="cs-field-error">{ibanError}</span>}
+            </div>
+
             <div style={{ display:"flex", gap:12 }}>
               <button
                 className="cs-btn-ghost"
                 style={{ flex:1, marginTop:0 }}
-                onClick={() => { setModalContratar(false); setDniContrato(""); setDniError(""); }}
+                onClick={() => { setModalContratar(false); setDniContrato(""); setDniError(""); setIbanContrato(""); setIbanError(""); }}
                 disabled={enviandoContrato}
               >
                 ← Volver
