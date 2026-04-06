@@ -16,6 +16,7 @@ import {
 import {
   hasValue, emptyManual, resolverIdGeneracion, getCeNombreById,
   haversineDistance, buildPayloadAsesor, buildRedirectURL, enviarLead,
+  validarDNI, validarIBAN,
 } from "../utils/facturaUtils";
 import OptimizerModal from "./OptimizerModal";
 import PlanScreen from "./PlanScreen";
@@ -476,9 +477,11 @@ export default function FacturaUpload() {
         }
         userLat = parseFloat(geoData[0].lat);
         userLon = parseFloat(geoData[0].lon);
+        setUserCoords({ lat: userLat, lon: userLon });
       }
 
       console.log("📍 Coordenadas usuario:", { lat: userLat, lon: userLon });
+      console.log("[userCoords] lat:", userCoords?.lat, "lon:", userCoords?.lon);
 
       // 2. Usar caché o pedir lista de CEs
       console.log("🔍 CEs en state (listaCE):", listaCE?.length);
@@ -584,6 +587,8 @@ export default function FacturaUpload() {
     correo:     cliente.correo,
     telefono:   cliente.telefono,
     direccion:  cliente.direccion,
+    lat:        userCoords?.lat ?? null,
+    lon:        userCoords?.lon ?? null,
     dealId:     overrideDealId   ?? dealId,
     mpklogId:   overrideMpklogId ?? mpklogId,
     databaseId: "",
@@ -732,6 +737,7 @@ export default function FacturaUpload() {
     const factura = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
     const cePayload = { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) };
     try {
+      console.log("[handleEnviar] cliente.lat:", userCoords?.lat, "cliente.lon:", userCoords?.lon);
       const fd = new FormData();
       fd.append("data", JSON.stringify({ cliente: buildClientePayload(), factura, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload }));
       if (mode === "pdf" && file) fd.append("file", file, file.name);
@@ -812,15 +818,17 @@ export default function FacturaUpload() {
   };
 
   const handleContratar = async () => {
-    const dniRegex = /^[0-9]{8}[A-Za-z]$/;
     if (!dniContrato.trim()) {
       setDniError("El DNI es obligatorio"); return;
     }
-    if (!dniRegex.test(dniContrato.trim())) {
-      setDniError("Introduce un DNI válido (ej: 12345678A)"); return;
+    if (!validarDNI(dniContrato.trim())) {
+      setDniError("El DNI no es válido"); return;
     }
     if (!ibanContrato.trim()) {
       setIbanError("El IBAN es obligatorio"); return;
+    }
+    if (!validarIBAN(ibanContrato.trim())) {
+      setIbanError("El IBAN no es válido"); return;
     }
     setDniError("");
     setEnviandoContrato(true);
