@@ -121,7 +121,34 @@ export function buildRedirectURL(baseUrl, cliente, factura, idGen, manualFields,
   return `${baseUrl}?${p.toString()}`;
 }
 
+// ── Validación ──────────────────────────────────────────────────────────────────────
+
+export function validarDNI(dni) {
+  const dniRegex = /^[0-9]{8}[A-Za-z]$/;
+  if (!dniRegex.test(dni)) return false;
+  const letras = "TRWAGMYFPDXBNJZSQVHLCKE";
+  const numero = parseInt(dni.substring(0, 8), 10);
+  const letraEsperada = letras[numero % 23];
+  return dni.charAt(8).toUpperCase() === letraEsperada;
+}
+
+export function validarIBAN(iban) {
+  const ibanLimpio = iban.replace(/\s/g, "").toUpperCase();
+  if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$/.test(ibanLimpio)) return false;
+  const reordenado = ibanLimpio.slice(4) + ibanLimpio.slice(0, 4);
+  const numerico = reordenado.split("").map(c =>
+    isNaN(c) ? c.charCodeAt(0) - 55 : c
+  ).join("");
+  let resto = 0;
+  for (const digito of numerico) {
+    resto = (resto * 10 + parseInt(digito, 10)) % 97;
+  }
+  return resto === 1;
+}
+
+
 // ── Lead ──────────────────────────────────────────────────────────────────────
+
 export async function enviarLead(url, payload, onWarn) {
   if (!url) { onWarn?.(); return; }
   try {
