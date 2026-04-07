@@ -75,8 +75,8 @@ body { background: #EEECE8; font-family: 'Montserrat','Helvetica Neue',sans-seri
 .cs-table tr:nth-child(odd) td { background:#f7f7f5; }
 .cs-table tr:nth-child(odd) td:first-child { border-radius:6px 0 0 6px; }
 .cs-table tr:nth-child(odd) td:last-child { border-radius:0 6px 6px 0; }
-.cs-table td:first-child { color:#777; font-weight:500; width:55%; }
-.cs-table td:last-child { color:#111; font-weight:600; font-family:monospace; text-align:right; }
+.cs-table td:first-child { color:#555; font-weight:500; width:60%; }
+.cs-table td:last-child { color:#121212; font-weight:700; font-family:inherit; text-align:right; }
 
 .cs-auto-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
 .cs-auto-item { display:flex; flex-direction:column; padding:10px 12px; background:#f0f8f0; border-radius:6px; border:1px solid #c8e6c9; }
@@ -143,9 +143,9 @@ body { background: #EEECE8; font-family: 'Montserrat','Helvetica Neue',sans-seri
 .cs-plan-inner { padding:32px 48px 0; }
 .cs-plan-pagos { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:85px; }
 .cs-plan-origen { display:flex; gap:0; align-items:stretch; margin-bottom:85px; }
-.cs-plan-connector { display:flex; align-items:center; padding:0 12px; }
+.cs-plan-connector { display:flex; align-items:center; justify-content:center; padding:0 10px; flex-shrink:0; }
 .cs-plan-tabla { display:grid; grid-template-columns:1fr auto; gap:24px; align-items:start; margin-bottom:55px; padding:24px; }
-.cs-plan-regalo { display:flex; align-items:center; gap:40px; background:#1C1C1C; border-radius:14px; padding:48px 48px; margin-bottom:50px; overflow:hidden; }
+.cs-plan-regalo { display:flex; align-items:center; gap:40px; background:#ffffff; border-radius:14px; padding:48px 48px; margin-bottom:50px; overflow:hidden; }
 
 @media (max-width:640px) {
   .cs-page { padding:0 12px 60px; }
