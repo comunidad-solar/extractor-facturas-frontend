@@ -625,6 +625,7 @@ export default function FacturaUpload() {
     impuestos: { imp_ele: d.imp_ele || null, iva: d.iva || null },
     otros: {
       alq_eq_dia:       d.alq_eq_dia       || null,
+      bono_social:      d.bono_social      ?? null,
       cuotaAlquilerMes: d.cuotaAlquilerMes ?? null,
     },
     archivo: {},
