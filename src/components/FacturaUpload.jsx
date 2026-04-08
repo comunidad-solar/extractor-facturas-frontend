@@ -1541,7 +1541,7 @@ export default function FacturaUpload() {
                     <div key={k} className="cs-field-group">
                       <label className="cs-label">{FIELD_LABELS[k]}</label>
                       <input className="cs-input" name={k}
-                        placeholder="Introduce el valor"
+                        placeholder={k === "bono_social" ? "0 si no aplica" : "Introduce el valor"}
                         value={manualFields[k]} onChange={handleManual} />
                     </div>
                   ))}
