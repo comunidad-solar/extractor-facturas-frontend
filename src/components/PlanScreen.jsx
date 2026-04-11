@@ -1,5 +1,6 @@
+import { useState, useEffect } from "react";
 import { fmtES } from "../utils/facturaUtils";
-import { CE_STATUS_LABELS } from "../constants/appConstants";
+import { API_BASE, CE_STATUS_LABELS } from "../constants/appConstants";
 
 export default function PlanScreen({
   cliente,
@@ -11,12 +12,47 @@ export default function PlanScreen({
   panelesSel,
   panelesPropuesta,
   tabActiva,
+  sesionData: sesionDataProp,
   onContratar,
   onVolver,
   onOptimizar,
   onSetPanelesPropuesta,
   onSetTabActiva,
+  onSesionError,
 }) {
+  // eslint-disable-next-line no-unused-vars
+  const [sesionData, setSesionData] = useState(sesionDataProp ?? null);
+  const [sesionFailed, setSesionFailed] = useState(false);
+
+  useEffect(() => {
+    const sessionId = localStorage.getItem("cs_session_id");
+    if (!sessionId) return;
+    fetch(`${API_BASE}/sesion/${sessionId}`)
+      .then(res => {
+        if (res.status === 404 || res.status === 410) throw new Error("expirada");
+        if (!res.ok) throw new Error("error");
+        return res.json();
+      })
+      .then(data => setSesionData(data))
+      .catch(() => {
+        setSesionFailed(true);
+        if (onSesionError) onSesionError();
+      });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (sesionFailed) {
+    return (
+      <div className="cs-results-card fade-in" style={{ textAlign:"center", padding:"80px 40px" }}>
+        <p style={{ fontSize:18, fontWeight:600, color:"#121212", marginBottom:12 }}>
+          Lo sentimos, ha ocurrido un error.
+        </p>
+        <p style={{ fontSize:14, color:"#777" }}>
+          Por favor, vuelve a realizar el proceso.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <>
     <div className="cs-results-card fade-in" style={{ maxWidth:1000, padding:"0 0 48px", backgroundColor:"#EEECE8" }}>

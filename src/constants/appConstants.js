@@ -14,6 +14,7 @@ export const FIELD_LABELS = {
   imp_ele:          "Impuesto eléctrico (%)",
   iva:              "IVA (%)",
   alq_eq_dia:       "Alquiler equipo (€/día)",
+  bono_social:      "Bono social (€)",
   tarifa_acceso:    "Tarifa de acceso",
   distribuidora:    "Distribuidora",
   pot_p1_kw:        "Potencia contratada P1 (kW)",
@@ -41,7 +42,7 @@ export const FIELD_LABELS = {
 // Campos que o utilizador pode preencher/corrigir manualmente no passo 2
 export const MANUAL_FIELD_KEYS = [
   "periodo_inicio", "periodo_fin", "comercializadora",
-  "pp_p1", "pp_p2", "imp_ele", "iva", "alq_eq_dia", "importe_factura",
+  "pp_p1", "pp_p2", "imp_ele", "iva", "alq_eq_dia", "bono_social", "importe_factura",
 ];
 
 export const PRECIOS_POT_3TD_KEYS      = ["pp_p3", "pp_p4", "pp_p5", "pp_p6"];
@@ -61,6 +62,7 @@ export const API_AUTO_KEYS = [
 export const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu/server/api/get-ce-info-lat-lng";
 
 export const API_BASE           = "https://extractor.13.38.9.119.nip.io";
+export const SESION_URL         = `${API_BASE}/sesion`;
 export const PLAN_REDIRECT_URL  = "https://main.d3rqv6h66vhq03.amplifyapp.com/";
 export const QUOTING_URL        = "https://dummyjson.com/test";
 export const LEAD_URL           = "https://dummyjson.com/test";

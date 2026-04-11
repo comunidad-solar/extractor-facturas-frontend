@@ -9,13 +9,13 @@ import "./FacturaUpload.css";
 import {
   FIELD_LABELS, MANUAL_FIELD_KEYS, PRECIOS_POT_3TD_KEYS,
   PRECIOS_ENERGIA_BASE_KEYS, PRECIOS_ENERGIA_3TD_KEYS, API_AUTO_KEYS,
-  CE_API_URL, API_BASE, PLAN_REDIRECT_URL, QUOTING_URL, LEAD_URL,
+  CE_API_URL, API_BASE, SESION_URL, PLAN_REDIRECT_URL, QUOTING_URL, LEAD_URL,
   NOMINATIM_URL, CE_DETAIL_URL, CE_STATUS_LABELS,
   ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL,
 } from "../constants/appConstants";
 import {
   hasValue, emptyManual, resolverIdGeneracion, getCeNombreById,
-  haversineDistance, buildPayloadAsesor, buildRedirectURL, enviarLead,
+  haversineDistance, buildPayloadAsesor, enviarLead,
   validarDNI, validarIBAN,
 } from "../utils/facturaUtils";
 import OptimizerModal from "./OptimizerModal";
@@ -88,6 +88,8 @@ export default function FacturaUpload() {
   const [cuotaAlquilerMes, setCuotaAlquilerMes] = useState(null);
   const [dealId, setDealId]                     = useState(null);
   const [mpklogId, setMpklogId]                 = useState(null);
+  const [sesionData, setSesionData]             = useState(null);
+  const [sesionError, setSesionError]           = useState(false);
   const [modalContratar, setModalContratar]     = useState(false);
   const [dniContrato, setDniContrato]           = useState("");
   const [dniError, setDniError]                 = useState("");
@@ -172,15 +174,17 @@ export default function FacturaUpload() {
       setPanelesSel(p("panelesSel", 3));
       setPanelesPropuesta(p("panelesSel", 3));
       setPlanData({
-        ahorro25Anos:           p("ahorro25Anos",           1575.35),
-        pagoUnico:              p("pagoUnico",              3480.75),
-        pagoFinanciado:         p("pagoFinanciado",         41.33),
-        ahorroMensual:          p("ahorroMensual",          38.35),
-        ahorroAnual:            p("ahorroAnual",            460.20),
-        produccionAnual:        p("produccionAnual",        4101.25),
-        potenciaTotal:          p("potenciaTotal",          3),
-        coeficienteDistribucion:p("coeficienteDistribucion",5),
-        plazoRecuperacion:      p("plazoRecuperacion",      6.7),
+        ahorro25Anos:            parseFloat(params.get("ahorro25Anos"))            || null,
+        pagoUnico:               parseFloat(params.get("pagoUnico"))               || null,
+        pagoFinanciado:          parseFloat(params.get("pagoFinanciado"))          || null,
+        ahorroMensual:           parseFloat(params.get("ahorroMensual"))           || null,
+        ahorroAnual:             parseFloat(params.get("ahorroAnual"))             || null,
+        produccionAnual:         parseFloat(params.get("produccionAnual"))         || null,
+        potenciaTotal:           parseFloat(params.get("potenciaTotal"))           || null,
+        coeficienteDistribucion: parseFloat(params.get("coeficienteDistribucion")) || null,
+        plazoRecuperacion:       params.get("plazoRecuperacion")                   || null,
+        panelesSel:              parseInt(params.get("panelesSel"))                || null,
+        cuotaAlquilerMes:        parseFloat(params.get("cuotaAlquilerMes"))        || null,
       });
       setLoading(false);
 
@@ -703,28 +707,30 @@ export default function FacturaUpload() {
             body: JSON.stringify(buildPayloadAsesor(mode, facturaData, cupsData, manualFields)),
           }),
         ]);
-        const dataEnviar     = await resEnviar.json().catch(() => ({}));
-        const dealIdRecebido   = dataEnviar?.dealId   ?? null;
-        const mpklogIdRecebido = dataEnviar?.mpklogId ?? null;
-        if (dealIdRecebido)   { setDealId(dealIdRecebido);     console.log("[handleEnviar/asesor] dealId recebido:", dealIdRecebido);     }
-        if (mpklogIdRecebido) { setMpklogId(mpklogIdRecebido); console.log("[handleEnviar/asesor] mpklogId recebido:", mpklogIdRecebido); }
-
-        const redirectUrl = buildRedirectURL(PLAN_REDIRECT_URL, cliente, facturaAsesor, resolverIdGeneracion(idGeneracion, ceNombre), manualFields, facturaData ?? cupsData, modoAlquiler, cuotaAlquilerMes);
-        const redirectUrlWithDeal = dealIdRecebido ? `${redirectUrl}&dealId=${encodeURIComponent(dealIdRecebido)}` : redirectUrl;
+        const dataEnviar       = await resEnviar.json().catch(() => ({}));
+        const dealIdRecebido   = dataEnviar?.dealId      ?? null;
+        const mpklogIdRecebido = dataEnviar?.mpklogId    ?? null;
+        const sessionIdRecebido = dataEnviar?.session_id ?? null;
+        if (dealIdRecebido)    { setDealId(dealIdRecebido);     console.log("[handleEnviar/asesor] dealId recebido:", dealIdRecebido);     }
+        if (mpklogIdRecebido)  { setMpklogId(mpklogIdRecebido); console.log("[handleEnviar/asesor] mpklogId recebido:", mpklogIdRecebido); }
+        if (sessionIdRecebido) console.log("[handleEnviar/asesor] session_id recebido:", sessionIdRecebido);
 
         // Guardar dados flat para restaurar após redirect do Cotizador (modo asesor)
         const facturaFlatAsesor = mode === "pdf"
           ? { ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null }
           : { cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null };
-        localStorage.setItem("cs_cliente",  JSON.stringify({ ...buildClientePayload(dealIdRecebido, mpklogIdRecebido) }));
-        localStorage.setItem("cs_factura",  JSON.stringify(facturaFlatAsesor));
-        localStorage.setItem("cs_ce",       JSON.stringify(cePayload));
-        localStorage.setItem("cs_dealId",   dealIdRecebido   ?? "");
-        localStorage.setItem("cs_mpklogId", mpklogIdRecebido ?? "");
-        localStorage.setItem("cs_fsmstate", Fsmstate         ?? "");
-        localStorage.setItem("cs_mode",     mode             ?? "");
+        localStorage.setItem("cs_cliente",    JSON.stringify({ ...buildClientePayload(dealIdRecebido, mpklogIdRecebido) }));
+        localStorage.setItem("cs_factura",    JSON.stringify(facturaFlatAsesor));
+        localStorage.setItem("cs_ce",         JSON.stringify(cePayload));
+        localStorage.setItem("cs_dealId",     dealIdRecebido    ?? "");
+        localStorage.setItem("cs_mpklogId",   mpklogIdRecebido  ?? "");
+        localStorage.setItem("cs_fsmstate",   Fsmstate          ?? "");
+        localStorage.setItem("cs_mode",       mode              ?? "");
+        localStorage.setItem("cs_session_id", sessionIdRecebido ?? "");
 
-        window.location.href = redirectUrlWithDeal;
+        const idGenAsesor = resolverIdGeneracion(idGeneracion, ceNombre);
+        const redirectUrlAsesor = `${ASESOR_REDIRECT_URL}?coming-from-extractor=true&id_generacion=${encodeURIComponent(idGenAsesor ?? "")}&session_id=${encodeURIComponent(sessionIdRecebido ?? "")}`;
+        window.location.href = redirectUrlAsesor;
       } catch (err) {
         console.error("[asesor] Erro no envío:", err);
         setError(err.message);
@@ -748,26 +754,30 @@ export default function FacturaUpload() {
         const detail = typeof dataEnviar.detail === "string" ? dataEnviar.detail : JSON.stringify(dataEnviar.detail) || `HTTP ${resEnviar.status}`;
         throw new Error(detail);
       }
-      const dealIdRecebido   = dataEnviar?.dealId   ?? null;
-      const mpklogIdRecebido = dataEnviar?.mpklogId ?? null;
+      const dealIdRecebido   = dataEnviar?.dealId    ?? null;
+      const mpklogIdRecebido = dataEnviar?.mpklogId  ?? null;
+      const sessionIdRecebido = dataEnviar?.session_id ?? null;
       if (dealIdRecebido)   { setDealId(dealIdRecebido);     console.log("[handleEnviar] dealId recebido:", dealIdRecebido);     }
       if (mpklogIdRecebido) { setMpklogId(mpklogIdRecebido); console.log("[handleEnviar] mpklogId recebido:", mpklogIdRecebido); }
+      if (sessionIdRecebido) console.log("[handleEnviar] session_id recebido:", sessionIdRecebido);
 
       // Guardar dados para restaurar após redirect do Cotizador
       // cs_factura em formato flat (não estruturado) — buildFactura() espera pot_p1_kw, pe_p1, etc.
       const facturaFlat = mode === "pdf"
         ? { ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null }
         : { cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null };
-      localStorage.setItem("cs_cliente",  JSON.stringify({ ...buildClientePayload(dealIdRecebido, mpklogIdRecebido) }));
-      localStorage.setItem("cs_factura",  JSON.stringify(facturaFlat));
-      localStorage.setItem("cs_ce",       JSON.stringify({ nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) }));
-      localStorage.setItem("cs_dealId",   dealIdRecebido   ?? "");
-      localStorage.setItem("cs_mpklogId", mpklogIdRecebido ?? "");
-      localStorage.setItem("cs_fsmstate", Fsmstate         ?? "");
-      localStorage.setItem("cs_mode",     mode             ?? "");
+      localStorage.setItem("cs_cliente",    JSON.stringify({ ...buildClientePayload(dealIdRecebido, mpklogIdRecebido) }));
+      localStorage.setItem("cs_factura",    JSON.stringify(facturaFlat));
+      localStorage.setItem("cs_ce",         JSON.stringify({ nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) }));
+      localStorage.setItem("cs_dealId",     dealIdRecebido    ?? "");
+      localStorage.setItem("cs_mpklogId",   mpklogIdRecebido  ?? "");
+      localStorage.setItem("cs_fsmstate",   Fsmstate          ?? "");
+      localStorage.setItem("cs_mode",       mode              ?? "");
+      localStorage.setItem("cs_session_id", sessionIdRecebido ?? "");
 
-      // Abrir Cotizador em nova aba com todos os dados da factura como query params
-      const redirectUrl = buildRedirectURL(PLAN_REDIRECT_URL, cliente, factura, resolverIdGeneracion(idGeneracion, ceNombre), manualFields, facturaData ?? cupsData, modoAlquiler, cuotaAlquilerMes);
+      // Abrir Cotizador em nova aba com URL simplificada
+      const idGenResolvido = resolverIdGeneracion(idGeneracion, ceNombre);
+      const redirectUrl = `${PLAN_REDIRECT_URL}?coming-from-extractor=true&id_generacion=${encodeURIComponent(idGenResolvido ?? "")}&session_id=${encodeURIComponent(sessionIdRecebido ?? "")}`;
       console.log("[handleEnviar] redirect URL:", redirectUrl);
       window.open(redirectUrl, "_blank");
 
@@ -951,6 +961,19 @@ export default function FacturaUpload() {
       },
       Fsmstate:    "08_PROPUESTA_ALQ",
       FsmPrevious: Fsmstate || urlRef.fsmstate || null,
+      plan: {
+        ahorro25Anos:            planData?.ahorro25Anos,
+        pagoUnico:               planData?.pagoUnico,
+        pagoFinanciado:          planData?.pagoFinanciado,
+        ahorroMensual:           planData?.ahorroMensual,
+        ahorroAnual:             planData?.ahorroAnual,
+        produccionAnual:         planData?.produccionAnual,
+        potenciaTotal:           planData?.potenciaTotal,
+        coeficienteDistribucion: planData?.coeficienteDistribucion,
+        plazoRecuperacion:       planData?.plazoRecuperacion,
+        panelesSel:              planData?.panelesSel,
+        cuotaAlquilerMes:        planData?.cuotaAlquilerMes,
+      },
       ce: {
         nombre:        ceNombre    || urlRef.ce?.nombre    || "",
         direccion:     ceDireccion || urlRef.ce?.direccion || "",
@@ -1097,11 +1120,13 @@ export default function FacturaUpload() {
             panelesSel={panelesSel}
             panelesPropuesta={panelesPropuesta}
             tabActiva={tabActiva}
+            sesionData={sesionData}
             onContratar={() => setModalContratar(true)}
             onVolver={handleReset}
             onOptimizar={handleOptimizar}
             onSetPanelesPropuesta={setPanelesPropuesta}
             onSetTabActiva={setTabActiva}
+            onSesionError={() => setSesionError(true)}
           />
         )}
 
