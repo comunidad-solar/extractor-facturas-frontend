@@ -19,6 +19,7 @@ export default function PlanScreen({
   onSetPanelesPropuesta,
   onSetTabActiva,
   onSesionError,
+  onSesionLoaded,
 }) {
   // eslint-disable-next-line no-unused-vars
   const [sesionData, setSesionData] = useState(sesionDataProp ?? null);
@@ -26,6 +27,7 @@ export default function PlanScreen({
 
   useEffect(() => {
     const sessionId = localStorage.getItem("cs_session_id");
+    console.log("[PlanScreen] cs_session_id:", sessionId);
     if (!sessionId) return;
     fetch(`${API_BASE}/sesion/${sessionId}`)
       .then(res => {
@@ -33,7 +35,10 @@ export default function PlanScreen({
         if (!res.ok) throw new Error("error");
         return res.json();
       })
-      .then(data => setSesionData(data))
+      .then(data => {
+        setSesionData(data);
+        if (onSesionLoaded) onSesionLoaded(data);
+      })
       .catch(() => {
         setSesionFailed(true);
         if (onSesionError) onSesionError();

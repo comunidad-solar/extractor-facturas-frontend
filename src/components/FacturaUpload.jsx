@@ -852,12 +852,18 @@ export default function FacturaUpload() {
   facturaLSKeys: urlParamsRef.current.facturaLS ? Object.keys(urlParamsRef.current.facturaLS).slice(0, 10) : null,
 });
 
-    // Ref com dados da URL (modo demo) como fallback síncrono
+    // sesionData recuperado pelo GET /sesion na PlanScreen (fonte primária em modo demo)
+    const sd        = sesionData ?? null;
+    const sdCliente = sd?.cliente ?? {};
+    const sdFactura = sd?.factura ?? null;
+    const sdCe      = sd?.ce      ?? {};
+
+    // Ref com dados da URL como fallback secundário
     const urlRef    = urlParamsRef.current;
     const urlFact   = urlRef.factura   ?? {};
     const urlCli    = urlRef.cliente   ?? {};
-    const facturaLS = urlRef.facturaLS ?? null;   // restaurada de localStorage (sync)
-    const modeEff   = mode ?? urlRef.modeLS ?? null; // mode restaurado de localStorage
+    const facturaLS = urlRef.facturaLS ?? null;
+    const modeEff   = mode ?? sd?.mode ?? urlRef.modeLS ?? null;
 
     // rawData para overrides de pe_p* e importe (fluxo normal com step 2)
     const rawData = facturaData ?? cupsData
@@ -877,19 +883,19 @@ export default function FacturaUpload() {
     if (modeEff === "pdf") {
       factura = facturaData
         ? ensureStructured({ ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null })
-        : ensureStructured(facturaLS);
+        : ensureStructured(sdFactura ?? facturaLS);
     } else if (modeEff === "cups") {
       factura = cupsData
         ? ensureStructured({ cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null })
-        : ensureStructured(facturaLS);
+        : ensureStructured(sdFactura ?? facturaLS);
     } else {
-      factura = ensureStructured(facturaLS ?? rawData);
+      factura = ensureStructured(sdFactura ?? facturaLS ?? rawData);
     }
 
     // Se dealId ainda não foi obtido, chamar /enviar primeiro
     // para registar no Zoho e obter dealId + mpklogId
-    let dealIdFinal   = dealId   ?? urlRef.dealId   ?? null;
-    let mpklogIdFinal = mpklogId ?? urlRef.mpklogId ?? null;
+    let dealIdFinal   = dealId   ?? sd?.dealId   ?? urlRef.dealId   ?? null;
+    let mpklogIdFinal = mpklogId ?? sd?.mpklogId ?? urlRef.mpklogId ?? null;
 
     if (!dealIdFinal) {
       try {
@@ -932,13 +938,13 @@ export default function FacturaUpload() {
 
     const payload = {
       cliente: {
-        nombre:         cliente.nombre    || urlCli.nombre    || "",
-        apellidos:      cliente.apellidos || urlCli.apellidos || "",
-        correo:         cliente.correo    || urlCli.correo    || "",
-        telefono:       cliente.telefono  || urlCli.telefono  || "",
-        direccion:      cliente.direccion || urlCli.direccion || "",
-        dealId:         dealIdFinal       ?? null,
-        mpklogId:       mpklogIdFinal     ?? null,
+        nombre:         cliente.nombre    || sdCliente.nombre    || urlCli.nombre    || "",
+        apellidos:      cliente.apellidos || sdCliente.apellidos || urlCli.apellidos || "",
+        correo:         cliente.correo    || sdCliente.correo    || urlCli.correo    || "",
+        telefono:       cliente.telefono  || sdCliente.telefono  || urlCli.telefono  || "",
+        direccion:      cliente.direccion || sdCliente.direccion || urlCli.direccion || "",
+        dealId:         dealIdFinal    ?? null,
+        mpklogId:       mpklogIdFinal  ?? null,
         databaseId:     "00001",
         dni:            dniContrato.trim().toUpperCase(),
         iban:           ibanContrato.trim().toUpperCase(),
@@ -960,7 +966,7 @@ export default function FacturaUpload() {
         ) || null,
       },
       Fsmstate:    "08_PROPUESTA_ALQ",
-      FsmPrevious: Fsmstate || urlRef.fsmstate || null,
+      FsmPrevious: Fsmstate || sd?.Fsmstate || urlRef.fsmstate || null,
       plan: {
         ahorro25Anos:            planData?.ahorro25Anos,
         pagoUnico:               planData?.pagoUnico,
@@ -975,11 +981,14 @@ export default function FacturaUpload() {
         cuotaAlquilerMes:        planData?.cuotaAlquilerMes,
       },
       ce: {
-        nombre:        ceNombre    || urlRef.ce?.nombre    || "",
-        direccion:     ceDireccion || urlRef.ce?.direccion || "",
-        status:        ceStatus    || urlRef.ce?.status    || "",
-        etiqueta:      ceEtiqueta  || urlRef.ce?.etiqueta  || "",
-        id_generacion: resolverIdGeneracion(idGeneracion || urlRef.idGen, ceNombre || urlRef.ce?.nombre),
+        nombre:        ceNombre    || sdCe.nombre    || urlRef.ce?.nombre    || "",
+        direccion:     ceDireccion || sdCe.direccion || urlRef.ce?.direccion || "",
+        status:        ceStatus    || sdCe.status    || urlRef.ce?.status    || "",
+        etiqueta:      ceEtiqueta  || sdCe.etiqueta  || urlRef.ce?.etiqueta  || "",
+        id_generacion: resolverIdGeneracion(
+          idGeneracion || sdCe.id_generacion || urlRef.idGen,
+          ceNombre     || sdCe.nombre        || urlRef.ce?.nombre
+        ),
       },
     };
 
@@ -1127,6 +1136,7 @@ export default function FacturaUpload() {
             onSetPanelesPropuesta={setPanelesPropuesta}
             onSetTabActiva={setTabActiva}
             onSesionError={() => setSesionError(true)}
+            onSesionLoaded={(data) => setSesionData(data)}
           />
         )}
 
