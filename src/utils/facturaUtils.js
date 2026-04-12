@@ -6,6 +6,7 @@ import {
   PRECIOS_POT_3TD_KEYS,
   PRECIOS_ENERGIA_BASE_KEYS,
   PRECIOS_ENERGIA_3TD_KEYS,
+  PERIODOS_POR_MES_3TD,
 } from "../constants/appConstants";
 
 // ── Validação de valor ────────────────────────────────────────────────────────
@@ -146,6 +147,28 @@ export function validarIBAN(iban) {
   return resto === 1;
 }
 
+
+// ── Sugestão de meses para segunda fatura 3.0TD ──────────────────────────────
+// Recebe o mês (1-12) da primeira fatura; devolve lista de meses ordenados por
+// cobertura de períodos em falta (descendente), excluindo o mês da primeira fatura
+// e meses com períodos idênticos.
+export function sugerirMeses3TD(mesFactura) {
+  const ALL_PERIODOS = ["p1", "p2", "p3", "p4", "p5", "p6"];
+  const periodosDoMes = PERIODOS_POR_MES_3TD[mesFactura] ?? [];
+  const periodosEmFalta = ALL_PERIODOS.filter(p => !periodosDoMes.includes(p));
+  const chaveDoMes = periodosDoMes.slice().sort().join(",");
+
+  return Object.entries(PERIODOS_POR_MES_3TD)
+    .map(([mes, periodos]) => ({ mes: parseInt(mes), periodos }))
+    .filter(({ mes }) => mes !== mesFactura)
+    .filter(({ periodos }) => periodos.slice().sort().join(",") !== chaveDoMes)
+    .map(({ mes, periodos }) => ({
+      mes,
+      cobertura: periodos.filter(p => periodosEmFalta.includes(p)).length,
+    }))
+    .filter(({ cobertura }) => cobertura > 0)
+    .sort((a, b) => b.cobertura - a.cobertura);
+}
 
 // ── Lead ──────────────────────────────────────────────────────────────────────
 

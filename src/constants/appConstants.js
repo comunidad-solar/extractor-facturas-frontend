@@ -58,10 +58,26 @@ export const API_AUTO_KEYS = [
   "dias_facturados",
 ];
 
-// CE API proxiada por Vite em dev (evita CORS); em produção usa URL absoluta
-export const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu/server/api/get-ce-info-lat-lng";
+// Mapeamento de períodos activos por mês para tarifa 3.0TD
+export const PERIODOS_POR_MES_3TD = {
+  1:  ["p1","p2","p6"],
+  2:  ["p1","p2","p6"],
+  3:  ["p2","p3","p6"],
+  4:  ["p4","p5","p6"],
+  5:  ["p4","p5","p6"],
+  6:  ["p3","p4","p6"],
+  7:  ["p1","p2","p6"],
+  8:  ["p3","p4","p6"],
+  9:  ["p3","p4","p6"],
+  10: ["p4","p5","p6"],
+  11: ["p2","p3","p6"],
+  12: ["p1","p2","p6"],
+};
 
-export const API_BASE           = "https://extractor.13.38.9.119.nip.io";
+// CE API proxiada por Vite em dev (evita CORS); em produção usa URL absoluta
+export const CE_API_URL = "/ce-api/server/api/get-ce-info-lat-lng";
+
+export const API_BASE           = "http://127.0.0.1:8000";
 export const SESION_URL         = `${API_BASE}/sesion`;
 export const PLAN_REDIRECT_URL  = "https://main.d3rqv6h66vhq03.amplifyapp.com/";
 export const QUOTING_URL        = "https://dummyjson.com/test";
