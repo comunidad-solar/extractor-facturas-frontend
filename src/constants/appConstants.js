@@ -58,6 +58,22 @@ export const API_AUTO_KEYS = [
   "dias_facturados",
 ];
 
+// Mapeamento de períodos activos por mês para tarifa 3.0TD
+export const PERIODOS_POR_MES_3TD = {
+  1:  ["p1","p2","p6"],
+  2:  ["p1","p2","p6"],
+  3:  ["p2","p3","p6"],
+  4:  ["p4","p5","p6"],
+  5:  ["p4","p5","p6"],
+  6:  ["p3","p4","p6"],
+  7:  ["p1","p2","p6"],
+  8:  ["p3","p4","p6"],
+  9:  ["p3","p4","p6"],
+  10: ["p4","p5","p6"],
+  11: ["p2","p3","p6"],
+  12: ["p1","p2","p6"],
+};
+
 // CE API proxiada por Vite em dev (evita CORS); em produção usa URL absoluta
 export const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu/server/api/get-ce-info-lat-lng";
 

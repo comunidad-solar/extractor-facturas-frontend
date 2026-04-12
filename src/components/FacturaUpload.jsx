@@ -16,7 +16,7 @@ import {
 import {
   hasValue, emptyManual, resolverIdGeneracion, getCeNombreById,
   haversineDistance, buildPayloadAsesor, enviarLead,
-  validarDNI, validarIBAN,
+  validarDNI, validarIBAN, sugerirMeses3TD,
 } from "../utils/facturaUtils";
 import OptimizerModal from "./OptimizerModal";
 import PlanScreen from "./PlanScreen";
@@ -65,7 +65,15 @@ export default function FacturaUpload() {
   const [file, setFile]               = useState(null);
   const [isDragging, setIsDragging]   = useState(false);
   const [facturaData, setFacturaData] = useState(null);
-  const fileRef = useRef();
+  const fileRef  = useRef();
+  const fileRef1 = useRef();
+
+  // ── Segunda fatura 3.0TD ─────────────────────────────────────────────────
+  const [factura1Data, setFactura1Data]     = useState(null);
+  const [_file1, setFile1]                  = useState(null);
+  const [mesesSugeridos, setMesesSugeridos] = useState([]);
+  const [loading1, setLoading1]             = useState(false);
+  const [error1, setError1]                 = useState("");
 
   // ── Step 2B — CUPS ───────────────────────────────────────────────────────
   const [cups, setCups]               = useState("");
@@ -89,7 +97,8 @@ export default function FacturaUpload() {
   const [dealId, setDealId]                     = useState(null);
   const [mpklogId, setMpklogId]                 = useState(null);
   const [sesionData, setSesionData]             = useState(null);
-  const [sesionError, setSesionError]           = useState(false);
+  const [_sesionError, setSesionError]          = useState(false);
+  const [modalSegundaFactura, setModalSegundaFactura] = useState(false);
   const [modalContratar, setModalContratar]     = useState(false);
   const [dniContrato, setDniContrato]           = useState("");
   const [dniError, setDniError]                 = useState("");
@@ -188,12 +197,14 @@ export default function FacturaUpload() {
       });
       setLoading(false);
 
+      const cleanUrl = (val) => (!val || val === "—") ? "" : val;
+
       setCliente(c => ({
-        nombre:    c.nombre    || s("cliente.nombre")    || s("nombre")    || "",
-        apellidos: c.apellidos || s("cliente.apellidos") || s("apellidos") || "",
-        correo:    c.correo    || s("cliente.correo")    || s("correo")    || "",
-        telefono:  c.telefono  || s("cliente.telefono")  || s("telefono")  || "",
-        direccion: c.direccion || s("cliente.direccion") || s("direccion") || "",
+        nombre:    c.nombre    || cleanUrl(s("cliente.nombre"))    || cleanUrl(s("nombre"))    || "",
+        apellidos: c.apellidos || cleanUrl(s("cliente.apellidos")) || cleanUrl(s("apellidos")) || "",
+        correo:    c.correo    || cleanUrl(s("cliente.correo"))    || cleanUrl(s("correo"))    || "",
+        telefono:  c.telefono  || cleanUrl(s("cliente.telefono"))  || cleanUrl(s("telefono"))  || "",
+        direccion: c.direccion || cleanUrl(s("cliente.direccion")) || cleanUrl(s("direccion")) || "",
       }));
 
       setCeNombre(prev    => prev || s("ceNombre")    || "");
@@ -535,6 +546,11 @@ export default function FacturaUpload() {
     handleFile(e.dataTransfer.files[0]);
   };
 
+  const NOMBRES_MESES = {
+    1:"enero", 2:"febrero", 3:"marzo", 4:"abril", 5:"mayo", 6:"junio",
+    7:"julio", 8:"agosto", 9:"septiembre", 10:"octubre", 11:"noviembre", 12:"diciembre",
+  };
+
   const handleAnalizarPDF = async () => {
     if (!file) return;
     setLoading(true); setLoadingMsg("Analizando tu factura..."); setError("");
@@ -546,10 +562,47 @@ export default function FacturaUpload() {
       const data = await res.json();
       setFacturaData(data);
       setStatus("analyzed");
+      if (data.tarifa_acceso === "3.0TD") {
+        const mes = parseInt(data.periodo_fin?.split("/")?.[1]);
+        if (mes >= 1 && mes <= 12) setMesesSugeridos(sugerirMeses3TD(mes));
+        setModalSegundaFactura(true);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const buildFactura1 = () => {
+    if (!factura1Data) return {};
+    return buildFactura(factura1Data);
+  };
+
+  const handleFile1Change = async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (!f.name.endsWith(".pdf")) { setError1("Solo se admiten archivos PDF"); return; }
+    setFile1(f); setLoading1(true); setError1("");
+    try {
+      const fd = new FormData();
+      fd.append("file", f, f.name);
+      const res = await fetch(`${API_BASE}/facturas/extraer`, { method: "POST", body: fd });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      const mes1 = parseInt(facturaData?.periodo_fin?.split("/")?.[1]);
+      const mes2 = parseInt(data.periodo_fin?.split("/")?.[1]);
+      if (mes1 === mes2) {
+        setError1("La segunda factura es del mismo mes que la primera");
+        setFile1(null); setLoading1(false); return;
+      }
+
+      setFactura1Data(data);
+    } catch {
+      setError1("Error al extraer la segunda factura");
+    } finally {
+      setLoading1(false);
     }
   };
 
@@ -746,7 +799,11 @@ export default function FacturaUpload() {
     try {
       console.log("[handleEnviar] cliente.lat:", userCoords?.lat, "cliente.lon:", userCoords?.lon);
       const fd = new FormData();
-      fd.append("data", JSON.stringify({ cliente: buildClientePayload(), factura, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload }));
+      const dataPayload = {
+        cliente: buildClientePayload(), factura, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload,
+        ...(factura1Data && { factura_1: buildFactura1() }),
+      };
+      fd.append("data", JSON.stringify(dataPayload));
       if (mode === "pdf" && file) fd.append("file", file, file.name);
       const resEnviar  = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
       const dataEnviar = await resEnviar.json().catch(() => ({}));
@@ -936,13 +993,15 @@ export default function FacturaUpload() {
       }
     }
 
+    const cleanUrl = (val) => (!val || val === "—") ? "" : val;
+
     const payload = {
       cliente: {
-        nombre:         cliente.nombre    || sdCliente.nombre    || urlCli.nombre    || "",
-        apellidos:      cliente.apellidos || sdCliente.apellidos || urlCli.apellidos || "",
-        correo:         cliente.correo    || sdCliente.correo    || urlCli.correo    || "",
-        telefono:       cliente.telefono  || sdCliente.telefono  || urlCli.telefono  || "",
-        direccion:      cliente.direccion || sdCliente.direccion || urlCli.direccion || "",
+        nombre:         cliente.nombre    || sdCliente.nombre    || cleanUrl(urlCli.nombre)    || "",
+        apellidos:      cliente.apellidos || sdCliente.apellidos || cleanUrl(urlCli.apellidos) || "",
+        correo:         cliente.correo    || sdCliente.correo    || cleanUrl(urlCli.correo)    || "",
+        telefono:       cliente.telefono  || sdCliente.telefono  || cleanUrl(urlCli.telefono)  || "",
+        direccion:      cliente.direccion || sdCliente.direccion || cleanUrl(urlCli.direccion) || "",
         dealId:         dealIdFinal    ?? null,
         mpklogId:       mpklogIdFinal  ?? null,
         databaseId:     "00001",
@@ -990,6 +1049,9 @@ export default function FacturaUpload() {
           ceNombre     || sdCe.nombre        || urlRef.ce?.nombre
         ),
       },
+      ...((sesionData?.factura_1 || factura1Data) && {
+        factura_1: sesionData?.factura_1 ?? buildFactura1(),
+      }),
     };
 
     try {
@@ -1044,6 +1106,15 @@ export default function FacturaUpload() {
     setCeDistancia(null); setCeRadio(null); setPlanData(null); setPanelesSel(3);
     setIbanContrato(""); setIbanError("");
   };
+
+  // ── Cálculos para modal segunda fatura 3.0TD ────────────────────────────
+  const coberturaMax     = mesesSugeridos[0]?.cobertura ?? 0;
+  const mesesPrincipais  = mesesSugeridos
+    .filter(({ cobertura }) => cobertura === coberturaMax)
+    .map(({ mes }) => NOMBRES_MESES[mes]);
+  const mesesSecundarios = mesesSugeridos
+    .filter(({ cobertura }) => cobertura < coberturaMax)
+    .map(({ mes }) => NOMBRES_MESES[mes]);
 
   // ── Render helpers ────────────────────────────────────────────────────────
   const visibleApiKeys = (data) =>
@@ -1601,6 +1672,86 @@ export default function FacturaUpload() {
         onVolver={() => setModalOptimizar(null)}
         onAceptar={handleAceptarPropuesta}
       />
+
+      {/* ── MODAL SEGUNDA FATURA 3.0TD ── */}
+      {modalSegundaFactura && (
+        <div style={{
+          position:"fixed", inset:0, background:"rgba(0,0,0,0.55)",
+          zIndex:1000, display:"flex", alignItems:"center",
+          justifyContent:"center", padding:16,
+        }}>
+          <div style={{
+            background:"#fff", borderRadius:16, padding:"32px 28px",
+            maxWidth:480, width:"100%",
+            boxShadow:"0 8px 40px rgba(0,0,0,0.18)",
+          }}>
+            <h3 style={{ fontSize:18, fontWeight:700, color:"#111", marginBottom:8 }}>
+              Tu tarifa es 3.0TD
+            </h3>
+            <p style={{ fontSize:13, color:"#555", marginBottom:8 }}>
+              Para completar el análisis, te recomendamos subir una factura de uno
+              de estos meses: <strong>{mesesPrincipais.join(", ")}</strong>.
+              {mesesSecundarios.length > 0 && (
+                <span> También puedes subir una factura de: {mesesSecundarios.join(", ")}.</span>
+              )}
+            </p>
+            <p style={{ fontSize:12, color:"#888", marginBottom:20 }}>
+              Caso no tengas otra factura, puedes cerrar este mensaje y seguir normalmente.
+              No es obligatorio.
+            </p>
+
+            {!factura1Data ? (
+              <div
+                className="cs-upload-area"
+                onClick={() => fileRef1.current?.click()}
+                style={{ marginBottom:16, cursor:"pointer", padding:"16px", borderRadius:8, border:"1px dashed #ccc", textAlign:"center" }}
+              >
+                <input
+                  ref={fileRef1}
+                  type="file"
+                  accept=".pdf"
+                  style={{ display:"none" }}
+                  onChange={handleFile1Change}
+                />
+                <p style={{ fontSize:13, color:"#555" }}>{loading1 ? "Extrayendo..." : "Subir segunda factura (PDF)"}</p>
+                {error1 && <p className="cs-error" style={{ marginTop:8 }}>{error1}</p>}
+              </div>
+            ) : (
+              <div style={{ marginBottom:16 }}>
+                <p style={{ fontSize:13, color:"#2a7a2a", fontWeight:600 }}>
+                  ✓ Segunda factura extraída correctamente
+                </p>
+                <button
+                  className="cs-btn-ghost"
+                  style={{ fontSize:12, marginTop:4 }}
+                  onClick={() => { setFactura1Data(null); setFile1(null); setError1(""); }}
+                >
+                  Eliminar
+                </button>
+              </div>
+            )}
+
+            <div style={{ display:"flex", gap:12 }}>
+              <button
+                className="cs-btn-ghost"
+                style={{ flex:1, marginTop:0 }}
+                onClick={() => setModalSegundaFactura(false)}
+                disabled={sending}
+              >
+                Cerrar
+              </button>
+              <button
+                className="cs-btn-primary"
+                style={{ flex:1, marginTop:0 }}
+                onClick={() => { setModalSegundaFactura(false); handleEnviar(); }}
+                disabled={sending || loading1}
+              >
+                {sending ? "Enviando..." : "Enviar datos →"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── MODAL CONTRATAR ── */}
       {modalContratar && (
