@@ -197,12 +197,14 @@ export default function FacturaUpload() {
       });
       setLoading(false);
 
+      const cleanUrl = (val) => (!val || val === "—") ? "" : val;
+
       setCliente(c => ({
-        nombre:    c.nombre    || s("cliente.nombre")    || s("nombre")    || "",
-        apellidos: c.apellidos || s("cliente.apellidos") || s("apellidos") || "",
-        correo:    c.correo    || s("cliente.correo")    || s("correo")    || "",
-        telefono:  c.telefono  || s("cliente.telefono")  || s("telefono")  || "",
-        direccion: c.direccion || s("cliente.direccion") || s("direccion") || "",
+        nombre:    c.nombre    || cleanUrl(s("cliente.nombre"))    || cleanUrl(s("nombre"))    || "",
+        apellidos: c.apellidos || cleanUrl(s("cliente.apellidos")) || cleanUrl(s("apellidos")) || "",
+        correo:    c.correo    || cleanUrl(s("cliente.correo"))    || cleanUrl(s("correo"))    || "",
+        telefono:  c.telefono  || cleanUrl(s("cliente.telefono"))  || cleanUrl(s("telefono"))  || "",
+        direccion: c.direccion || cleanUrl(s("cliente.direccion")) || cleanUrl(s("direccion")) || "",
       }));
 
       setCeNombre(prev    => prev || s("ceNombre")    || "");
@@ -991,13 +993,15 @@ export default function FacturaUpload() {
       }
     }
 
+    const cleanUrl = (val) => (!val || val === "—") ? "" : val;
+
     const payload = {
       cliente: {
-        nombre:         cliente.nombre    || sdCliente.nombre    || urlCli.nombre    || "",
-        apellidos:      cliente.apellidos || sdCliente.apellidos || urlCli.apellidos || "",
-        correo:         cliente.correo    || sdCliente.correo    || urlCli.correo    || "",
-        telefono:       cliente.telefono  || sdCliente.telefono  || urlCli.telefono  || "",
-        direccion:      cliente.direccion || sdCliente.direccion || urlCli.direccion || "",
+        nombre:         cliente.nombre    || sdCliente.nombre    || cleanUrl(urlCli.nombre)    || "",
+        apellidos:      cliente.apellidos || sdCliente.apellidos || cleanUrl(urlCli.apellidos) || "",
+        correo:         cliente.correo    || sdCliente.correo    || cleanUrl(urlCli.correo)    || "",
+        telefono:       cliente.telefono  || sdCliente.telefono  || cleanUrl(urlCli.telefono)  || "",
+        direccion:      cliente.direccion || sdCliente.direccion || cleanUrl(urlCli.direccion) || "",
         dealId:         dealIdFinal    ?? null,
         mpklogId:       mpklogIdFinal  ?? null,
         databaseId:     "00001",
