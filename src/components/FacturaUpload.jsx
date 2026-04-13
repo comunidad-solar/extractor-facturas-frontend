@@ -201,6 +201,7 @@ export default function FacturaUpload() {
         plazoRecuperacion:       params.get("plazoRecuperacion")                   || null,
         panelesSel:              parseInt(params.get("panelesSel"))                || null,
         cuotaAlquilerMes:        parseFloat(params.get("cuotaAlquilerMes"))        || null,
+        ahorroAnualPercent:      parseFloat(params.get("ahorroAnualPercent"))      || null,
       });
       setLoading(false);
 

@@ -72,7 +72,7 @@ export default function PlanScreen({
                 Hola <strong>{cliente.nombre}</strong>, estás a un paso de
               </p>
               <p className="cs-plan-hero-title" style={{ fontSize:46, fontWeight:800, lineHeight:1.1, marginBottom:20, color:"#EF931D" }}>
-                ahorrar un 30% en tu<br />factura de la luz
+                ahorrar un {planData?.ahorroAnualPercent ?? 30}% en tu<br />factura de la luz
               </p>
               <p style={{ fontSize:16, fontWeight:400, marginBottom:2, color:"#121212" }}>
                 Este es tu fantástico plan en la Comunidad Energética de
