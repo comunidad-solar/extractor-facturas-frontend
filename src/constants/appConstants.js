@@ -58,6 +58,9 @@ export const API_AUTO_KEYS = [
   "dias_facturados",
 ];
 
+// Tarifas que requerem faturas adicionais para análise completa
+export const TARIFAS_MULTI_FACTURA = ["3.0TD", "6.0TD", "6.1TD"];
+
 // Mapeamento de períodos activos por mês para tarifa 3.0TD
 export const PERIODOS_POR_MES_3TD = {
   1:  ["p1","p2","p6"],

@@ -152,10 +152,12 @@ export function validarIBAN(iban) {
 // Recebe o mês (1-12) da primeira fatura; devolve lista de meses ordenados por
 // cobertura de períodos em falta (descendente), excluindo o mês da primeira fatura
 // e meses com períodos idênticos.
-export function sugerirMeses3TD(mesFactura) {
+export function sugerirMeses3TD(mesFactura, periodosJaCobertos = []) {
   const ALL_PERIODOS = ["p1", "p2", "p3", "p4", "p5", "p6"];
   const periodosDoMes = PERIODOS_POR_MES_3TD[mesFactura] ?? [];
-  const periodosEmFalta = ALL_PERIODOS.filter(p => !periodosDoMes.includes(p));
+  // Períodos já cobertos = mês actual + faturas anteriores
+  const todosCobertos = [...new Set([...periodosDoMes, ...periodosJaCobertos])];
+  const periodosEmFalta = ALL_PERIODOS.filter(p => !todosCobertos.includes(p));
   const chaveDoMes = periodosDoMes.slice().sort().join(",");
 
   return Object.entries(PERIODOS_POR_MES_3TD)

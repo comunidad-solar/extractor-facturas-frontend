@@ -9,6 +9,7 @@ import "./FacturaUpload.css";
 import {
   FIELD_LABELS, MANUAL_FIELD_KEYS, PRECIOS_POT_3TD_KEYS,
   PRECIOS_ENERGIA_BASE_KEYS, PRECIOS_ENERGIA_3TD_KEYS, API_AUTO_KEYS,
+  PERIODOS_POR_MES_3TD, TARIFAS_MULTI_FACTURA,
   CE_API_URL, API_BASE, SESION_URL, PLAN_REDIRECT_URL, QUOTING_URL, LEAD_URL,
   NOMINATIM_URL, CE_DETAIL_URL, CE_STATUS_LABELS,
   ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL,
@@ -67,13 +68,20 @@ export default function FacturaUpload() {
   const [facturaData, setFacturaData] = useState(null);
   const fileRef  = useRef();
   const fileRef1 = useRef();
+  const fileRef2 = useRef();
 
-  // ── Segunda fatura 3.0TD ─────────────────────────────────────────────────
-  const [factura1Data, setFactura1Data]     = useState(null);
-  const [_file1, setFile1]                  = useState(null);
-  const [mesesSugeridos, setMesesSugeridos] = useState([]);
-  const [loading1, setLoading1]             = useState(false);
-  const [error1, setError1]                 = useState("");
+  // ── Faturas adicionais 3.0TD / 6.0TD / 6.1TD ────────────────────────────
+  const [factura1Data, setFactura1Data]         = useState(null); // segunda fatura
+  const [factura2Data, setFactura2Data]         = useState(null); // terceira fatura
+  const [_file1, setFile1]                      = useState(null);
+  const [_file2, setFile2]                      = useState(null);
+  const [loading1, setLoading1]                 = useState(false);
+  const [loading2, setLoading2]                 = useState(false);
+  const [error1, setError1]                     = useState("");
+  const [error2, setError2]                     = useState("");
+  const [mesesSugeridos1, setMesesSugeridos1]   = useState([]); // sugestões para 2ª fatura
+  const [mesesSugeridos2, setMesesSugeridos2]   = useState([]); // sugestões para 3ª fatura
+  const [modalConfirmarEnvio, setModalConfirmarEnvio] = useState(false);
 
   // ── Step 2B — CUPS ───────────────────────────────────────────────────────
   const [cups, setCups]               = useState("");
@@ -98,7 +106,6 @@ export default function FacturaUpload() {
   const [mpklogId, setMpklogId]                 = useState(null);
   const [sesionData, setSesionData]             = useState(null);
   const [_sesionError, setSesionError]          = useState(false);
-  const [modalSegundaFactura, setModalSegundaFactura] = useState(false);
   const [modalContratar, setModalContratar]     = useState(false);
   const [dniContrato, setDniContrato]           = useState("");
   const [dniError, setDniError]                 = useState("");
@@ -562,10 +569,20 @@ export default function FacturaUpload() {
       const data = await res.json();
       setFacturaData(data);
       setStatus("analyzed");
-      if (data.tarifa_acceso === "3.0TD") {
+      if (TARIFAS_MULTI_FACTURA.includes(data.tarifa_acceso)) {
         const mes = parseInt(data.periodo_fin?.split("/")?.[1]);
-        if (mes >= 1 && mes <= 12) setMesesSugeridos(sugerirMeses3TD(mes));
-        setModalSegundaFactura(true);
+        if (mes >= 1 && mes <= 12) {
+          const periodosDoMes1 = PERIODOS_POR_MES_3TD[mes] ?? [];
+          // Sugestões para 2ª fatura (sem períodos adicionais ainda)
+          const mesesPrinc1 = sugerirMeses3TD(mes);
+          setMesesSugeridos1(mesesPrinc1);
+          // Sugestões para 3ª fatura — excluir períodos cobertos pelos meses principais da 2ª
+          const periodosCobertos1 = mesesPrinc1
+            .filter(({ cobertura }) => cobertura === mesesPrinc1[0]?.cobertura)
+            .flatMap(({ mes: m }) => PERIODOS_POR_MES_3TD[m] ?? []);
+          const periodosJaCobertos2 = [...new Set([...periodosDoMes1, ...periodosCobertos1])];
+          setMesesSugeridos2(sugerirMeses3TD(mes, periodosJaCobertos2));
+        }
       }
     } catch (err) {
       setError(err.message);
@@ -598,12 +615,49 @@ export default function FacturaUpload() {
         setFile1(null); setLoading1(false); return;
       }
 
+      // Recalcular sugestões para 3ª fatura excluindo períodos cobertos pela 2ª fatura
+      const periodos1 = PERIODOS_POR_MES_3TD[mes1] ?? [];
+      const periodos2 = PERIODOS_POR_MES_3TD[mes2] ?? [];
+      const periodosCobertos2 = [...new Set([...periodos1, ...periodos2])];
+      setMesesSugeridos2(sugerirMeses3TD(mes1, periodosCobertos2));
       setFactura1Data(data);
     } catch {
       setError1("Error al extraer la segunda factura");
     } finally {
       setLoading1(false);
     }
+  };
+
+  const handleFile2Change = async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (!f.name.endsWith(".pdf")) { setError2("Solo se admiten archivos PDF"); return; }
+    setFile2(f); setLoading2(true); setError2("");
+    try {
+      const fd = new FormData();
+      fd.append("file", f, f.name);
+      const res = await fetch(`${API_BASE}/facturas/extraer`, { method: "POST", body: fd });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      const mes1 = parseInt(facturaData?.periodo_fin?.split("/")?.[1]);
+      const mes3 = parseInt(data.periodo_fin?.split("/")?.[1]);
+      if (mes1 === mes3) {
+        setError2("La tercera factura es del mismo mes que la primera");
+        setFile2(null); setLoading2(false); return;
+      }
+
+      setFactura2Data(data);
+    } catch {
+      setError2("Error al extraer la tercera factura");
+    } finally {
+      setLoading2(false);
+    }
+  };
+
+  const buildFactura2 = () => {
+    if (!factura2Data) return {};
+    return buildFactura(factura2Data);
   };
 
   // ── Handlers — CUPS ──────────────────────────────────────────────────────
@@ -802,6 +856,7 @@ export default function FacturaUpload() {
       const dataPayload = {
         cliente: buildClientePayload(), factura, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload,
         ...(factura1Data && { factura_1: buildFactura1() }),
+        ...(factura2Data && { factura_2: buildFactura2() }),
       };
       fd.append("data", JSON.stringify(dataPayload));
       if (mode === "pdf" && file) fd.append("file", file, file.name);
@@ -1052,6 +1107,9 @@ export default function FacturaUpload() {
       ...((sesionData?.factura_1 || factura1Data) && {
         factura_1: sesionData?.factura_1 ?? buildFactura1(),
       }),
+      ...((sesionData?.factura_2 || factura2Data) && {
+        factura_2: sesionData?.factura_2 ?? buildFactura2(),
+      }),
     };
 
     try {
@@ -1107,14 +1165,8 @@ export default function FacturaUpload() {
     setIbanContrato(""); setIbanError("");
   };
 
-  // ── Cálculos para modal segunda fatura 3.0TD ────────────────────────────
-  const coberturaMax     = mesesSugeridos[0]?.cobertura ?? 0;
-  const mesesPrincipais  = mesesSugeridos
-    .filter(({ cobertura }) => cobertura === coberturaMax)
-    .map(({ mes }) => NOMBRES_MESES[mes]);
-  const mesesSecundarios = mesesSugeridos
-    .filter(({ cobertura }) => cobertura < coberturaMax)
-    .map(({ mes }) => NOMBRES_MESES[mes]);
+  // Constante que controla a visibilidade dos dados extraídos da fatura (tabela completa)
+  const MOSTRAR_DADOS_FACTURA = false;
 
   // ── Render helpers ────────────────────────────────────────────────────────
   const visibleApiKeys = (data) =>
@@ -1490,7 +1542,8 @@ export default function FacturaUpload() {
               <div className="cs-results-card fade-in">
                 <div className="cs-results-header">
                   <p style={{ fontSize:18, fontWeight:700, color:"#111" }}>✅ Factura analizada</p>
-                  <button className="cs-btn-secondary" onClick={() => { setStatus("idle"); setFacturaData(null); setFile(null); }}>
+                  <button className="cs-btn-secondary"
+                    onClick={() => { setStatus("idle"); setFacturaData(null); setFile(null); }}>
                     Nueva factura
                   </button>
                 </div>
@@ -1501,6 +1554,7 @@ export default function FacturaUpload() {
                   </div>
                 )}
 
+                {/* Dados do cliente sempre visíveis */}
                 <p className="cs-section-label" style={{ marginTop:0 }}>Datos del cliente</p>
                 <div className="cs-client-grid" style={{ marginBottom:16 }}>
                   <div className="cs-client-item">
@@ -1521,49 +1575,270 @@ export default function FacturaUpload() {
                   </div>
                 </div>
 
-                <p className="cs-section-label">Datos extraídos de la factura</p>
-                <table className="cs-table" style={{ marginBottom:24 }}>
-                  <tbody>
-                    {Object.entries(FIELD_LABELS)
-                      .filter(([k]) => hasValue(facturaData[k]))
-                      .map(([k, label]) => (
-                        <tr key={k}>
-                          <td>{label}</td>
-                          <td>{facturaData[k]}</td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
-
-                {/* Precios energía — solo mostrar si el backend los extrajo */}
-                {[
-                  ...PRECIOS_ENERGIA_BASE_KEYS,
-                  ...(facturaData?.tarifa_acceso !== "2.0TD" ? PRECIOS_ENERGIA_3TD_KEYS : []),
-                ].filter((k) => hasValue(facturaData?.[k])).length > 0 && (
+                {/* Dados completos da fatura — apenas quando MOSTRAR_DADOS_FACTURA === true */}
+                {MOSTRAR_DADOS_FACTURA && (
                   <>
-                    <p className="cs-section-label">Precios de energía</p>
-                    <div className="cs-manual-grid">
-                      {[
-                        ...PRECIOS_ENERGIA_BASE_KEYS,
-                        ...(facturaData?.tarifa_acceso !== "2.0TD" ? PRECIOS_ENERGIA_3TD_KEYS : []),
-                      ]
-                        .filter((k) => hasValue(facturaData?.[k]))
-                        .map((k) => (
-                          <div key={k} className="cs-field-group">
-                            <label className="cs-label">{FIELD_LABELS[k]}</label>
-                            <div className="cs-input"
-                              style={{ background:"#f7f7f5", color:"#555",
-                                       cursor:"default", userSelect:"text" }}>
-                              {facturaData[k]}
-                            </div>
-                          </div>
-                        ))
-                      }
-                    </div>
+                    <p className="cs-section-label">Datos extraídos de la factura</p>
+                    <table className="cs-table" style={{ marginBottom:24 }}>
+                      <tbody>
+                        {Object.entries(FIELD_LABELS)
+                          .filter(([k]) => hasValue(facturaData[k]))
+                          .map(([k, label]) => (
+                            <tr key={k}>
+                              <td>{label}</td>
+                              <td>{facturaData[k]}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+
+                    {[
+                      ...PRECIOS_ENERGIA_BASE_KEYS,
+                      ...(facturaData?.tarifa_acceso !== "2.0TD" ? PRECIOS_ENERGIA_3TD_KEYS : []),
+                    ].filter((k) => hasValue(facturaData?.[k])).length > 0 && (
+                      <>
+                        <p className="cs-section-label">Precios de energía</p>
+                        <div className="cs-manual-grid">
+                          {[
+                            ...PRECIOS_ENERGIA_BASE_KEYS,
+                            ...(facturaData?.tarifa_acceso !== "2.0TD" ? PRECIOS_ENERGIA_3TD_KEYS : []),
+                          ]
+                            .filter((k) => hasValue(facturaData?.[k]))
+                            .map((k) => (
+                              <div key={k} className="cs-field-group">
+                                <label className="cs-label">{FIELD_LABELS[k]}</label>
+                                <div className="cs-input"
+                                  style={{ background:"#f7f7f5", color:"#555",
+                                           cursor:"default", userSelect:"text" }}>
+                                  {facturaData[k]}
+                                </div>
+                              </div>
+                            ))
+                          }
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
 
-                <button className="cs-btn-primary" style={{ marginTop:0 }} onClick={handleEnviar} disabled={sending}>
+                {/* Bloco faturas adicionais — só para tarifas multi-fatura */}
+                {TARIFAS_MULTI_FACTURA.includes(facturaData?.tarifa_acceso) && (
+                  <div style={{
+                    margin:"24px 0",
+                    borderRadius:16,
+                    border:"1px solid #E8E6E2",
+                    overflow:"hidden",
+                  }}>
+                    {/* Header do bloco */}
+                    <div style={{ background:"#ffffff", padding:"20px 24px" }}>
+                      <p style={{ fontSize:13, fontWeight:700, color:"#000000",
+                        letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:4 }}>
+                        Tarifa {facturaData.tarifa_acceso}
+                      </p>
+                      <p style={{ fontSize:15, color:"#555", fontWeight:500, lineHeight:1.5 }}>
+                        Para un análisis completo necesitamos dos facturas adicionales
+                        de meses diferentes.
+                      </p>
+                    </div>
+
+                    {/* Upload 2ª fatura */}
+                    <div style={{ padding:"20px 24px", borderBottom:"1px solid #E8E6E2" }}>
+                      {mesesSugeridos1.length > 0 && (() => {
+                        const cobMax1 = mesesSugeridos1[0]?.cobertura ?? 0;
+                        const princ1  = mesesSugeridos1
+                          .filter(({ cobertura }) => cobertura === cobMax1)
+                          .map(({ mes }) => NOMBRES_MESES[mes]);
+                        return (
+                          <div style={{ marginBottom:16 }}>
+                            <p style={{ fontSize:11, fontWeight:700, color:"#000000",
+                              letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:6 }}>
+                              Segunda factura
+                            </p>
+                            <p style={{ fontSize:13, color:"#444", lineHeight:1.6 }}>
+                              Preferiblemente de{" "}
+                              <strong style={{ color:"#121212" }}>{princ1.join(", ")}</strong>.
+                            </p>
+                          </div>
+                        );
+                      })()}
+
+                      {!factura1Data ? (
+                        <div>
+                          <div
+                            className="cs-dropzone"
+                            onClick={() => fileRef1.current?.click()}
+                          >
+                            <input
+                              ref={fileRef1}
+                              type="file"
+                              accept=".pdf"
+                              style={{ display:"none" }}
+                              onChange={handleFile1Change}
+                            />
+                            <p style={{ fontSize:22, marginBottom:6 }}>📄</p>
+                            <p style={{ fontSize:13, color:"#666", fontWeight:500 }}>
+                              {loading1 ? "Analizando..." : "Haz clic para subir la segunda factura"}
+                            </p>
+                            <p style={{ fontSize:11, color:"#aaa", marginTop:4 }}>Solo PDF</p>
+                          </div>
+                          {error1 && (
+                            <p style={{ fontSize:12, color:"#c0392b", marginTop:8, fontWeight:500 }}>
+                              ⚠️ {error1}
+                            </p>
+                          )}
+                          <button
+                            style={{
+                              width:"100%", marginTop:10,
+                              background:"#121212", color:"#fff",
+                              border:"none", borderRadius:28,
+                              padding:"12px", fontSize:14,
+                              fontWeight:700, fontFamily:"inherit",
+                              cursor: loading1 ? "not-allowed" : "pointer",
+                              opacity: loading1 ? 0.6 : 1,
+                              letterSpacing:"0.04em",
+                            }}
+                            onClick={() => fileRef1.current?.click()}
+                            disabled={loading1}
+                          >
+                            {loading1 ? "Analizando..." : "Analizar factura →"}
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{
+                          display:"flex", alignItems:"center", justifyContent:"space-between",
+                          padding:"12px 16px", background:"#F0FDF4",
+                          borderRadius:10, border:"1px solid #BBF7D0",
+                        }}>
+                          <div>
+                            <p style={{ fontSize:13, color:"#166534", fontWeight:700, marginBottom:2 }}>
+                              ✓ Segunda factura analizada
+                            </p>
+                            <p style={{ fontSize:11, color:"#4ade80" }}>
+                              {factura1Data?.comercializadora || ""}
+                            </p>
+                          </div>
+                          <button
+                            style={{
+                              background:"none", border:"1px solid #BBF7D0",
+                              borderRadius:20, padding:"4px 12px",
+                              fontSize:11, color:"#166534", cursor:"pointer",
+                              fontFamily:"inherit", fontWeight:600,
+                            }}
+                            onClick={() => { setFactura1Data(null); setFile1(null); setError1(""); }}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Upload 3ª fatura */}
+                    <div style={{ padding:"20px 24px" }}>
+                      {mesesSugeridos2.length > 0 && (() => {
+                        const cobMax2 = mesesSugeridos2[0]?.cobertura ?? 0;
+                        const princ2  = mesesSugeridos2
+                          .filter(({ cobertura }) => cobertura === cobMax2)
+                          .map(({ mes }) => NOMBRES_MESES[mes]);
+                        return (
+                          <div style={{ marginBottom:16 }}>
+                            <p style={{ fontSize:11, fontWeight:700, color:"#000000",
+                              letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:6 }}>
+                              Tercera factura
+                            </p>
+                            <p style={{ fontSize:13, color:"#444", lineHeight:1.6 }}>
+                              Preferiblemente de{" "}
+                              <strong style={{ color:"#121212" }}>{princ2.join(", ")}</strong>.
+                            </p>
+                          </div>
+                        );
+                      })()}
+
+                      {!factura2Data ? (
+                        <div>
+                          <div
+                            className="cs-dropzone"
+                            onClick={() => fileRef2.current?.click()}
+                          >
+                            <input
+                              ref={fileRef2}
+                              type="file"
+                              accept=".pdf"
+                              style={{ display:"none" }}
+                              onChange={handleFile2Change}
+                            />
+                            <p style={{ fontSize:22, marginBottom:6 }}>📄</p>
+                            <p style={{ fontSize:13, color:"#666", fontWeight:500 }}>
+                              {loading2 ? "Analizando..." : "Haz clic para subir la tercera factura"}
+                            </p>
+                            <p style={{ fontSize:11, color:"#aaa", marginTop:4 }}>Solo PDF</p>
+                          </div>
+                          {error2 && (
+                            <p style={{ fontSize:12, color:"#c0392b", marginTop:8, fontWeight:500 }}>
+                              ⚠️ {error2}
+                            </p>
+                          )}
+                          <button
+                            style={{
+                              width:"100%", marginTop:10,
+                              background:"#121212", color:"#fff",
+                              border:"none", borderRadius:28,
+                              padding:"12px", fontSize:14,
+                              fontWeight:700, fontFamily:"inherit",
+                              cursor: loading2 ? "not-allowed" : "pointer",
+                              opacity: loading2 ? 0.6 : 1,
+                              letterSpacing:"0.04em",
+                            }}
+                            onClick={() => fileRef2.current?.click()}
+                            disabled={loading2}
+                          >
+                            {loading2 ? "Analizando..." : "Analizar factura →"}
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{
+                          display:"flex", alignItems:"center", justifyContent:"space-between",
+                          padding:"12px 16px", background:"#F0FDF4",
+                          borderRadius:10, border:"1px solid #BBF7D0",
+                        }}>
+                          <div>
+                            <p style={{ fontSize:13, color:"#166534", fontWeight:700, marginBottom:2 }}>
+                              ✓ Tercera factura analizada
+                            </p>
+                            <p style={{ fontSize:11, color:"#4ade80" }}>
+                              {factura2Data?.comercializadora || ""}
+                            </p>
+                          </div>
+                          <button
+                            style={{
+                              background:"none", border:"1px solid #BBF7D0",
+                              borderRadius:20, padding:"4px 12px",
+                              fontSize:11, color:"#166534", cursor:"pointer",
+                              fontFamily:"inherit", fontWeight:600,
+                            }}
+                            onClick={() => { setFactura2Data(null); setFile2(null); setError2(""); }}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  className="cs-btn-primary"
+                  style={{ marginTop:0 }}
+                  onClick={() => {
+                    const esMultiFactura = TARIFAS_MULTI_FACTURA.includes(facturaData?.tarifa_acceso);
+                    const todasSubidas   = factura1Data && factura2Data;
+                    if (esMultiFactura && !todasSubidas) {
+                      setModalConfirmarEnvio(true);
+                    } else {
+                      handleEnviar();
+                    }
+                  }}
+                  disabled={sending}
+                >
                   {sending ? "Enviando..." : "Enviar datos →"}
                 </button>
               </div>
@@ -1673,8 +1948,8 @@ export default function FacturaUpload() {
         onAceptar={handleAceptarPropuesta}
       />
 
-      {/* ── MODAL SEGUNDA FATURA 3.0TD ── */}
-      {modalSegundaFactura && (
+      {/* ── MODAL CONFIRMAR ENVIO SEM TODAS AS FATURAS ── */}
+      {modalConfirmarEnvio && (
         <div style={{
           position:"fixed", inset:0, background:"rgba(0,0,0,0.55)",
           zIndex:1000, display:"flex", alignItems:"center",
@@ -1682,71 +1957,32 @@ export default function FacturaUpload() {
         }}>
           <div style={{
             background:"#fff", borderRadius:16, padding:"32px 28px",
-            maxWidth:480, width:"100%",
+            maxWidth:420, width:"100%",
             boxShadow:"0 8px 40px rgba(0,0,0,0.18)",
           }}>
             <h3 style={{ fontSize:18, fontWeight:700, color:"#111", marginBottom:8 }}>
-              Tu tarifa es 3.0TD
+              ¿Continuar sin todas las facturas?
             </h3>
-            <p style={{ fontSize:13, color:"#555", marginBottom:8 }}>
-              Para completar el análisis, te recomendamos subir una factura de uno
-              de estos meses: <strong>{mesesPrincipais.join(", ")}</strong>.
-              {mesesSecundarios.length > 0 && (
-                <span> También puedes subir una factura de: {mesesSecundarios.join(", ")}.</span>
-              )}
+            <p style={{ fontSize:13, color:"#555", marginBottom:24, lineHeight:1.6 }}>
+              Sin las tres facturas el análisis será aproximado y puede no reflejar
+              con precisión tu consumo real. Te recomendamos subir las facturas
+              adicionales para obtener un resultado más preciso.
             </p>
-            <p style={{ fontSize:12, color:"#888", marginBottom:20 }}>
-              Caso no tengas otra factura, puedes cerrar este mensaje y seguir normalmente.
-              No es obligatorio.
-            </p>
-
-            {!factura1Data ? (
-              <div
-                className="cs-upload-area"
-                onClick={() => fileRef1.current?.click()}
-                style={{ marginBottom:16, cursor:"pointer", padding:"16px", borderRadius:8, border:"1px dashed #ccc", textAlign:"center" }}
-              >
-                <input
-                  ref={fileRef1}
-                  type="file"
-                  accept=".pdf"
-                  style={{ display:"none" }}
-                  onChange={handleFile1Change}
-                />
-                <p style={{ fontSize:13, color:"#555" }}>{loading1 ? "Extrayendo..." : "Subir segunda factura (PDF)"}</p>
-                {error1 && <p className="cs-error" style={{ marginTop:8 }}>{error1}</p>}
-              </div>
-            ) : (
-              <div style={{ marginBottom:16 }}>
-                <p style={{ fontSize:13, color:"#2a7a2a", fontWeight:600 }}>
-                  ✓ Segunda factura extraída correctamente
-                </p>
-                <button
-                  className="cs-btn-ghost"
-                  style={{ fontSize:12, marginTop:4 }}
-                  onClick={() => { setFactura1Data(null); setFile1(null); setError1(""); }}
-                >
-                  Eliminar
-                </button>
-              </div>
-            )}
-
             <div style={{ display:"flex", gap:12 }}>
               <button
                 className="cs-btn-ghost"
                 style={{ flex:1, marginTop:0 }}
-                onClick={() => setModalSegundaFactura(false)}
-                disabled={sending}
+                onClick={() => setModalConfirmarEnvio(false)}
               >
-                Cerrar
+                ← Volver a subir
               </button>
               <button
                 className="cs-btn-primary"
                 style={{ flex:1, marginTop:0 }}
-                onClick={() => { setModalSegundaFactura(false); handleEnviar(); }}
-                disabled={sending || loading1}
+                onClick={() => { setModalConfirmarEnvio(false); handleEnviar(); }}
+                disabled={sending}
               >
-                {sending ? "Enviando..." : "Enviar datos →"}
+                {sending ? "Enviando..." : "Enviar así →"}
               </button>
             </div>
           </div>
