@@ -818,9 +818,9 @@ export default function FacturaUpload() {
         const dealIdRecebido   = dataEnviar?.dealId      ?? null;
         const mpklogIdRecebido = dataEnviar?.mpklogId    ?? null;
         const sessionIdRecebido = dataEnviar?.session_id ?? null;
-        if (dealIdRecebido)    { setDealId(dealIdRecebido);     console.log("[handleEnviar/asesor] dealId recebido:", dealIdRecebido);     }
-        if (mpklogIdRecebido)  { setMpklogId(mpklogIdRecebido); console.log("[handleEnviar/asesor] mpklogId recebido:", mpklogIdRecebido); }
-        if (sessionIdRecebido) console.log("[handleEnviar/asesor] session_id recebido:", sessionIdRecebido);
+        if (dealIdRecebido)   setDealId(dealIdRecebido);
+        if (mpklogIdRecebido) setMpklogId(mpklogIdRecebido);
+        console.log("[handleEnviar/asesor] IDs recebidos:", { dealId: dealIdRecebido, mpklogId: mpklogIdRecebido, session_id: sessionIdRecebido });
 
         // Guardar dados flat para restaurar após redirect do Cotizador (modo asesor)
         const facturaFlatAsesor = mode === "pdf"
@@ -836,7 +836,7 @@ export default function FacturaUpload() {
         localStorage.setItem("cs_session_id", sessionIdRecebido ?? "");
 
         const idGenAsesor = resolverIdGeneracion(idGeneracion, ceNombre);
-        const redirectUrlAsesor = `${ASESOR_REDIRECT_URL}?coming-from-extractor=true&id_generacion=${encodeURIComponent(idGenAsesor ?? "")}&session_id=${encodeURIComponent(sessionIdRecebido ?? "")}`;
+        const redirectUrlAsesor = `${PLAN_REDIRECT_URL}?coming-from-extractor=true&id_generacion=${encodeURIComponent(idGenAsesor ?? "")}&session_id=${encodeURIComponent(sessionIdRecebido ?? "")}`;
         window.location.href = redirectUrlAsesor;
       } catch (err) {
         console.error("[asesor] Erro no envío:", err);
@@ -869,9 +869,9 @@ export default function FacturaUpload() {
       const dealIdRecebido   = dataEnviar?.dealId    ?? null;
       const mpklogIdRecebido = dataEnviar?.mpklogId  ?? null;
       const sessionIdRecebido = dataEnviar?.session_id ?? null;
-      if (dealIdRecebido)   { setDealId(dealIdRecebido);     console.log("[handleEnviar] dealId recebido:", dealIdRecebido);     }
-      if (mpklogIdRecebido) { setMpklogId(mpklogIdRecebido); console.log("[handleEnviar] mpklogId recebido:", mpklogIdRecebido); }
-      if (sessionIdRecebido) console.log("[handleEnviar] session_id recebido:", sessionIdRecebido);
+      if (dealIdRecebido)   setDealId(dealIdRecebido);
+      if (mpklogIdRecebido) setMpklogId(mpklogIdRecebido);
+      console.log("[handleEnviar] IDs recebidos:", { dealId: dealIdRecebido, mpklogId: mpklogIdRecebido, session_id: sessionIdRecebido });
 
       // Guardar dados para restaurar após redirect do Cotizador
       // cs_factura em formato flat (não estruturado) — buildFactura() espera pot_p1_kw, pe_p1, etc.
