@@ -748,17 +748,16 @@ export default function FacturaUpload() {
     if (!facturaData) return {};
     const merged = { ...facturaData, ...Object.fromEntries(
       Object.entries(manualFields).filter(([, v]) => v !== "")
-    ), modo: modoAlquiler ? "alquiler" : "venta", cuotaAlquilerMes: cuotaAlquilerMes ?? null };
+    ), modo: modoAlquiler ? "alquiler" : "venta" };
     return buildFactura(merged);
   };
 
   const buildFacturaCUPS = () =>
-    buildFactura({ cups, ...cupsData, ...manualFields, modo: modoAlquiler ? "alquiler" : "venta", cuotaAlquilerMes: cuotaAlquilerMes ?? null });
+    buildFactura({ cups, ...cupsData, ...manualFields, modo: modoAlquiler ? "alquiler" : "venta" });
 
   const handleEnviarAsesor = async () => {
     if (sending) return;
-    setSending(true); setError("");
-    try {
+    setSending(true); setError(""); setStatus("loading_plan");    try {
       const fd = new FormData();
       fd.append("data", JSON.stringify({
         cliente,

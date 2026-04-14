@@ -291,6 +291,16 @@ export default function PlanScreen({
           </div>
         </div>
 
+        {/* ── FACTURA PLAN ── */}
+        <div style={{ marginBottom:56 }}>
+          <p style={{ fontSize:22, fontWeight:800, color:"#121212", marginBottom:24 }}>Así quedaría tu factura</p>
+          <img
+            src="/factura plan.svg"
+            alt="Ejemplo de factura con comunidad solar"
+            style={{ width:"100%", borderRadius:12, display:"block" }}
+          />
+        </div>
+
         {/* ── TABS: CÓMO FUNCIONA / TU PLAN / CONDICIONES ── */}
         <div style={{ borderRadius:14, overflow:"hidden", marginBottom:56, boxShadow:"0 2px 12px rgba(0,0,0,0.06)" }}>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr" }}>
@@ -385,6 +395,15 @@ export default function PlanScreen({
             </div>
           </div>
         )}
+
+        {/* ── PROCESO ── */}
+        <div style={{ marginBottom:56 }}>
+          <img
+            src="/Processo.svg"
+            alt="Proceso de contratación"
+            style={{ width:"100%", display:"block" }}
+          />
+        </div>
 
         {/* ── REGALO APP ── */}
         <div className="cs-plan-regalo">
