@@ -102,6 +102,9 @@ export default function FacturaUpload() {
   const [tabActiva, setTabActiva]     = useState("como"); // "como" | "plan" | "condiciones"
   const [modoAlquiler, setModoAlquiler]         = useState(false);
   const [cuotaAlquilerMes, setCuotaAlquilerMes] = useState(null);
+  const [extractSessionId,  setExtractSessionId]  = useState(null);
+  const [extract1SessionId, setExtract1SessionId] = useState(null);
+  const [extract2SessionId, setExtract2SessionId] = useState(null);
   const [dealId, setDealId]                     = useState(null);
   const [mpklogId, setMpklogId]                 = useState(null);
   const [sesionData, setSesionData]             = useState(null);
@@ -559,6 +562,88 @@ export default function FacturaUpload() {
     7:"julio", 8:"agosto", 9:"septiembre", 10:"octubre", 11:"noviembre", 12:"diciembre",
   };
 
+  // Achata a resposta do novo /facturas/extraer (estrutura aninhada) para o formato plano usado pelo código
+  const flattenFacturaResponse = (raw) => {
+    const f = raw.factura ?? raw;
+    const pot  = f.potencias_kw    ?? {};
+    const con  = f.consumos_kwh    ?? {};
+    const pp   = f.precios_potencia ?? {};
+    const pe   = f.precios_energia  ?? {};
+    const imp  = f.impuestos        ?? {};
+    const otros = f.otros           ?? {};
+    const desc  = otros.descuentos  ?? {};
+    return {
+      cups:             f.cups,
+      comercializadora: f.comercializadora,
+      distribuidora:    f.distribuidora,
+      tarifa_acceso:    f.tarifa_acceso,
+      periodo_inicio:   f.periodo_inicio,
+      periodo_fin:      f.periodo_fin,
+      dias_facturados:  f.dias_facturados,
+      importe_factura:  f.importe_factura,
+      // potencias
+      pot_p1_kw: pot.p1, pot_p2_kw: pot.p2, pot_p3_kw: pot.p3,
+      pot_p4_kw: pot.p4, pot_p5_kw: pot.p5, pot_p6_kw: pot.p6,
+      // consumos
+      consumo_p1_kwh: con.p1, consumo_p2_kwh: con.p2, consumo_p3_kwh: con.p3,
+      consumo_p4_kwh: con.p4, consumo_p5_kwh: con.p5, consumo_p6_kwh: con.p6,
+      // precios potencia
+      pp_p1: pp.p1, pp_p2: pp.p2, pp_p3: pp.p3,
+      pp_p4: pp.p4, pp_p5: pp.p5, pp_p6: pp.p6,
+      // precios energia
+      pe_p1: pe.pe_p1, pe_p2: pe.pe_p2, pe_p3: pe.pe_p3,
+      pe_p4: pe.pe_p4, pe_p5: pe.pe_p5, pe_p6: pe.pe_p6,
+      // impuestos
+      imp_ele: imp.imp_ele, iva: imp.iva,
+      // otros básicos
+      alq_eq_dia: otros.alq_eq_dia, bono_social: desc.bono_social,
+      // otros nuevos
+      consumo_periodo1_kwh:        otros.consumo_periodo1_kwh,
+      precio_periodo1_eur_kwh:     otros.precio_periodo1_eur_kwh,
+      importe_periodo1_eur:        otros.importe_periodo1_eur,
+      consumo_periodo2_kwh:        otros.consumo_periodo2_kwh,
+      precio_periodo2_eur_kwh:     otros.precio_periodo2_eur_kwh,
+      importe_periodo2_eur:        otros.importe_periodo2_eur,
+      subtotal_sin_ie:             otros.subtotal_sin_ie,
+      cuantia_peajes_cargos:       otros.cuantia_peajes_cargos,
+      cnae:                        otros.cnae,
+      boe_peajes_fecha:            otros.boe_peajes_fecha,
+      boe_cargos_fecha:            otros.boe_cargos_fecha,
+      fecha_final_contrato:        otros.fecha_final_contrato,
+      potencia_maxima_p1_kw:       otros.potencia_maxima_p1_kw,
+      potencia_maxima_p2_kw:       otros.potencia_maxima_p2_kw,
+      consumo_medio_cp_kwh:        otros.consumo_medio_cp_kwh,
+      mix_naturgy_renovable_pct:          otros.mix_naturgy_renovable_pct,
+      mix_naturgy_cogeneracion_pct:       otros.mix_naturgy_cogeneracion_pct,
+      mix_naturgy_cc_gas_natural_pct:     otros.mix_naturgy_cc_gas_natural_pct,
+      mix_naturgy_carbon_pct:             otros.mix_naturgy_carbon_pct,
+      mix_naturgy_fuel_gas_pct:           otros.mix_naturgy_fuel_gas_pct,
+      mix_naturgy_nuclear_pct:            otros.mix_naturgy_nuclear_pct,
+      mix_naturgy_otras_no_renovables_pct:otros.mix_naturgy_otras_no_renovables_pct,
+      mix_nacional_renovable_pct:          otros.mix_nacional_renovable_pct,
+      mix_nacional_cogeneracion_pct:       otros.mix_nacional_cogeneracion_pct,
+      mix_nacional_cc_gas_natural_pct:     otros.mix_nacional_cc_gas_natural_pct,
+      mix_nacional_carbon_pct:             otros.mix_nacional_carbon_pct,
+      mix_nacional_fuel_gas_pct:           otros.mix_nacional_fuel_gas_pct,
+      mix_nacional_nuclear_pct:            otros.mix_nacional_nuclear_pct,
+      mix_nacional_otras_no_renovables_pct:otros.mix_nacional_otras_no_renovables_pct,
+      emisiones_co2_eq_g_kwh:      otros.emisiones_co2_eq_g_kwh,
+      media_nacional_co2_g_kwh:    otros.media_nacional_co2_g_kwh,
+      residuos_radiactivos_ug_kwh: otros.residuos_radiactivos_ug_kwh,
+      media_nacional_residuos_ug_kwh: otros.media_nacional_residuos_ug_kwh,
+      segmento_cargos:             otros.segmento_cargos,
+      distribucion_energia_pct:    otros.distribucion_energia_pct,
+      distribucion_impuestos_pct:  otros.distribucion_impuestos_pct,
+      distribucion_alquiler_pct:   otros.distribucion_alquiler_pct,
+      distribucion_peajes_pct:     otros.distribucion_peajes_pct,
+      distribucion_cargos_pct:     otros.distribucion_cargos_pct,
+      cargos_recore_pct:           otros.cargos_recore_pct,
+      cargos_deficit_pct:          otros.cargos_deficit_pct,
+      cargos_tnp_pct:              otros.cargos_tnp_pct,
+      cargos_otros_pct:            otros.cargos_otros_pct,
+    };
+  };
+
   const handleAnalizarPDF = async () => {
     if (!file) return;
     setLoading(true); setLoadingMsg("Analizando tu factura..."); setError("");
@@ -568,7 +653,9 @@ export default function FacturaUpload() {
       const res = await fetch(`${API_BASE}/facturas/extraer`, { method: "POST", body: formData });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setFacturaData(data);
+      if (data.session_id) setExtractSessionId(data.session_id);
+      const flat = flattenFacturaResponse(data);
+      setFacturaData(flat);
       setStatus("analyzed");
       if (TARIFAS_MULTI_FACTURA.includes(data.tarifa_acceso)) {
         const mes = parseInt(data.periodo_fin?.split("/")?.[1]);
@@ -609,8 +696,9 @@ export default function FacturaUpload() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
+      const flat1 = flattenFacturaResponse(data);
       const mes1 = parseInt(facturaData?.periodo_fin?.split("/")?.[1]);
-      const mes2 = parseInt(data.periodo_fin?.split("/")?.[1]);
+      const mes2 = parseInt(flat1.periodo_fin?.split("/")?.[1]);
       if (mes1 === mes2) {
         setError1("La segunda factura es del mismo mes que la primera");
         setFile1(null); setLoading1(false); return;
@@ -621,7 +709,8 @@ export default function FacturaUpload() {
       const periodos2 = PERIODOS_POR_MES_3TD[mes2] ?? [];
       const periodosCobertos2 = [...new Set([...periodos1, ...periodos2])];
       setMesesSugeridos2(sugerirMeses3TD(mes1, periodosCobertos2));
-      setFactura1Data(data);
+      if (data.session_id) setExtract1SessionId(data.session_id);
+      setFactura1Data(flat1);
     } catch {
       setError1("Error al extraer la segunda factura");
     } finally {
@@ -641,14 +730,16 @@ export default function FacturaUpload() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
+      const flat2 = flattenFacturaResponse(data);
       const mes1 = parseInt(facturaData?.periodo_fin?.split("/")?.[1]);
-      const mes3 = parseInt(data.periodo_fin?.split("/")?.[1]);
+      const mes3 = parseInt(flat2.periodo_fin?.split("/")?.[1]);
       if (mes1 === mes3) {
         setError2("La tercera factura es del mismo mes que la primera");
         setFile2(null); setLoading2(false); return;
       }
 
-      setFactura2Data(data);
+      if (data.session_id) setExtract2SessionId(data.session_id);
+      setFactura2Data(flat2);
     } catch {
       setError2("Error al extraer la tercera factura");
     } finally {
@@ -739,9 +830,50 @@ export default function FacturaUpload() {
       alq_eq_dia:       d.alq_eq_dia       || null,
       bono_social:      d.bono_social      ?? null,
       cuotaAlquilerMes: d.cuotaAlquilerMes ?? null,
+      consumo_periodo1_kwh:        d.consumo_periodo1_kwh        ?? null,
+      precio_periodo1_eur_kwh:     d.precio_periodo1_eur_kwh     ?? null,
+      importe_periodo1_eur:        d.importe_periodo1_eur        ?? null,
+      consumo_periodo2_kwh:        d.consumo_periodo2_kwh        ?? null,
+      precio_periodo2_eur_kwh:     d.precio_periodo2_eur_kwh     ?? null,
+      importe_periodo2_eur:        d.importe_periodo2_eur        ?? null,
+      subtotal_sin_ie:             d.subtotal_sin_ie             ?? null,
+      cuantia_peajes_cargos:       d.cuantia_peajes_cargos       ?? null,
+      cnae:                        d.cnae                        ?? null,
+      boe_peajes_fecha:            d.boe_peajes_fecha            ?? null,
+      boe_cargos_fecha:            d.boe_cargos_fecha            ?? null,
+      fecha_final_contrato:        d.fecha_final_contrato        ?? null,
+      potencia_maxima_p1_kw:       d.potencia_maxima_p1_kw       ?? null,
+      potencia_maxima_p2_kw:       d.potencia_maxima_p2_kw       ?? null,
+      consumo_medio_cp_kwh:        d.consumo_medio_cp_kwh        ?? null,
+      mix_naturgy_renovable_pct:           d.mix_naturgy_renovable_pct           ?? null,
+      mix_naturgy_cogeneracion_pct:        d.mix_naturgy_cogeneracion_pct        ?? null,
+      mix_naturgy_cc_gas_natural_pct:      d.mix_naturgy_cc_gas_natural_pct      ?? null,
+      mix_naturgy_carbon_pct:              d.mix_naturgy_carbon_pct              ?? null,
+      mix_naturgy_fuel_gas_pct:            d.mix_naturgy_fuel_gas_pct            ?? null,
+      mix_naturgy_nuclear_pct:             d.mix_naturgy_nuclear_pct             ?? null,
+      mix_naturgy_otras_no_renovables_pct: d.mix_naturgy_otras_no_renovables_pct ?? null,
+      mix_nacional_renovable_pct:           d.mix_nacional_renovable_pct           ?? null,
+      mix_nacional_cogeneracion_pct:        d.mix_nacional_cogeneracion_pct        ?? null,
+      mix_nacional_cc_gas_natural_pct:      d.mix_nacional_cc_gas_natural_pct      ?? null,
+      mix_nacional_carbon_pct:              d.mix_nacional_carbon_pct              ?? null,
+      mix_nacional_fuel_gas_pct:            d.mix_nacional_fuel_gas_pct            ?? null,
+      mix_nacional_nuclear_pct:             d.mix_nacional_nuclear_pct             ?? null,
+      mix_nacional_otras_no_renovables_pct: d.mix_nacional_otras_no_renovables_pct ?? null,
+      emisiones_co2_eq_g_kwh:       d.emisiones_co2_eq_g_kwh       ?? null,
+      media_nacional_co2_g_kwh:     d.media_nacional_co2_g_kwh     ?? null,
+      residuos_radiactivos_ug_kwh:  d.residuos_radiactivos_ug_kwh  ?? null,
+      media_nacional_residuos_ug_kwh: d.media_nacional_residuos_ug_kwh ?? null,
+      segmento_cargos:              d.segmento_cargos              ?? null,
+      distribucion_energia_pct:     d.distribucion_energia_pct     ?? null,
+      distribucion_impuestos_pct:   d.distribucion_impuestos_pct   ?? null,
+      distribucion_alquiler_pct:    d.distribucion_alquiler_pct    ?? null,
+      distribucion_peajes_pct:      d.distribucion_peajes_pct      ?? null,
+      distribucion_cargos_pct:      d.distribucion_cargos_pct      ?? null,
+      cargos_recore_pct:            d.cargos_recore_pct            ?? null,
+      cargos_deficit_pct:           d.cargos_deficit_pct           ?? null,
+      cargos_tnp_pct:               d.cargos_tnp_pct               ?? null,
+      cargos_otros_pct:             d.cargos_otros_pct             ?? null,
     },
-    archivo: {},
-    api: { api_ok: d.api_ok ?? null, api_error: d.api_error || "" },
   });
 
   const buildFacturaPDF = () => {
@@ -802,7 +934,7 @@ export default function FacturaUpload() {
 
         // Enviar ao Zoho Flow via /enviar (igual ao fluxo normal)
         const fd = new FormData();
-        fd.append("data", JSON.stringify({ cliente: buildClientePayload(), factura: facturaAsesor, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload }));
+        fd.append("data", JSON.stringify({ cliente: buildClientePayload(), factura: facturaAsesor, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload, session_id: extractSessionId }));
         if (mode === "pdf" && file) fd.append("file", file, file.name);
 
         // Enviar em paralelo: /enviar (Zoho Flow) + ASESOR_ENVIO_URL
@@ -855,8 +987,9 @@ export default function FacturaUpload() {
       const fd = new FormData();
       const dataPayload = {
         cliente: buildClientePayload(), factura, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload,
-        ...(factura1Data && { factura_1: buildFactura1() }),
-        ...(factura2Data && { factura_2: buildFactura2() }),
+        session_id: extractSessionId,
+        ...(factura1Data && { factura_1: buildFactura1(), session_id_1: extract1SessionId }),
+        ...(factura2Data && { factura_2: buildFactura2(), session_id_2: extract2SessionId }),
       };
       fd.append("data", JSON.stringify(dataPayload));
       if (mode === "pdf" && file) fd.append("file", file, file.name);
