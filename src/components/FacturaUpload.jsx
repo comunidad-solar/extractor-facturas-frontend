@@ -26,7 +26,7 @@ export default function FacturaUpload() {
   // ── Steps & navigation ───────────────────────────────────────────────────
   const [step, setStep] = useState(1);  // 1 | 2
   const [mode, setMode] = useState(null); // null | "pdf" | "cups"
-  const [modoAsesor, setModoAsesor] = useState(true);
+  const [modoAsesor, setModoAsesor] = useState(false);
 
   // ── Step 1 — client data ─────────────────────────────────────────────────
   const [cliente, setCliente] = useState({
@@ -172,7 +172,11 @@ export default function FacturaUpload() {
       },
     };
 
-    if (params.get("interno-asesores") === "true") {
+    if (params.get("interno-asesores") !== "false") {
+      if (!params.has("interno-asesores")) {
+        params.set("interno-asesores", "true");
+        window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
+      }
       setModoAsesor(true);
     }
     const idGen = params.get("id_generacion");
