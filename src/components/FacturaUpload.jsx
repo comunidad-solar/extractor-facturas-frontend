@@ -654,6 +654,7 @@ export default function FacturaUpload() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.session_id) setExtractSessionId(data.session_id);
+      console.log("[extraer] session_id recebido:", data.session_id ?? null);
       const flat = flattenFacturaResponse(data);
       setFacturaData(flat);
       setStatus("analyzed");
