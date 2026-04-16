@@ -26,7 +26,7 @@ export default function FacturaUpload() {
   // ── Steps & navigation ───────────────────────────────────────────────────
   const [step, setStep] = useState(1);  // 1 | 2
   const [mode, setMode] = useState(null); // null | "pdf" | "cups"
-  const [modoAsesor, setModoAsesor] = useState(false);
+  const [modoAsesor, setModoAsesor] = useState(true);
 
   // ── Step 1 — client data ─────────────────────────────────────────────────
   const [cliente, setCliente] = useState({
