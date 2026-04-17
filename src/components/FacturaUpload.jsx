@@ -113,6 +113,7 @@ export default function FacturaUpload() {
   const [dniContrato, setDniContrato]           = useState("");
   const [dniError, setDniError]                 = useState("");
   const [enviandoContrato, setEnviandoContrato] = useState(false);
+  const [planAbierto, setPlanAbierto]           = useState(false);
   const [ibanContrato, setIbanContrato]         = useState("");
   const [ibanError, setIbanError]               = useState("");
 
@@ -1030,6 +1031,7 @@ export default function FacturaUpload() {
       const redirectUrl = `${PLAN_REDIRECT_URL}?coming-from-extractor=true&id_generacion=${encodeURIComponent(idGenResolvido ?? "")}&session_id=${encodeURIComponent(sessionIdRecebido ?? "")}`;
       console.log("[handleEnviar] redirect URL:", redirectUrl);
       window.open(redirectUrl, "_blank");
+      setPlanAbierto(true);
 
       // O plano é calculado e mostrado no Cotizador (nova aba) — não chamar QUOTING_URL aqui
       setStatus("loading_plan");
@@ -1423,20 +1425,33 @@ export default function FacturaUpload() {
         {!loading && status === "loading_plan" && (
           <div className="cs-card fade-in" style={{ textAlign:"center", padding:"60px 24px" }}>
             <div style={{ fontSize:48, marginBottom:24 }}>☀️</div>
-            <h2 style={{ fontSize:18, fontWeight:700, color:"#111", marginBottom:12 }}>
-              Estamos calculando tu plan personalizado…
-            </h2>
-            <p style={{ fontSize:13, color:"#777", marginBottom:32 }}>
-              Esto puede tardar unos segundos.
-            </p>
-            <div style={{ display:"flex", justifyContent:"center", gap:8 }}>
-              {[0,1,2].map(i => (
-                <div key={i} style={{
-                  width:10, height:10, borderRadius:"50%", background:"#E48409",
-                  animation:"cs-bounce 1s infinite", animationDelay:`${i*0.2}s`,
-                }}/>
-              ))}
-            </div>
+            {planAbierto ? (
+              <>
+                <h2 style={{ fontSize:18, fontWeight:700, color:"#111", marginBottom:12 }}>
+                  Tu plan se ha abierto en otra pestaña
+                </h2>
+                <p style={{ fontSize:13, color:"#777" }}>
+                  Puedes cerrar esta ventana con seguridad.
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 style={{ fontSize:18, fontWeight:700, color:"#111", marginBottom:12 }}>
+                  Estamos calculando tu plan personalizado…
+                </h2>
+                <p style={{ fontSize:13, color:"#777", marginBottom:32 }}>
+                  Esto puede tardar unos segundos.
+                </p>
+                <div style={{ display:"flex", justifyContent:"center", gap:8 }}>
+                  {[0,1,2].map(i => (
+                    <div key={i} style={{
+                      width:10, height:10, borderRadius:"50%", background:"#E48409",
+                      animation:"cs-bounce 1s infinite", animationDelay:`${i*0.2}s`,
+                    }}/>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
 
