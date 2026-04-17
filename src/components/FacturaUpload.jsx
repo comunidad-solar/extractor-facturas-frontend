@@ -114,6 +114,7 @@ export default function FacturaUpload() {
   const [dniError, setDniError]                 = useState("");
   const [enviandoContrato, setEnviandoContrato] = useState(false);
   const [planAbierto, setPlanAbierto]           = useState(false);
+  const [advertenciaAno, setAdvertenciaAno]     = useState(false);
   const [ibanContrato, setIbanContrato]         = useState("");
   const [ibanError, setIbanError]               = useState("");
 
@@ -662,6 +663,7 @@ export default function FacturaUpload() {
       console.log("[extraer] session_id recebido:", data.session_id ?? null);
       const flat = flattenFacturaResponse(data);
       setFacturaData(flat);
+      setAdvertenciaAno(data.advertencia_ano === true);
       setStatus("analyzed");
       if (TARIFAS_MULTI_FACTURA.includes(data.tarifa_acceso)) {
         const mes = parseInt(data.periodo_fin?.split("/")?.[1]);
@@ -1978,22 +1980,40 @@ export default function FacturaUpload() {
                   </div>
                 )}
 
-                <button
-                  className="cs-btn-primary"
-                  style={{ marginTop:0 }}
-                  onClick={() => {
-                    const esMultiFactura = TARIFAS_MULTI_FACTURA.includes(facturaData?.tarifa_acceso);
-                    const todasSubidas   = factura1Data && factura2Data;
-                    if (esMultiFactura && !todasSubidas) {
-                      setModalConfirmarEnvio(true);
-                    } else {
-                      handleEnviar();
-                    }
-                  }}
-                  disabled={sending}
-                >
-                  {sending ? "Enviando..." : "Enviar datos →"}
-                </button>
+                {advertenciaAno && (
+                  <div style={{
+                    display:"flex", alignItems:"flex-start", gap:10,
+                    background:"#FFF7ED", border:"1px solid #FDBA74",
+                    borderRadius:10, padding:"14px 16px", marginBottom:12,
+                  }}>
+                    <span style={{ fontSize:18, lineHeight:1 }}>⚠️</span>
+                    <p style={{ fontSize:13, color:"#9A3412", lineHeight:1.5, margin:0 }}>
+                      Tu factura es del año 2024 y los datos pueden no estar actualizados.
+                      Por favor, envía una factura más reciente.
+                    </p>
+                  </div>
+                )}
+
+                <div style={{ position:"relative", display:"inline-block", width:"100%" }}
+                  title={advertenciaAno ? "Envía una factura más reciente para continuar" : undefined}>
+                  <button
+                    className="cs-btn-primary"
+                    style={{ marginTop:0, ...(advertenciaAno ? { opacity:0.45, cursor:"not-allowed" } : {}) }}
+                    onClick={() => {
+                      if (advertenciaAno) return;
+                      const esMultiFactura = TARIFAS_MULTI_FACTURA.includes(facturaData?.tarifa_acceso);
+                      const todasSubidas   = factura1Data && factura2Data;
+                      if (esMultiFactura && !todasSubidas) {
+                        setModalConfirmarEnvio(true);
+                      } else {
+                        handleEnviar();
+                      }
+                    }}
+                    disabled={sending || advertenciaAno}
+                  >
+                    {sending ? "Enviando..." : "Enviar datos →"}
+                  </button>
+                </div>
               </div>
             )}
 
@@ -2081,9 +2101,17 @@ export default function FacturaUpload() {
                   ))}
                 </div>
 
-                <button className="cs-btn-primary" style={{ marginTop:8 }} onClick={handleEnviar} disabled={sending}>
-                  {sending ? "Enviando..." : "Enviar datos →"}
-                </button>
+                <div style={{ position:"relative", display:"inline-block", width:"100%" }}
+                  title={advertenciaAno ? "Envía una factura más reciente para continuar" : undefined}>
+                  <button
+                    className="cs-btn-primary"
+                    style={{ marginTop:8, ...(advertenciaAno ? { opacity:0.45, cursor:"not-allowed" } : {}) }}
+                    onClick={advertenciaAno ? undefined : handleEnviar}
+                    disabled={sending || advertenciaAno}
+                  >
+                    {sending ? "Enviando..." : "Enviar datos →"}
+                  </button>
+                </div>
               </div>
             )}
           </>
