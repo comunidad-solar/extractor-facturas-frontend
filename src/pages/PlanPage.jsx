@@ -108,10 +108,8 @@ export default function PlanPage() {
   });
 
   const handleContratar = async () => {
-    const errDni = validarDNI(dniContrato);
-    if (errDni) { setDniError(errDni); return; }
-    const errIban = validarIBAN(ibanContrato);
-    if (errIban) { setIbanError(errIban); return; }
+    if (!validarDNI(dniContrato))   { setDniError("DNI no válido");   return; }
+    if (!validarIBAN(ibanContrato)) { setIbanError("IBAN no válido"); return; }
 
     setEnviandoContrato(true);
     setContratoError("");
