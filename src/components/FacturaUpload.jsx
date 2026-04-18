@@ -5,6 +5,7 @@
 // Envía resultado al backend de quoting.
 
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "./FacturaUpload.css";
 import {
   FIELD_LABELS, MANUAL_FIELD_KEYS, PRECIOS_POT_3TD_KEYS,
@@ -25,6 +26,7 @@ import PlanScreen from "./PlanScreen";
 export default function FacturaUpload() {
   // ── Steps & navigation ───────────────────────────────────────────────────
   const [step, setStep] = useState(1);  // 1 | 2
+  const navigate = useNavigate();
   const [mode, setMode] = useState(null); // null | "pdf" | "cups"
   const [modoAsesor, setModoAsesor] = useState(false);
 
@@ -286,17 +288,7 @@ export default function FacturaUpload() {
       if (csMpklogId) setMpklogId(prev => prev || csMpklogId);
       if (csFsmstate) setFsmstate(prev => prev || csFsmstate);
 
-      // Limpar localStorage após restaurar
-      localStorage.removeItem("cs_cliente");
-      localStorage.removeItem("cs_factura");
-      localStorage.removeItem("cs_ce");
-      localStorage.removeItem("cs_dealId");
-      localStorage.removeItem("cs_mpklogId");
-      localStorage.removeItem("cs_fsmstate");
-      localStorage.removeItem("cs_mode");
-
-      // Sempre no final — garante que os passos 1 e 2 já correram
-      setStatus("sent");
+      navigate("/plan", { replace: true });
     }
 
     const modoParam = params.get("modo");
