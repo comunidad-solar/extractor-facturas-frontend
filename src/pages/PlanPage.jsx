@@ -57,7 +57,7 @@ function readInitialState(params) {
       potenciaTotal:           n("potenciaTotal"),
       coeficienteDistribucion: n("coeficienteDistribucion"),
       plazoRecuperacion:       params.get("plazoRecuperacion") || null,
-      panelesSel:              parseInt(params.get("panelesSel")) || null,
+      panelesSel:              parseInt(params.get("panelesSel")) || 3,
       cuotaAlquilerMes:        n("cuotaAlquilerMes"),
       ahorroAnualPercent:      n("ahorroAnualPercent"),
     },
@@ -68,7 +68,7 @@ export default function PlanPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const init = readInitialState(searchParams);
+  const [init] = useState(() => readInitialState(searchParams));
 
   const [cliente]          = useState(init.cliente);
   const [ceNombre]         = useState(init.ceNombre);
@@ -76,7 +76,7 @@ export default function PlanPage() {
   const [modoAlquiler]     = useState(init.modoAlquiler);
   const [cuotaAlquilerMes] = useState(init.cuotaAlquilerMes);
   const [planData]         = useState(init.planData);
-  const [panelesSel]       = useState(init.panelesSel);
+  const panelesSel         = init.panelesSel;
 
   const [panelesPropuesta, setPanelesPropuesta] = useState(init.panelesSel ?? 3);
   const [tabActiva, setTabActiva]               = useState("como");
@@ -228,8 +228,9 @@ export default function PlanPage() {
         modalOptimizar={modalOptimizar}
         panelesPropuesta={panelesPropuesta}
         modoAlquiler={modoAlquiler}
-        onClose={() => setModalOptimizar(null)}
-        onConfirm={(p) => { setPanelesPropuesta(p); setModalOptimizar(null); }}
+        cuotaAlquilerMes={cuotaAlquilerMes}
+        onVolver={() => setModalOptimizar(null)}
+        onAceptar={() => setModalOptimizar(null)}
       />
 
       {modalContratar && (
