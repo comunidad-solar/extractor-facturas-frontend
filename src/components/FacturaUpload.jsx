@@ -18,10 +18,9 @@ import {
 import {
   hasValue, emptyManual, resolverIdGeneracion, getCeNombreById,
   haversineDistance, buildPayloadAsesor, enviarLead,
-  validarDNI, validarIBAN, sugerirMeses3TD,
+  sugerirMeses3TD,
 } from "../utils/facturaUtils";
 import OptimizerModal from "./OptimizerModal";
-import PlanScreen from "./PlanScreen";
 
 export default function FacturaUpload() {
   // ── Steps & navigation ───────────────────────────────────────────────────
@@ -97,11 +96,8 @@ export default function FacturaUpload() {
   const [status, setStatus]           = useState("idle"); // "idle"|"analyzed"|"sent"
   const [sending, setSending]         = useState(false);
   const [leadWarn, setLeadWarn]       = useState(false);
-  const [planData, setPlanData]       = useState(null);
-  const [panelesSel, setPanelesSel]             = useState(3); // valor confirmado — sección Tu plan
   const [panelesPropuesta, setPanelesPropuesta] = useState(3); // valor provisional — stepper
   const [modalOptimizar, setModalOptimizar]     = useState(null); // null | "loading" | planProposta
-  const [tabActiva, setTabActiva]     = useState("como"); // "como" | "plan" | "condiciones"
   const [modoAlquiler, setModoAlquiler]         = useState(false);
   const [cuotaAlquilerMes, setCuotaAlquilerMes] = useState(null);
   const [extractSessionId,  setExtractSessionId]  = useState(null);
@@ -109,16 +105,8 @@ export default function FacturaUpload() {
   const [extract2SessionId, setExtract2SessionId] = useState(null);
   const [dealId, setDealId]                     = useState(null);
   const [mpklogId, setMpklogId]                 = useState(null);
-  const [sesionData, setSesionData]             = useState(null);
-  const [_sesionError, setSesionError]          = useState(false);
-  const [modalContratar, setModalContratar]     = useState(false);
-  const [dniContrato, setDniContrato]           = useState("");
-  const [dniError, setDniError]                 = useState("");
-  const [enviandoContrato, setEnviandoContrato] = useState(false);
   const [planAbierto, setPlanAbierto]           = useState(false);
   const [advertenciaAno, setAdvertenciaAno]     = useState(false);
-  const [ibanContrato, setIbanContrato]         = useState("");
-  const [ibanError, setIbanError]               = useState("");
 
   // ── Leitura inicial da URL ────────────────────────────────────────────────
   useEffect(() => {
@@ -198,22 +186,7 @@ export default function FacturaUpload() {
       };
       const s = (key, fallback = "") => params.get(key) ?? fallback;
 
-      setPanelesSel(p("panelesSel", 3));
       setPanelesPropuesta(p("panelesSel", 3));
-      setPlanData({
-        ahorro25Anos:            parseFloat(params.get("ahorro25Anos"))            || null,
-        pagoUnico:               parseFloat(params.get("pagoUnico"))               || null,
-        pagoFinanciado:          parseFloat(params.get("pagoFinanciado"))          || null,
-        ahorroMensual:           parseFloat(params.get("ahorroMensual"))           || null,
-        ahorroAnual:             parseFloat(params.get("ahorroAnual"))             || null,
-        produccionAnual:         parseFloat(params.get("produccionAnual"))         || null,
-        potenciaTotal:           parseFloat(params.get("potenciaTotal"))           || null,
-        coeficienteDistribucion: parseFloat(params.get("coeficienteDistribucion")) || null,
-        plazoRecuperacion:       params.get("plazoRecuperacion")                   || null,
-        panelesSel:              parseInt(params.get("panelesSel"))                || null,
-        cuotaAlquilerMes:        parseFloat(params.get("cuotaAlquilerMes"))        || null,
-        ahorroAnualPercent:      parseFloat(params.get("ahorroAnualPercent"))      || null,
-      });
       setLoading(false);
 
       const cleanUrl = (val) => (!val || val === "—") ? "" : val;
@@ -270,7 +243,6 @@ export default function FacturaUpload() {
         if (csMode === "pdf")  setFacturaData(f);
         if (csMode === "cups") setCupsData(f);
         if (csMode) setMode(csMode);
-        // Ref síncrono — setState é async, ref é imediato para handleContratar
         urlParamsRef.current.facturaLS = f;
         if (csMode) urlParamsRef.current.modeLS = csMode;
       }
@@ -1037,34 +1009,8 @@ export default function FacturaUpload() {
     }
   };
 
-  const handleOptimizar = async () => {
-    setModalOptimizar("loading");
-    const factura = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
-    const payload = {
-      cliente, factura, Fsmstate, FsmPrevious: fsmPrevious,
-      ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) },
-      numeroPaneles: panelesPropuesta,
-    };
-    console.log("[optimizar] payload enviado:", payload);
-    try {
-      const res = await fetch(QUOTING_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const plan = await res.json();
-      setModalOptimizar(plan);
-    } catch (err) {
-      setModalOptimizar(null);
-      setError(err.message);
-    }
-  };
-
   const handleAceptarPropuesta = () => {
     const proposta = modalOptimizar;
-    setPlanData(proposta);
-    setPanelesSel(panelesPropuesta);
     setModalOptimizar(null);
     // fire-and-forget: señal de aceptación al backend
     fetch(QUOTING_URL, {
@@ -1074,220 +1020,6 @@ export default function FacturaUpload() {
     }).catch(() => {});
   };
 
-  const handleContratar = async () => {
-    if (!dniContrato.trim()) {
-      setDniError("El DNI es obligatorio"); return;
-    }
-    if (!validarDNI(dniContrato.trim())) {
-      setDniError("El DNI no es válido"); return;
-    }
-    if (!ibanContrato.trim()) {
-      setIbanError("El IBAN es obligatorio"); return;
-    }
-    if (!validarIBAN(ibanContrato.trim())) {
-      setIbanError("El IBAN no es válido"); return;
-    }
-    setDniError("");
-    setEnviandoContrato(true);
-    console.log("[handleContratar] DEBUG:", {mode,
-  modeLS: urlParamsRef.current.modeLS,
-  modeEff: mode ?? urlParamsRef.current.modeLS ?? null,
-  facturaDataExists: !!facturaData,
-  facturaDataKeys: facturaData ? Object.keys(facturaData).slice(0, 10) : null,
-  facturaLSExists: !!urlParamsRef.current.facturaLS,
-  facturaLSKeys: urlParamsRef.current.facturaLS ? Object.keys(urlParamsRef.current.facturaLS).slice(0, 10) : null,
-});
-
-    // sesionData recuperado pelo GET /sesion na PlanScreen (fonte primária em modo demo)
-    const sd        = sesionData ?? null;
-    const sdCliente = sd?.cliente ?? {};
-    const sdFactura = sd?.factura ?? null;
-    const sdCe      = sd?.ce      ?? {};
-
-    // Ref com dados da URL como fallback secundário
-    const urlRef    = urlParamsRef.current;
-    const urlFact   = urlRef.factura   ?? {};
-    const urlCli    = urlRef.cliente   ?? {};
-    const facturaLS = urlRef.facturaLS ?? null;
-    const modeEff   = mode ?? sd?.mode ?? urlRef.modeLS ?? null;
-
-    // rawData para overrides de pe_p* e importe (fluxo normal com step 2)
-    const rawData = facturaData ?? cupsData
-      ?? (urlFact.cups || urlFact.comercializadora ? urlFact : null)
-      ?? {};
-
-    // Helper: normaliza para formato estruturado independentemente do formato de entrada.
-    // Se já tem chaves estruturadas (potencias_kw), devolve tal qual.
-    // Se tem chaves flat (pot_p1_kw), converte via buildFactura.
-    const ensureStructured = (obj) => {
-      if (!obj || Object.keys(obj).length === 0) return {};
-      if (obj.potencias_kw !== undefined) return obj;
-      return buildFactura(obj);
-    };
-
-    let factura;
-    if (modeEff === "pdf") {
-      factura = facturaData
-        ? ensureStructured({ ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null })
-        : ensureStructured(sdFactura ?? facturaLS);
-    } else if (modeEff === "cups") {
-      factura = cupsData
-        ? ensureStructured({ cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null })
-        : ensureStructured(sdFactura ?? facturaLS);
-    } else {
-      factura = ensureStructured(sdFactura ?? facturaLS ?? rawData);
-    }
-
-    // Se dealId ainda não foi obtido, chamar /enviar primeiro
-    // para registar no Zoho e obter dealId + mpklogId
-    let dealIdFinal   = dealId   ?? sd?.dealId   ?? urlRef.dealId   ?? null;
-    let mpklogIdFinal = mpklogId ?? sd?.mpklogId ?? urlRef.mpklogId ?? null;
-
-    if (!dealIdFinal) {
-      try {
-        const cePayloadPre = {
-          nombre:        ceNombre    || urlRef.ce?.nombre    || "",
-          direccion:     ceDireccion || urlRef.ce?.direccion || "",
-          status:        ceStatus    || urlRef.ce?.status    || "",
-          etiqueta:      ceEtiqueta  || urlRef.ce?.etiqueta  || "",
-          id_generacion: resolverIdGeneracion(idGeneracion || urlRef.idGen, ceNombre || urlRef.ce?.nombre),
-        };
-        const clientePre = {
-          nombre:    cliente.nombre    || urlCli.nombre    || "",
-          apellidos: cliente.apellidos || urlCli.apellidos || "",
-          correo:    cliente.correo    || urlCli.correo    || "",
-          telefono:  cliente.telefono  || urlCli.telefono  || "",
-          direccion: cliente.direccion || urlCli.direccion || "",
-          dealId: null, mpklogId: null, databaseId: "", dni: "",
-          tipoVenta: modoAlquiler ? "Alquiler" : "Venta",
-        };
-        const fdPre = new FormData();
-        fdPre.append("data", JSON.stringify({
-          cliente: clientePre,
-          factura,
-          Fsmstate: Fsmstate || urlRef.fsmstate || "",
-          FsmPrevious: fsmPrevious || urlRef.fsmPrevious || null,
-          ce: cePayloadPre,
-        }));
-        if (mode === "pdf" && file) fdPre.append("file", file, file.name);
-
-        const resEnviar  = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fdPre });
-        const dataEnviar = await resEnviar.json().catch(() => ({}));
-        dealIdFinal   = dataEnviar?.dealId   ?? null;
-        mpklogIdFinal = dataEnviar?.mpklogId ?? null;
-        if (dealIdFinal)   setDealId(dealIdFinal);
-        if (mpklogIdFinal) setMpklogId(mpklogIdFinal);
-      } catch (e) {
-        console.warn("[handleContratar] Erro ao obter dealId:", e);
-      }
-    }
-
-    const cleanUrl = (val) => (!val || val === "—") ? "" : val;
-
-    const payload = {
-      cliente: {
-        nombre:         cliente.nombre    || sdCliente.nombre    || cleanUrl(urlCli.nombre)    || "",
-        apellidos:      cliente.apellidos || sdCliente.apellidos || cleanUrl(urlCli.apellidos) || "",
-        correo:         cliente.correo    || sdCliente.correo    || cleanUrl(urlCli.correo)    || "",
-        telefono:       cliente.telefono  || sdCliente.telefono  || cleanUrl(urlCli.telefono)  || "",
-        direccion:      cliente.direccion || sdCliente.direccion || cleanUrl(urlCli.direccion) || "",
-        dealId:         dealIdFinal    ?? null,
-        mpklogId:       mpklogIdFinal  ?? null,
-        databaseId:     "00001",
-        dni:            dniContrato.trim().toUpperCase(),
-        iban:           ibanContrato.trim().toUpperCase(),
-        tipoVenta:      modoAlquiler ? "Alquiler" : "Venta",
-        planContratado: true,
-      },
-      factura: {
-        ...factura,
-        precios_energia: {
-          pe_p1: parseFloat(manualFields.pe_p1 || rawData.pe_p1 || facturaLS?.precios_energia?.pe_p1) || null,
-          pe_p2: parseFloat(manualFields.pe_p2 || rawData.pe_p2 || facturaLS?.precios_energia?.pe_p2) || null,
-          pe_p3: parseFloat(manualFields.pe_p3 || rawData.pe_p3 || facturaLS?.precios_energia?.pe_p3) || null,
-          pe_p4: parseFloat(manualFields.pe_p4 || rawData.pe_p4 || facturaLS?.precios_energia?.pe_p4) || null,
-          pe_p5: parseFloat(manualFields.pe_p5 || rawData.pe_p5 || facturaLS?.precios_energia?.pe_p5) || null,
-          pe_p6: parseFloat(manualFields.pe_p6 || rawData.pe_p6 || facturaLS?.precios_energia?.pe_p6) || null,
-        },
-        importe_factura: parseFloat(
-          manualFields.importe_factura || rawData.importe_factura || facturaLS?.importe_factura
-        ) || null,
-      },
-      Fsmstate:    "08_PROPUESTA_ALQ",
-      FsmPrevious: Fsmstate || sd?.Fsmstate || urlRef.fsmstate || null,
-      plan: {
-        ahorro25Anos:            planData?.ahorro25Anos,
-        pagoUnico:               planData?.pagoUnico,
-        pagoFinanciado:          planData?.pagoFinanciado,
-        ahorroMensual:           planData?.ahorroMensual,
-        ahorroAnual:             planData?.ahorroAnual,
-        produccionAnual:         planData?.produccionAnual,
-        potenciaTotal:           planData?.potenciaTotal,
-        coeficienteDistribucion: planData?.coeficienteDistribucion,
-        plazoRecuperacion:       planData?.plazoRecuperacion,
-        panelesSel:              planData?.panelesSel,
-        cuotaAlquilerMes:        planData?.cuotaAlquilerMes,
-      },
-      ce: {
-        nombre:        ceNombre    || sdCe.nombre    || urlRef.ce?.nombre    || "",
-        direccion:     ceDireccion || sdCe.direccion || urlRef.ce?.direccion || "",
-        status:        ceStatus    || sdCe.status    || urlRef.ce?.status    || "",
-        etiqueta:      ceEtiqueta  || sdCe.etiqueta  || urlRef.ce?.etiqueta  || "",
-        id_generacion: resolverIdGeneracion(
-          idGeneracion || sdCe.id_generacion || urlRef.idGen,
-          ceNombre     || sdCe.nombre        || urlRef.ce?.nombre
-        ),
-      },
-      ...((sesionData?.factura_1 || factura1Data) && {
-        factura_1: sesionData?.factura_1 ?? buildFactura1(),
-      }),
-      ...((sesionData?.factura_2 || factura2Data) && {
-        factura_2: sesionData?.factura_2 ?? buildFactura2(),
-      }),
-    };
-
-    try {
-      const fd = new FormData();
-      fd.append("data", JSON.stringify(payload));
-      if (mode === "pdf" && file) fd.append("file", file, file.name);
-
-      const res = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
-      if (!res.ok) {
-        const detail = await res.json()
-          .then((d) => typeof d.detail === "string"
-            ? d.detail : JSON.stringify(d.detail))
-          .catch(() => `HTTP ${res.status}`);
-        throw new Error(detail);
-      }
-      setModalContratar(false);
-      setDniContrato("");
-      setStatus("asesor_solicitado");
-
-      // Descomentar para abrir contrato em nova aba quando backend enviar contractUrl via webhook
-      // setLoading(true);
-      // setLoadingMsg("Preparando tu contrato...");
-      // const MAX_INTENTOS = 15;
-      // for (let i = 0; i < MAX_INTENTOS; i++) {
-      //   await new Promise((r) => setTimeout(r, 2000));
-      //   try {
-      //     const contratoRes = await fetch(`${API_BASE}/contrato/${dealIdFinal}`);
-      //     if (contratoRes.ok) {
-      //       const data = await contratoRes.json();
-      //       if (data.found === true) {
-      //         window.open(data.contractUrl, "_blank");
-      //         break;
-      //       }
-      //     }
-      //   } catch { /* ignorar erros de rede no polling */ }
-      // }
-      // setLoading(false);
-    } catch (err) {
-      setDniError(err.message);
-    } finally {
-      setEnviandoContrato(false);
-    }
-  };
-
   const handleReset = () => {
     setStep(1); setMode(null); setFile(null); setFacturaData(null);
     setCups(""); setCupsData(null); setManualFields(emptyManual());
@@ -1295,8 +1027,7 @@ export default function FacturaUpload() {
     setCliente({ nombre: "", apellidos: "", correo: "", telefono: "", direccion: "" });
     setFsmstate(""); setFsmPrevious(null); setCeNombre(""); setCeDireccion(""); setZonaWarn("");
     setUserCoords(null); setNominatimSuggestions([]); setShowDropdown(false);
-    setCeDistancia(null); setCeRadio(null); setPlanData(null); setPanelesSel(3);
-    setIbanContrato(""); setIbanError("");
+    setCeDistancia(null); setCeRadio(null);
   };
 
   // Constante que controla a visibilidade dos dados extraídos da fatura (tabela completa)
@@ -1372,29 +1103,6 @@ export default function FacturaUpload() {
             <span style={{ fontSize:14, color:"#555" }}>{loadingMsg}</span>
             <span style={{ fontSize:12, color:"#aaa" }}>Esto puede tardar unos segundos</span>
           </div>
-        )}
-
-        {/* ── PLAN PERSONALIZADO ── */}
-        {!loading && status === "sent" && (
-          <PlanScreen
-            cliente={cliente}
-            ceNombre={ceNombre}
-            ceStatus={ceStatus}
-            modoAlquiler={modoAlquiler}
-            cuotaAlquilerMes={cuotaAlquilerMes}
-            planData={planData}
-            panelesSel={panelesSel}
-            panelesPropuesta={panelesPropuesta}
-            tabActiva={tabActiva}
-            sesionData={sesionData}
-            onContratar={() => setModalContratar(true)}
-            onVolver={handleReset}
-            onOptimizar={handleOptimizar}
-            onSetPanelesPropuesta={setPanelesPropuesta}
-            onSetTabActiva={setTabActiva}
-            onSesionError={() => setSesionError(true)}
-            onSesionLoaded={(data) => setSesionData(data)}
-          />
         )}
 
         {/* ── FUERA DE ZONA ── */}
@@ -2156,71 +1864,6 @@ export default function FacturaUpload() {
                 disabled={sending}
               >
                 {sending ? "Enviando..." : "Enviar así →"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── MODAL CONTRATAR ── */}
-      {modalContratar && (
-        <div style={{
-          position:"fixed", inset:0, background:"rgba(0,0,0,0.55)",
-          zIndex:1000, display:"flex", alignItems:"center",
-          justifyContent:"center", padding:16,
-        }}>
-          <div style={{
-            background:"#fff", borderRadius:16, padding:"32px 28px",
-            maxWidth:400, width:"100%",
-            boxShadow:"0 8px 40px rgba(0,0,0,0.18)",
-          }}>
-            <h3 style={{ fontSize:18, fontWeight:700, color:"#111", marginBottom:8 }}>
-              Confirmar contratación
-            </h3>
-            <p style={{ fontSize:13, color:"#777", marginBottom:24 }}>
-              Introduce tu DNI para completar la contratación.
-            </p>
-
-            <div className="cs-field-group" style={{ marginBottom:16 }}>
-              <label className="cs-label">DNI</label>
-              <input
-                className={`cs-input${dniError ? " error" : ""}`}
-                placeholder="12345678A"
-                value={dniContrato}
-                onChange={(e) => { setDniContrato(e.target.value); setDniError(""); }}
-                onKeyDown={(e) => e.key === "Enter" && handleContratar()}
-                autoFocus
-              />
-              {dniError && <span className="cs-field-error">{dniError}</span>}
-            </div>
-
-            <div className="cs-field-group" style={{ marginBottom:16 }}>
-              <label className="cs-label">IBAN</label>
-              <input
-                className={`cs-input${ibanError ? " error" : ""}`}
-                placeholder="ES00 0000 0000 0000 0000 0000"
-                value={ibanContrato}
-                onChange={(e) => { setIbanContrato(e.target.value); setIbanError(""); }}
-              />
-              {ibanError && <span className="cs-field-error">{ibanError}</span>}
-            </div>
-
-            <div style={{ display:"flex", gap:12 }}>
-              <button
-                className="cs-btn-ghost"
-                style={{ flex:1, marginTop:0 }}
-                onClick={() => { setModalContratar(false); setDniContrato(""); setDniError(""); setIbanContrato(""); setIbanError(""); }}
-                disabled={enviandoContrato}
-              >
-                ← Volver
-              </button>
-              <button
-                className="cs-btn-primary"
-                style={{ flex:1, marginTop:0 }}
-                onClick={handleContratar}
-                disabled={enviandoContrato}
-              >
-                {enviandoContrato ? "Enviando..." : "Contratar ahora →"}
               </button>
             </div>
           </div>
