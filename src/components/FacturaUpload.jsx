@@ -109,6 +109,7 @@ export default function FacturaUpload() {
   const [mpklogId, setMpklogId]                 = useState(null);
   const [sesionData, setSesionData]             = useState(null);
   const [_sesionError, setSesionError]          = useState(false);
+  const [facturaPreviewData, setFacturaPreviewData] = useState(null);
   const [modalContratar, setModalContratar]     = useState(false);
   const [dniContrato, setDniContrato]           = useState("");
   const [dniError, setDniError]                 = useState("");
@@ -1401,7 +1402,8 @@ export default function FacturaUpload() {
             onSetPanelesPropuesta={setPanelesPropuesta}
             onSetTabActiva={setTabActiva}
             onSesionError={() => setSesionError(true)}
-            onSesionLoaded={(data) => setSesionData(data)}
+            facturaPreviewData={facturaPreviewData}
+            onSesionLoaded={(data) => { setSesionData(data); if (data?.factura_preview) setFacturaPreviewData(data.factura_preview); }}
           />
         )}
 
