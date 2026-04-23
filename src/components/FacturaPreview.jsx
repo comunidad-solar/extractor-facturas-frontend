@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, Cell,
@@ -117,10 +118,10 @@ const buildBarData = (gb) => [
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function FacturaPreview({ data = MOCK_DATA }) {
-  const d   = data;
+  const d = (data && data.resumen && data.impuestos && data.grafico_barras && data.grafico_diario && data.potencia_facturada && data.energia_facturada && data.excedentes && data.otros_conceptos) ? data : MOCK_DATA;
   const r   = d.resumen;
   const imp = d.impuestos;
-  const barData = buildBarData(d.grafico_barras);
+  const barData = useMemo(() => buildBarData(d.grafico_barras), [d.grafico_barras]);
 
   const resumenRows = [
     { label: 'Autoconsumo remoto',  val: r.autoconsumo_remoto,  color: '#7CB342' },
@@ -154,7 +155,7 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
         <ResponsiveContainer width="100%" height={220}>
           <AreaChart data={d.grafico_diario} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
             <XAxis dataKey="dia" tick={{ fontSize: 10 }} />
-            <YAxis tickFormatter={v => `${v},0 kWh`} tick={{ fontSize: 10 }} width={58} />
+            <YAxis tickFormatter={v => `${v} kWh`} tick={{ fontSize: 10 }} width={58} />
             <Tooltip formatter={(v, name) => [`${Number(v).toFixed(2)} kWh`, name]} />
             <Legend iconType="square" wrapperStyle={{ fontSize: 12 }} />
             <Area
@@ -177,7 +178,7 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
         </ResponsiveContainer>
 
         {/* ── Resumen + Barras (side-by-side md+, stacked mobile) ─────────── */}
-        <div className="flex flex-col md:flex-row gap-5 mt-5 mb-6">
+        <div className="flex flex-col sm:flex-row gap-5 mt-5 mb-6">
 
           {/* Caja de resumen */}
           <div style={{ border: '1.5px solid #bbb', borderRadius: 8, padding: '12px 16px', fontSize: 13, flexShrink: 0 }}>
@@ -199,9 +200,9 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
               <BarChart layout="vertical" data={barData} margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
                 <XAxis type="number" tick={{ fontSize: 10 }} unit=" kWh" />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} />
-                <Tooltip formatter={(v) => [`${Number(v).toFixed(2)} kWh`]} />
+                <Tooltip formatter={(v, name) => [`${Number(v).toFixed(2)} kWh`, name]} />
                 <Bar dataKey="value" radius={[0, 3, 3, 0]}>
-                  {barData.map((row, i) => <Cell key={i} fill={row.fill} />)}
+                  {barData.map((row) => <Cell key={row.name} fill={row.fill} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -290,6 +291,7 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
 
             {/* ── OTROS CONCEPTOS ────────────────────────────────────────── */}
             <tr><td colSpan={5} style={{ paddingTop: 8 }} /></tr>
+            <SectionRow label="Otros conceptos" />
             {d.otros_conceptos.map(o => (
               <tr key={o.concepto}>
                 <td style={{ padding: '2px 6px 2px 0', fontSize: 12 }}>
