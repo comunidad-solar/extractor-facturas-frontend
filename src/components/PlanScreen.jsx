@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { fmtES } from "../utils/facturaUtils";
 import { API_BASE, CE_STATUS_LABELS } from "../constants/appConstants";
+import FacturaPreview from "./FacturaPreview";
 
 export default function PlanScreen({
   cliente,
@@ -20,6 +21,7 @@ export default function PlanScreen({
   onSetTabActiva,
   onSesionError,
   onSesionLoaded,
+  facturaPreviewData = null,
 }) {
   // eslint-disable-next-line no-unused-vars
   const [sesionData, setSesionData] = useState(sesionDataProp ?? null);
@@ -293,12 +295,7 @@ export default function PlanScreen({
 
         {/* ── FACTURA PLAN ── */}
         <div style={{ marginBottom:56 }}>
-          <p style={{ fontSize:22, fontWeight:800, color:"#121212", marginBottom:24 }}>Así quedaría tu factura</p>
-          <img
-            src="/factura plan.svg"
-            alt="Ejemplo de factura con comunidad solar"
-            style={{ width:"100%", borderRadius:12, display:"block" }}
-          />
+          <FacturaPreview data={facturaPreviewData ?? undefined} />
         </div>
 
         {/* ── TABS: CÓMO FUNCIONA / TU PLAN / CONDICIONES ── */}
