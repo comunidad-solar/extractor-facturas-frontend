@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, Cell,
@@ -117,11 +117,38 @@ const buildBarData = (gb) => [
 ];
 
 // ─── Main component ───────────────────────────────────────────────────────────
+const isValid = (v) => !!(v && v.resumen && v.impuestos && v.grafico_barras && v.grafico_diario && v.potencia_facturada && v.energia_facturada && v.excedentes && v.otros_conceptos);
+
+// ── Flag de visibilidade do botão de edição — desativar em produção ───────────
+const SHOW_EDIT_BUTTON = import.meta.env.DEV;
+
 export default function FacturaPreview({ data = MOCK_DATA }) {
-  const d = (data && data.resumen && data.impuestos && data.grafico_barras && data.grafico_diario && data.potencia_facturada && data.energia_facturada && data.excedentes && data.otros_conceptos) ? data : MOCK_DATA;
+  const [localData, setLocalData] = useState(() => isValid(data) ? data : MOCK_DATA);
+  const [editOpen, setEditOpen]   = useState(false);
+  const [editJson, setEditJson]   = useState('');
+  const [editError, setEditError] = useState('');
+
+  const d   = localData;
   const r   = d.resumen;
   const imp = d.impuestos;
   const barData = useMemo(() => buildBarData(d.grafico_barras), [d.grafico_barras]);
+
+  const handleOpenEdit = () => {
+    setEditJson(JSON.stringify(localData, null, 2));
+    setEditError('');
+    setEditOpen(true);
+  };
+
+  const handleConfirmEdit = () => {
+    try {
+      const parsed = JSON.parse(editJson);
+      if (!isValid(parsed)) { setEditError('JSON incompleto: falta alguna clave requerida (resumen, impuestos, grafico_barras…)'); return; }
+      setLocalData(parsed);
+      setEditOpen(false);
+    } catch (e) {
+      setEditError('JSON inválido: ' + e.message);
+    }
+  };
 
   const resumenRows = [
     { label: 'Autoconsumo remoto',  val: r.autoconsumo_remoto,  color: '#7CB342' },
@@ -138,9 +165,49 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
     <div style={{ fontFamily: 'inherit', width: '100%', border: '1px solid #ddd', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div style={{ background: '#F5A623', padding: '14px 20px' }}>
+      <div style={{ background: '#F5A623', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <p style={{ fontSize: 18, fontWeight: 800, color: '#fff' }}>Así quedaría tu factura</p>
+        {SHOW_EDIT_BUTTON && (
+          <button
+            onClick={handleOpenEdit}
+            title="Editar datos (solo desarrollo)"
+            style={{ background: 'rgba(0,0,0,0.15)', border: 'none', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', color: '#fff', fontSize: 12, fontFamily: 'inherit', opacity: 0.7 }}
+          >
+            ✏ editar
+          </button>
+        )}
       </div>
+
+      {/* ── Modal de edición ───────────────────────────────────────────────── */}
+      {editOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: '24px 24px 20px', width: '100%', maxWidth: 640, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 40px rgba(0,0,0,0.2)' }}>
+            <p style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Editar datos de la factura</p>
+            <textarea
+              value={editJson}
+              onChange={e => { setEditJson(e.target.value); setEditError(''); }}
+              spellCheck={false}
+              style={{ flex: 1, minHeight: 380, fontFamily: 'monospace', fontSize: 12, border: '1px solid #ddd', borderRadius: 6, padding: 12, resize: 'vertical', outline: 'none' }}
+            />
+            {editError && <p style={{ fontSize: 11, color: '#C62828', marginTop: 8 }}>{editError}</p>}
+            <div style={{ display: 'flex', gap: 10, marginTop: 16, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setEditOpen(false)}
+                style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid #ddd', background: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmEdit}
+                style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: '#F5A623', color: '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 700 }}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* ── Detalles de la factura ─────────────────────────────────────────── */}
       <div style={{ padding: '20px 20px 0' }}>
