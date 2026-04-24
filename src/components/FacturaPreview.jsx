@@ -48,7 +48,6 @@ const MOCK_DATA = {
     cuotas_reguladas:    52.42,
     cuota_mantenimiento: 10.00,
     ivas:                14.48,
-    total:               83.45,
   },
   potencia_facturada: [
     { periodo: "P1", kw: 3.464, dias: 30, precio_kwdia: 0.073782, total: 7.67 },
@@ -257,7 +256,7 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
             ))}
             <div style={{ borderTop: '2px solid #111', marginTop: 8, paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: 13 }}>
               <span>Total</span>
-              <span>{fmtEur(r.total)}</span>
+              <span>{fmtEur(imp.total_factura)}</span>
             </div>
           </div>
 
