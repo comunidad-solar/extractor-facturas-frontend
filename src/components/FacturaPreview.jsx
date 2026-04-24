@@ -17,30 +17,30 @@ const SOLAR_ICONS = [
 const MOCK_DATA = {
   mes: "Mes Medio",
   dias: 30,
-  grafico_diario: [
-    { dia: 1,  consumida: 0.8, generada: 0.0 },
-    { dia: 2,  consumida: 0.9, generada: 0.2 },
-    { dia: 3,  consumida: 1.0, generada: 0.5 },
-    { dia: 4,  consumida: 0.7, generada: 1.2 },
-    { dia: 5,  consumida: 0.6, generada: 1.8 },
-    { dia: 6,  consumida: 0.8, generada: 2.1 },
-    { dia: 7,  consumida: 0.9, generada: 2.4 },
-    { dia: 8,  consumida: 1.1, generada: 1.9 },
-    { dia: 9,  consumida: 1.3, generada: 2.2 },
-    { dia: 10, consumida: 1.0, generada: 2.8 },
-    { dia: 11, consumida: 0.9, generada: 3.1 },
-    { dia: 12, consumida: 0.8, generada: 2.9 },
-    { dia: 13, consumida: 1.2, generada: 2.5 },
-    { dia: 14, consumida: 1.4, generada: 2.1 },
-    { dia: 15, consumida: 1.1, generada: 1.8 },
-    { dia: 16, consumida: 0.9, generada: 3.5 },
-    { dia: 17, consumida: 0.8, generada: 4.2 },
-    { dia: 18, consumida: 0.7, generada: 5.1 },
-    { dia: 19, consumida: 1.0, generada: 4.8 },
-    { dia: 20, consumida: 1.2, generada: 3.9 },
-    { dia: 21, consumida: 1.5, generada: 2.2 },
-    { dia: 22, consumida: 1.3, generada: 1.5 },
-    { dia: 23, consumida: 1.1, generada: 1.2 },
+  grafico_horario: [
+    { hora: 1,  consumida: 0.8, generada: 0.0 },
+    { hora: 2,  consumida: 0.9, generada: 0.2 },
+    { hora: 3,  consumida: 1.0, generada: 0.5 },
+    { hora: 4,  consumida: 0.7, generada: 1.2 },
+    { hora: 5,  consumida: 0.6, generada: 1.8 },
+    { hora: 6,  consumida: 0.8, generada: 2.1 },
+    { hora: 7,  consumida: 0.9, generada: 2.4 },
+    { hora: 8,  consumida: 1.1, generada: 1.9 },
+    { hora: 9,  consumida: 1.3, generada: 2.2 },
+    { hora: 10, consumida: 1.0, generada: 2.8 },
+    { hora: 11, consumida: 0.9, generada: 3.1 },
+    { hora: 12, consumida: 0.8, generada: 2.9 },
+    { hora: 13, consumida: 1.2, generada: 2.5 },
+    { hora: 14, consumida: 1.4, generada: 2.1 },
+    { hora: 15, consumida: 1.1, generada: 1.8 },
+    { hora: 16, consumida: 0.9, generada: 3.5 },
+    { hora: 17, consumida: 0.8, generada: 4.2 },
+    { hora: 18, consumida: 0.7, generada: 5.1 },
+    { hora: 19, consumida: 1.0, generada: 4.8 },
+    { hora: 20, consumida: 1.2, generada: 3.9 },
+    { hora: 21, consumida: 1.5, generada: 2.2 },
+    { hora: 22, consumida: 1.3, generada: 1.5 },
+    { hora: 23, consumida: 1.1, generada: 1.2 },
   ],
   grafico_barras: {
     autoconsumo_remoto_kwh: 517.41,
@@ -125,7 +125,7 @@ const buildBarData = (gb) => [
 ];
 
 // ─── Main component ───────────────────────────────────────────────────────────
-const isValid = (v) => !!(v && v.resumen && v.impuestos && v.grafico_barras && v.grafico_diario && v.potencia_facturada && v.energia_facturada && v.excedentes && v.otros_conceptos);
+const isValid = (v) => !!(v && v.resumen && v.impuestos && v.grafico_barras && v.grafico_horario && v.potencia_facturada && v.energia_facturada && v.excedentes && v.otros_conceptos);
 
 // ── Flag de visibilidade do botão de edição — desativar em produção ───────────
 const SHOW_EDIT_BUTTON = import.meta.env.DEV;
@@ -229,8 +229,8 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
         {/* ── Area chart + overlay de ícones solares ──────────────────────── */}
         <div style={{ position: 'relative' }}>
           <ResponsiveContainer width="100%" height={220} style={{ outline: 'none' }}>
-            <AreaChart data={d.grafico_diario} margin={{ top: 36, right: 16, left: 0, bottom: 0 }}>
-              <XAxis dataKey="dia" tick={{ fontSize: 10 }} ticks={[1, 5, 9, 13, 17, 21]} tickFormatter={v => `${v}h`} />
+            <AreaChart data={d.grafico_horario} margin={{ top: 36, right: 16, left: 0, bottom: 0 }}>
+              <XAxis dataKey="hora" tick={{ fontSize: 10 }} ticks={[1, 5, 9, 13, 17, 21]} tickFormatter={v => `${v}h`} />
               <YAxis tickFormatter={v => `${v} kWh`} tick={{ fontSize: 10 }} width={58} />
               <Tooltip formatter={(v, name) => [`${Number(v).toFixed(2)} kWh`, name]} />
               <Legend iconType="square" wrapperStyle={{ fontSize: 12 }} />
@@ -312,7 +312,7 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
               <TH>€/kW·día</TH>
               <td />
             </tr>
-            {d.potencia_facturada.map(p => (
+            {d.potencia_facturada.filter(p => p.kw != null && p.kw !== 0).map(p => (
               <tr key={p.periodo}>
                 <td style={{ padding: '2px 6px 2px 0', fontSize: 12 }}>{p.periodo} Potencia Facturada</td>
                 <TD>{fmtKwh(p.kw)}</TD>
