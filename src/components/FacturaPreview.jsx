@@ -218,7 +218,7 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
         </p>
 
         {/* ── Area chart ──────────────────────────────────────────────────── */}
-        <ResponsiveContainer width="100%" height={220}>
+        <ResponsiveContainer width="100%" height={220} style={{ outline: 'none' }}>
           <AreaChart data={d.grafico_diario} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
             <XAxis dataKey="dia" tick={{ fontSize: 10 }} />
             <YAxis tickFormatter={v => `${v} kWh`} tick={{ fontSize: 10 }} width={58} />
@@ -262,7 +262,7 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
 
           {/* Gráfico de barras horizontal */}
           <div className="flex-1 min-w-[260px]">
-            <ResponsiveContainer width="100%" height={160}>
+            <ResponsiveContainer width="100%" height={160} style={{ outline: 'none' }}>
               <BarChart layout="vertical" data={barData} margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
                 <XAxis type="number" tick={{ fontSize: 10 }} unit=" kWh" />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} />
