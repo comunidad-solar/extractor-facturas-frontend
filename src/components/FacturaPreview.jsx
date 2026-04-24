@@ -220,7 +220,7 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
         {/* ── Area chart ──────────────────────────────────────────────────── */}
         <ResponsiveContainer width="100%" height={220} style={{ outline: 'none' }}>
           <AreaChart data={d.grafico_diario} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-            <XAxis dataKey="dia" tick={{ fontSize: 10 }} />
+            <XAxis dataKey="dia" tick={{ fontSize: 10 }} ticks={[1, 5, 9, 13, 17, 21]} tickFormatter={v => `${v}h`} />
             <YAxis tickFormatter={v => `${v} kWh`} tick={{ fontSize: 10 }} width={58} />
             <Tooltip formatter={(v, name) => [`${Number(v).toFixed(2)} kWh`, name]} />
             <Legend iconType="square" wrapperStyle={{ fontSize: 12 }} />
