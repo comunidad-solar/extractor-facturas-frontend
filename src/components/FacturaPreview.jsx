@@ -244,7 +244,7 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
         </ResponsiveContainer>
 
         {/* ── Resumen + Barras (side-by-side md+, stacked mobile) ─────────── */}
-        <div className="flex flex-col sm:flex-row gap-5 mt-5 mb-6">
+        <div className="flex flex-col sm:flex-row gap-5 mb-6" style={{ marginTop: 32 }}>
 
           {/* Caja de resumen */}
           <div style={{ border: '1.5px solid #bbb', borderRadius: 8, padding: '12px 16px', fontSize: 13, flexShrink: 0 }}>
