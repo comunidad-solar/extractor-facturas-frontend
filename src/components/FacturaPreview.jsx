@@ -209,7 +209,7 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
 
 
       {/* ── Detalles de la factura ─────────────────────────────────────────── */}
-      <div style={{ padding: '20px 20px 0' }}>
+      <div style={{ padding: '20px 32px 0' }}>
         <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', borderBottom: '2px solid #7CB342', paddingBottom: 4, marginBottom: 12 }}>
           FACTURA DEL {(d.mes || '').toUpperCase()}
         </p>
@@ -277,7 +277,7 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
       </div>
 
       {/* ── Tabla detallada ────────────────────────────────────────────────── */}
-      <div style={{ padding: '0 20px 28px', borderTop: '1px solid #eee', overflowX: 'auto' }}>
+      <div style={{ padding: '0 32px 28px', borderTop: '1px solid #eee', overflowX: 'auto' }}>
         <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', marginBottom: 12, paddingTop: 16, borderBottom: '2px solid #7CB342', paddingBottom: 4 }}>
           MÁS INFORMACIÓN SOBRE TU FACTURA
         </p>
