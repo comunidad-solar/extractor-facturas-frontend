@@ -4,40 +4,50 @@ import {
   BarChart, Bar, Cell,
 } from 'recharts';
 
+// ── Iconos solares sobre el gráfico de área ───────────────────────────────────
+const SOLAR_ICONS = [
+  { hour: 5,  label: '☽' },
+  { hour: 9,  label: '↑☀' },
+  { hour: 13, label: '☀' },
+  { hour: 17, label: '↓☀' },
+  { hour: 21, label: '☽' },
+];
+
 // ─── Mock data (used when no data prop is passed) ─────────────────────────────
 const MOCK_DATA = {
   mes: "Mes Medio",
   dias: 30,
-  grafico_diario: [
-    { dia: 1,  consumida: 0.8, generada: 0.0 },
-    { dia: 2,  consumida: 0.9, generada: 0.2 },
-    { dia: 3,  consumida: 1.0, generada: 0.5 },
-    { dia: 4,  consumida: 0.7, generada: 1.2 },
-    { dia: 5,  consumida: 0.6, generada: 1.8 },
-    { dia: 6,  consumida: 0.8, generada: 2.1 },
-    { dia: 7,  consumida: 0.9, generada: 2.4 },
-    { dia: 8,  consumida: 1.1, generada: 1.9 },
-    { dia: 9,  consumida: 1.3, generada: 2.2 },
-    { dia: 10, consumida: 1.0, generada: 2.8 },
-    { dia: 11, consumida: 0.9, generada: 3.1 },
-    { dia: 12, consumida: 0.8, generada: 2.9 },
-    { dia: 13, consumida: 1.2, generada: 2.5 },
-    { dia: 14, consumida: 1.4, generada: 2.1 },
-    { dia: 15, consumida: 1.1, generada: 1.8 },
-    { dia: 16, consumida: 0.9, generada: 3.5 },
-    { dia: 17, consumida: 0.8, generada: 4.2 },
-    { dia: 18, consumida: 0.7, generada: 5.1 },
-    { dia: 19, consumida: 1.0, generada: 4.8 },
-    { dia: 20, consumida: 1.2, generada: 3.9 },
-    { dia: 21, consumida: 1.5, generada: 2.2 },
-    { dia: 22, consumida: 1.3, generada: 1.5 },
-    { dia: 23, consumida: 1.1, generada: 1.2 },
+  produto: "CE",
+  grafico_horario: [
+    { hora: 1,  generada: 0.0, consumida: 1.0, autoconsumo: 0.0 },
+    { hora: 2,  generada: 0.0, consumida: 0.8, autoconsumo: 0.0 },
+    { hora: 3,  generada: 0.0, consumida: 0.8, autoconsumo: 0.0 },
+    { hora: 4,  generada: 0.0, consumida: 0.8, autoconsumo: 0.0 },
+    { hora: 5,  generada: 0.0, consumida: 1.0, autoconsumo: 0.0 },
+    { hora: 6,  generada: 0.0, consumida: 1.4, autoconsumo: 0.0 },
+    { hora: 7,  generada: 0.1, consumida: 2.0, autoconsumo: 0.1 },
+    { hora: 8,  generada: 0.6, consumida: 2.5, autoconsumo: 0.6 },
+    { hora: 9,  generada: 1.4, consumida: 2.3, autoconsumo: 1.4 },
+    { hora: 10, generada: 2.4, consumida: 2.0, autoconsumo: 2.0 },
+    { hora: 11, generada: 3.3, consumida: 1.8, autoconsumo: 1.8 },
+    { hora: 12, generada: 4.0, consumida: 1.7, autoconsumo: 1.7 },
+    { hora: 13, generada: 4.5, consumida: 1.9, autoconsumo: 1.9 },
+    { hora: 14, generada: 4.6, consumida: 2.1, autoconsumo: 2.1 },
+    { hora: 15, generada: 4.3, consumida: 2.0, autoconsumo: 2.0 },
+    { hora: 16, generada: 3.5, consumida: 2.0, autoconsumo: 2.0 },
+    { hora: 17, generada: 2.4, consumida: 2.2, autoconsumo: 2.2 },
+    { hora: 18, generada: 1.3, consumida: 2.6, autoconsumo: 1.3 },
+    { hora: 19, generada: 0.4, consumida: 3.0, autoconsumo: 0.4 },
+    { hora: 20, generada: 0.0, consumida: 3.2, autoconsumo: 0.0 },
+    { hora: 21, generada: 0.0, consumida: 2.8, autoconsumo: 0.0 },
+    { hora: 22, generada: 0.0, consumida: 2.2, autoconsumo: 0.0 },
+    { hora: 23, generada: 0.0, consumida: 1.5, autoconsumo: 0.0 },
   ],
   grafico_barras: {
     autoconsumo_remoto_kwh: 517.41,
     energia_mercado_kwh:    398.90,
     autoconsumo_kwh:        311.34,
-    excedentes_kwh:         517.41,
+    excedentes_kwh:          42.10,
   },
   resumen: {
     autoconsumo_remoto:   0.00,
@@ -108,15 +118,15 @@ const SectionRow = ({ label }) => (
 );
 
 // ─── Bar chart data builder ───────────────────────────────────────────────────
-const buildBarData = (gb) => [
-  { name: 'Autoconsumo remoto', value: gb.autoconsumo_remoto_kwh, fill: '#A5D6A7' },
-  { name: 'Energía del mercado', value: gb.energia_mercado_kwh,   fill: '#F5A623' },
-  { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,        fill: '#42A5F5' },
-  { name: 'Excedentes',          value: gb.excedentes_kwh,         fill: '#90CAF9' },
+const buildBarData = (gb, produto) => [
+  ...(produto === 'AR' ? [{ name: 'Autoconsumo remoto', value: gb.autoconsumo_remoto_kwh, fill: '#A5D6A7' }] : []),
+  { name: 'Energía del mercado', value: gb.energia_mercado_kwh, fill: '#F5A623' },
+  { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,      fill: '#42A5F5' },
+  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#90CAF9' },
 ];
 
 // ─── Main component ───────────────────────────────────────────────────────────
-const isValid = (v) => !!(v && v.resumen && v.impuestos && v.grafico_barras && v.grafico_diario && v.potencia_facturada && v.energia_facturada && v.excedentes && v.otros_conceptos);
+const isValid = (v) => !!(v && v.resumen && v.impuestos && v.grafico_barras && v.grafico_horario && v.potencia_facturada && v.energia_facturada && v.excedentes && v.otros_conceptos);
 
 // ── Flag de visibilidade do botão de edição — desativar em produção ───────────
 const SHOW_EDIT_BUTTON = import.meta.env.DEV;
@@ -130,7 +140,7 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
   const d   = localData;
   const r   = d.resumen;
   const imp = d.impuestos;
-  const barData = useMemo(() => buildBarData(d.grafico_barras), [d.grafico_barras]);
+  const barData = useMemo(() => buildBarData(d.grafico_barras, d.produto), [d.grafico_barras, d.produto]);
 
   const handleOpenEdit = () => {
     setEditJson(JSON.stringify(localData, null, 2));
@@ -150,7 +160,7 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
   };
 
   const resumenRows = [
-    { label: 'Autoconsumo remoto',  val: r.autoconsumo_remoto,  color: '#7CB342' },
+    ...(d.produto === 'AR' ? [{ label: 'Autoconsumo remoto', val: r.autoconsumo_remoto, color: '#7CB342' }] : []),
     { label: 'Energía del mercado', val: r.energia_mercado,     color: '#F5A623' },
     { label: 'Excedente remoto',    val: r.excedente_remoto,    color: r.excedente_remoto < 0 ? '#C62828' : '#111' },
     { label: 'Potencia',            val: r.potencia },
@@ -209,7 +219,7 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
 
 
       {/* ── Detalles de la factura ─────────────────────────────────────────── */}
-      <div style={{ padding: '20px 20px 0' }}>
+      <div style={{ padding: '20px 32px 0' }}>
         <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', borderBottom: '2px solid #7CB342', paddingBottom: 4, marginBottom: 12 }}>
           FACTURA DEL {(d.mes || '').toUpperCase()}
         </p>
@@ -217,31 +227,32 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
           DETALLES DE LA FACTURA
         </p>
 
-        {/* ── Area chart ──────────────────────────────────────────────────── */}
-        <ResponsiveContainer width="100%" height={220} style={{ outline: 'none' }}>
-          <AreaChart data={d.grafico_diario} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-            <XAxis dataKey="dia" tick={{ fontSize: 10 }} />
-            <YAxis tickFormatter={v => `${v} kWh`} tick={{ fontSize: 10 }} width={58} />
-            <Tooltip formatter={(v, name) => [`${Number(v).toFixed(2)} kWh`, name]} />
-            <Legend iconType="square" wrapperStyle={{ fontSize: 12 }} />
-            <Area
-              type="monotone"
-              dataKey="generada"
-              name="Energía generada"
-              stroke="#7CB342"
-              fill="#7CB342"
-              fillOpacity={0.35}
-            />
-            <Area
-              type="monotone"
-              dataKey="consumida"
-              name="Energía consumida"
-              stroke="#F5A623"
-              fill="#F5A623"
-              fillOpacity={0.55}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        {/* ── Area chart + overlay de ícones solares ──────────────────────── */}
+        <div style={{ position: 'relative' }}>
+          <ResponsiveContainer width="100%" height={220} style={{ outline: 'none' }}>
+            <AreaChart data={d.grafico_horario} margin={{ top: 36, right: 16, left: 0, bottom: 0 }}>
+              <XAxis dataKey="hora" tick={{ fontSize: 10 }} ticks={[1, 5, 9, 13, 17, 21]} tickFormatter={v => `${v}h`} />
+              <YAxis tickFormatter={v => `${v} kWh`} tick={{ fontSize: 10 }} width={58} />
+              <Tooltip formatter={(v, name) => [`${Number(v).toFixed(2)} kWh`, name]} labelFormatter={v => `${v}h`} />
+              <Legend iconType="square" wrapperStyle={{ fontSize: 12 }} />
+              <Area type="monotone" dataKey="generada"    name="Energía generada"          stroke="#7CB342" fill="#7CB342" fillOpacity={0.35} />
+              <Area type="monotone" dataKey="consumida"   name="Energía consumida" stroke="#F5A623" fill="#F5A623" fillOpacity={0.35} />
+              <Area type="monotone" dataKey="autoconsumo" name="Autoconsumo"          stroke="#42A5F5" fill="#42A5F5" fillOpacity={0.355} />
+            </AreaChart>
+          </ResponsiveContainer>
+
+          {/* Ícones solares sobrepostos no topo da área de plotagem */}
+          <div style={{ position: 'absolute', top: 10, left: 58, right: 16, pointerEvents: 'none' }}>
+            {SOLAR_ICONS.map(({ hour, label }) => {
+              const pct = ((hour - 1) / 22) * 100;
+              return (
+                <div key={hour} style={{ position: 'absolute', left: `${pct}%`, transform: 'translateX(-50%)', fontSize: 20, color: '#555', lineHeight: 1 }}>
+                  {label}
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         {/* ── Resumen + Barras (side-by-side md+, stacked mobile) ─────────── */}
         <div className="flex flex-col sm:flex-row gap-5 mb-6" style={{ marginTop: 32 }}>
@@ -277,7 +288,7 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
       </div>
 
       {/* ── Tabla detallada ────────────────────────────────────────────────── */}
-      <div style={{ padding: '0 20px 28px', borderTop: '1px solid #eee', overflowX: 'auto' }}>
+      <div style={{ padding: '0 32px 28px', borderTop: '1px solid #eee', overflowX: 'auto' }}>
         <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', marginBottom: 12, paddingTop: 16, borderBottom: '2px solid #7CB342', paddingBottom: 4 }}>
           MÁS INFORMACIÓN SOBRE TU FACTURA
         </p>
@@ -303,7 +314,7 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
               <TH>€/kW·día</TH>
               <td />
             </tr>
-            {d.potencia_facturada.map(p => (
+            {d.potencia_facturada.filter(p => p.kw != null && p.kw !== 0).map(p => (
               <tr key={p.periodo}>
                 <td style={{ padding: '2px 6px 2px 0', fontSize: 12 }}>{p.periodo} Potencia Facturada</td>
                 <TD>{fmtKwh(p.kw)}</TD>
