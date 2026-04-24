@@ -4,6 +4,15 @@ import {
   BarChart, Bar, Cell,
 } from 'recharts';
 
+// ── Iconos solares sobre el gráfico de área ───────────────────────────────────
+const SOLAR_ICONS = [
+  { hour: 5,  label: '☽' },
+  { hour: 9,  label: '↑☀' },
+  { hour: 13, label: '☀' },
+  { hour: 17, label: '↓☀' },
+  { hour: 21, label: '☽' },
+];
+
 // ─── Mock data (used when no data prop is passed) ─────────────────────────────
 const MOCK_DATA = {
   mes: "Mes Medio",
@@ -217,31 +226,31 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
           DETALLES DE LA FACTURA
         </p>
 
-        {/* ── Area chart ──────────────────────────────────────────────────── */}
-        <ResponsiveContainer width="100%" height={220} style={{ outline: 'none' }}>
-          <AreaChart data={d.grafico_diario} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-            <XAxis dataKey="dia" tick={{ fontSize: 10 }} ticks={[1, 5, 9, 13, 17, 21]} tickFormatter={v => `${v}h`} />
-            <YAxis tickFormatter={v => `${v} kWh`} tick={{ fontSize: 10 }} width={58} />
-            <Tooltip formatter={(v, name) => [`${Number(v).toFixed(2)} kWh`, name]} />
-            <Legend iconType="square" wrapperStyle={{ fontSize: 12 }} />
-            <Area
-              type="monotone"
-              dataKey="generada"
-              name="Energía generada"
-              stroke="#7CB342"
-              fill="#7CB342"
-              fillOpacity={0.35}
-            />
-            <Area
-              type="monotone"
-              dataKey="consumida"
-              name="Energía consumida"
-              stroke="#F5A623"
-              fill="#F5A623"
-              fillOpacity={0.55}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        {/* ── Area chart + overlay de ícones solares ──────────────────────── */}
+        <div style={{ position: 'relative' }}>
+          <ResponsiveContainer width="100%" height={220} style={{ outline: 'none' }}>
+            <AreaChart data={d.grafico_diario} margin={{ top: 36, right: 16, left: 0, bottom: 0 }}>
+              <XAxis dataKey="dia" tick={{ fontSize: 10 }} ticks={[1, 5, 9, 13, 17, 21]} tickFormatter={v => `${v}h`} />
+              <YAxis tickFormatter={v => `${v} kWh`} tick={{ fontSize: 10 }} width={58} />
+              <Tooltip formatter={(v, name) => [`${Number(v).toFixed(2)} kWh`, name]} />
+              <Legend iconType="square" wrapperStyle={{ fontSize: 12 }} />
+              <Area type="monotone" dataKey="generada"  name="Energía generada"  stroke="#7CB342" fill="#7CB342" fillOpacity={0.35} />
+              <Area type="monotone" dataKey="consumida" name="Energía consumida" stroke="#F5A623" fill="#F5A623" fillOpacity={0.55} />
+            </AreaChart>
+          </ResponsiveContainer>
+
+          {/* Ícones solares sobrepostos no topo da área de plotagem */}
+          <div style={{ position: 'absolute', top: 10, left: 58, right: 16, pointerEvents: 'none' }}>
+            {SOLAR_ICONS.map(({ hour, label }) => {
+              const pct = ((hour - 1) / 22) * 100;
+              return (
+                <div key={hour} style={{ position: 'absolute', left: `${pct}%`, transform: 'translateX(-50%)', fontSize: 20, color: '#555', lineHeight: 1 }}>
+                  {label}
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         {/* ── Resumen + Barras (side-by-side md+, stacked mobile) ─────────── */}
         <div className="flex flex-col sm:flex-row gap-5 mb-6" style={{ marginTop: 32 }}>
