@@ -132,16 +132,18 @@ const isValid = (v) => !!(v && v.resumen && v.impuestos && v.grafico_barras && v
 // ── Flag de visibilidade do botão de edição — desativar em produção ───────────
 const SHOW_EDIT_BUTTON = import.meta.env.DEV;
 
-export default function FacturaPreview({ data = MOCK_DATA }) {
-  const [localData, setLocalData] = useState(() => isValid(data) ? data : MOCK_DATA);
+export default function FacturaPreview({ data = null }) {
+  const [localData, setLocalData] = useState(() => isValid(data) ? data : null);
   const [editOpen, setEditOpen]   = useState(false);
   const [editJson, setEditJson]   = useState('');
   const [editError, setEditError] = useState('');
 
   const d   = localData;
-  const r   = d.resumen;
-  const imp = d.impuestos;
-  const barData = useMemo(() => buildBarData(d.grafico_barras, d.produto), [d.grafico_barras, d.produto]);
+  const r   = d?.resumen;
+  const imp = d?.impuestos;
+  const barData = useMemo(() => d ? buildBarData(d.grafico_barras, d.produto) : [], [d]);
+
+  if (!localData) return null;
 
   const handleOpenEdit = () => {
     setEditJson(JSON.stringify(localData, null, 2));
