@@ -6,42 +6,43 @@ import {
 
 // ── Iconos solares sobre el gráfico de área ───────────────────────────────────
 const SOLAR_ICONS = [
-  { hour: 5,  label: '☽' },
-  { hour: 9,  label: '↑☀' },
-  { hour: 13, label: '☀' },
-  { hour: 17, label: '↓☀' },
-  { hour: 21, label: '☽' },
+  { hour: 4,  label: '☽' },
+  { hour: 8,  label: '↑☀' },
+  { hour: 12, label: '☀' },
+  { hour: 16, label: '↓☀' },
+  { hour: 20, label: '☽' },
 ];
 
 // ─── Mock data (used when no data prop is passed) ─────────────────────────────
 const MOCK_DATA = {
-  mes: "Mes Medio",
+  periodo: "Mes Medio",
   dias: 30,
   produto: "CE",
   grafico_horario: [
-    { hora: 1,  generada: 0.0, consumida: 1.0, autoconsumo: 0.0 },
+    { hora: 0,  generada: 0.0, consumida: 1.0, autoconsumo: 0.0 },
+    { hora: 1,  generada: 0.0, consumida: 0.8, autoconsumo: 0.0 },
     { hora: 2,  generada: 0.0, consumida: 0.8, autoconsumo: 0.0 },
     { hora: 3,  generada: 0.0, consumida: 0.8, autoconsumo: 0.0 },
-    { hora: 4,  generada: 0.0, consumida: 0.8, autoconsumo: 0.0 },
-    { hora: 5,  generada: 0.0, consumida: 1.0, autoconsumo: 0.0 },
-    { hora: 6,  generada: 0.0, consumida: 1.4, autoconsumo: 0.0 },
-    { hora: 7,  generada: 0.1, consumida: 2.0, autoconsumo: 0.1 },
-    { hora: 8,  generada: 0.6, consumida: 2.5, autoconsumo: 0.6 },
-    { hora: 9,  generada: 1.4, consumida: 2.3, autoconsumo: 1.4 },
-    { hora: 10, generada: 2.4, consumida: 2.0, autoconsumo: 2.0 },
-    { hora: 11, generada: 3.3, consumida: 1.8, autoconsumo: 1.8 },
-    { hora: 12, generada: 4.0, consumida: 1.7, autoconsumo: 1.7 },
-    { hora: 13, generada: 4.5, consumida: 1.9, autoconsumo: 1.9 },
-    { hora: 14, generada: 4.6, consumida: 2.1, autoconsumo: 2.1 },
-    { hora: 15, generada: 4.3, consumida: 2.0, autoconsumo: 2.0 },
-    { hora: 16, generada: 3.5, consumida: 2.0, autoconsumo: 2.0 },
-    { hora: 17, generada: 2.4, consumida: 2.2, autoconsumo: 2.2 },
-    { hora: 18, generada: 1.3, consumida: 2.6, autoconsumo: 1.3 },
-    { hora: 19, generada: 0.4, consumida: 3.0, autoconsumo: 0.4 },
-    { hora: 20, generada: 0.0, consumida: 3.2, autoconsumo: 0.0 },
-    { hora: 21, generada: 0.0, consumida: 2.8, autoconsumo: 0.0 },
-    { hora: 22, generada: 0.0, consumida: 2.2, autoconsumo: 0.0 },
-    { hora: 23, generada: 0.0, consumida: 1.5, autoconsumo: 0.0 },
+    { hora: 4,  generada: 0.0, consumida: 1.0, autoconsumo: 0.0 },
+    { hora: 5,  generada: 0.0, consumida: 1.4, autoconsumo: 0.0 },
+    { hora: 6,  generada: 0.1, consumida: 2.0, autoconsumo: 0.1 },
+    { hora: 7,  generada: 0.6, consumida: 2.5, autoconsumo: 0.6 },
+    { hora: 8,  generada: 1.4, consumida: 2.3, autoconsumo: 1.4 },
+    { hora: 9,  generada: 2.4, consumida: 2.0, autoconsumo: 2.0 },
+    { hora: 10, generada: 3.3, consumida: 1.8, autoconsumo: 1.8 },
+    { hora: 11, generada: 4.0, consumida: 1.7, autoconsumo: 1.7 },
+    { hora: 12, generada: 4.5, consumida: 1.9, autoconsumo: 1.9 },
+    { hora: 13, generada: 4.6, consumida: 2.1, autoconsumo: 2.1 },
+    { hora: 14, generada: 4.3, consumida: 2.0, autoconsumo: 2.0 },
+    { hora: 15, generada: 3.5, consumida: 2.0, autoconsumo: 2.0 },
+    { hora: 16, generada: 2.4, consumida: 2.2, autoconsumo: 2.2 },
+    { hora: 17, generada: 1.3, consumida: 2.6, autoconsumo: 1.3 },
+    { hora: 18, generada: 0.4, consumida: 3.0, autoconsumo: 0.4 },
+    { hora: 19, generada: 0.0, consumida: 3.2, autoconsumo: 0.0 },
+    { hora: 20, generada: 0.0, consumida: 2.8, autoconsumo: 0.0 },
+    { hora: 21, generada: 0.0, consumida: 2.2, autoconsumo: 0.0 },
+    { hora: 22, generada: 0.0, consumida: 1.5, autoconsumo: 0.0 },
+    { hora: 23, generada: 0.0, consumida: 1.0, autoconsumo: 0.0 },
   ],
   grafico_barras: {
     autoconsumo_remoto_kwh: 517.41,
@@ -131,16 +132,18 @@ const isValid = (v) => !!(v && v.resumen && v.impuestos && v.grafico_barras && v
 // ── Flag de visibilidade do botão de edição — desativar em produção ───────────
 const SHOW_EDIT_BUTTON = import.meta.env.DEV;
 
-export default function FacturaPreview({ data = MOCK_DATA }) {
-  const [localData, setLocalData] = useState(() => isValid(data) ? data : MOCK_DATA);
+export default function FacturaPreview({ data = null }) {
+  const [localData, setLocalData] = useState(() => isValid(data) ? data : null);
   const [editOpen, setEditOpen]   = useState(false);
   const [editJson, setEditJson]   = useState('');
   const [editError, setEditError] = useState('');
 
   const d   = localData;
-  const r   = d.resumen;
-  const imp = d.impuestos;
-  const barData = useMemo(() => buildBarData(d.grafico_barras, d.produto), [d.grafico_barras, d.produto]);
+  const r   = d?.resumen;
+  const imp = d?.impuestos;
+  const barData = useMemo(() => d ? buildBarData(d.grafico_barras, d.produto) : [], [d]);
+
+  if (!localData) return null;
 
   const handleOpenEdit = () => {
     setEditJson(JSON.stringify(localData, null, 2));
@@ -221,7 +224,7 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
       {/* ── Detalles de la factura ─────────────────────────────────────────── */}
       <div style={{ padding: '20px 32px 0' }}>
         <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', borderBottom: '2px solid #7CB342', paddingBottom: 4, marginBottom: 12 }}>
-          FACTURA DEL {(d.mes || '').toUpperCase()}
+          FACTURA DEL {(d.periodo || '').toUpperCase()}
         </p>
         <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', marginBottom: 14, color: '#333' }}>
           DETALLES DE LA FACTURA
@@ -231,20 +234,20 @@ export default function FacturaPreview({ data = MOCK_DATA }) {
         <div style={{ position: 'relative' }}>
           <ResponsiveContainer width="100%" height={220} style={{ outline: 'none' }}>
             <AreaChart data={d.grafico_horario} margin={{ top: 36, right: 16, left: 0, bottom: 0 }}>
-              <XAxis dataKey="hora" tick={{ fontSize: 10 }} ticks={[1, 5, 9, 13, 17, 21]} tickFormatter={v => `${v}h`} />
+              <XAxis dataKey="hora" tick={{ fontSize: 10 }} ticks={[0, 4, 8, 12, 16, 20]} tickFormatter={v => `${v}h`} />
               <YAxis tickFormatter={v => `${v} kWh`} tick={{ fontSize: 10 }} width={58} />
               <Tooltip formatter={(v, name) => [`${Number(v).toFixed(2)} kWh`, name]} labelFormatter={v => `${v}h`} />
               <Legend iconType="square" wrapperStyle={{ fontSize: 12 }} />
               <Area type="monotone" dataKey="generada"    name="Energía generada"          stroke="#7CB342" fill="#7CB342" fillOpacity={0.35} />
               <Area type="monotone" dataKey="consumida"   name="Energía consumida" stroke="#F5A623" fill="#F5A623" fillOpacity={0.35} />
-              <Area type="monotone" dataKey="autoconsumo" name="Autoconsumo"          stroke="#42A5F5" fill="#42A5F5" fillOpacity={0.355} />
+              <Area type="monotone" dataKey="autoconsumo" name="Autoconsumo"          stroke="#42A5F5" fill="#42A5F5" fillOpacity={0.60} />
             </AreaChart>
           </ResponsiveContainer>
 
           {/* Ícones solares sobrepostos no topo da área de plotagem */}
           <div style={{ position: 'absolute', top: 10, left: 58, right: 16, pointerEvents: 'none' }}>
             {SOLAR_ICONS.map(({ hour, label }) => {
-              const pct = ((hour - 1) / 22) * 100;
+              const pct = (hour / 23) * 100;
               return (
                 <div key={hour} style={{ position: 'absolute', left: `${pct}%`, transform: 'translateX(-50%)', fontSize: 20, color: '#555', lineHeight: 1 }}>
                   {label}
