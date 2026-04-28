@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, Cell,
@@ -135,6 +135,8 @@ const SHOW_EDIT_BUTTON = import.meta.env.DEV;
 export default function FacturaPreview({ data = null }) {
   const [localData, setLocalData] = useState(() => isValid(data) ? data : null);
   const [editOpen, setEditOpen]   = useState(false);
+
+  useEffect(() => { if (isValid(data)) setLocalData(data); }, [data]);
   const [editJson, setEditJson]   = useState('');
   const [editError, setEditError] = useState('');
 
