@@ -1407,7 +1407,7 @@ export default function FacturaUpload() {
             onSetTabActiva={setTabActiva}
             onSesionError={() => setSesionError(true)}
             facturaPreviewData={facturaPreviewData}
-            onSesionLoaded={(data) => { setSesionData(data); if (data?.factura_preview) setFacturaPreviewData(data.factura_preview); }}
+            onSesionLoaded={(data) => { setSesionData(data); if (data?.facturaPreview) setFacturaPreviewData(data.factura_preview); }}
           />
         )}
 
