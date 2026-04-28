@@ -77,6 +77,9 @@ export const PERIODOS_POR_MES_3TD = {
   12: ["p1","p2","p6"],
 };
 
+// Restrição de CE: só permite avançar se a CE mais próxima for esta. null = desativado.
+export const RESTRICT_TO_CE = "Mérida 1";
+
 // CE API proxiada por Vite em dev (evita CORS); em produção usa URL absoluta
 export const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu/server/api/get-ce-info-lat-lng";
 

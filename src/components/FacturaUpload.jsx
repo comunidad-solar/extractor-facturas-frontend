@@ -12,7 +12,7 @@ import {
   PERIODOS_POR_MES_3TD, TARIFAS_MULTI_FACTURA,
   CE_API_URL, API_BASE, SESION_URL, PLAN_REDIRECT_URL, QUOTING_URL, LEAD_URL,
   NOMINATIM_URL, CE_DETAIL_URL, CE_STATUS_LABELS,
-  ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL,
+  ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL, RESTRICT_TO_CE,
 } from "../constants/appConstants";
 import {
   hasValue, emptyManual, resolverIdGeneracion, getCeNombreById,
@@ -539,7 +539,11 @@ export default function FacturaUpload() {
       const cesFiltradas = ceFijada ? ces.filter(ce => ce.name === ceFijada || ce.addressName === ceFijada) : ces;
       const ceResult = await runZonaCheck(userLat, userLon, cesFiltradas.length ? cesFiltradas : ces);
       enviarLead(LEAD_URL, { cliente, ...ceResult, id_generacion: resolverIdGeneracion(idGeneracion, ceResult?.ceNombre) }, () => setLeadWarn(true)); // fire-and-forget
-      if (ceResult?.fsmstate === "02_FUERA_ZONA") {
+      const ceRestringida = RESTRICT_TO_CE && ceResult?.fsmstate === "01_DENTRO_ZONA" && ceResult?.ceNombre !== RESTRICT_TO_CE;
+      if (ceRestringida) {
+        updateFsmstate("02_FUERA_ZONA");
+        setStatus("fuera_zona");
+      } else if (ceResult?.fsmstate === "02_FUERA_ZONA") {
         setStatus("fuera_zona");
       } else {
         setStep(2);
