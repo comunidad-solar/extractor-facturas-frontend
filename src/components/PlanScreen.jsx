@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { fmtES } from "../utils/facturaUtils";
 import { API_BASE, CE_STATUS_LABELS } from "../constants/appConstants";
+import FacturaPreview from "./FacturaPreview";
 
 export default function PlanScreen({
   cliente,
@@ -20,6 +21,7 @@ export default function PlanScreen({
   onSetTabActiva,
   onSesionError,
   onSesionLoaded,
+  facturaPreviewData = null,
 }) {
   // eslint-disable-next-line no-unused-vars
   const [sesionData, setSesionData] = useState(sesionDataProp ?? null);
@@ -93,7 +95,7 @@ export default function PlanScreen({
                 <button
                   style={{ width:"100%", background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em" }}
                   onClick={onContratar}>
-                  Contratar
+                  {ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
                 </button>
               </div>
             </div>
@@ -158,7 +160,7 @@ export default function PlanScreen({
                 <button
                   style={{ marginTop:12, background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"12px 32px", fontSize:14, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em" }}
                   onClick={onContratar}>
-                  Contratar
+                  {ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
                 </button>
               </div>
               <div style={{ background:"#fff", borderRadius:14, padding:"28px 24px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, boxShadow:"0 2px 12px rgba(0,0,0,0.06)" }}>
@@ -293,12 +295,7 @@ export default function PlanScreen({
 
         {/* ── FACTURA PLAN ── */}
         <div style={{ marginBottom:56 }}>
-          <p style={{ fontSize:22, fontWeight:800, color:"#121212", marginBottom:24 }}>Así quedaría tu factura</p>
-          <img
-            src="/factura plan.svg"
-            alt="Ejemplo de factura con comunidad solar"
-            style={{ width:"100%", borderRadius:12, display:"block" }}
-          />
+          <FacturaPreview data={facturaPreviewData ?? undefined} />
         </div>
 
         {/* ── TABS: CÓMO FUNCIONA / TU PLAN / CONDICIONES ── */}
