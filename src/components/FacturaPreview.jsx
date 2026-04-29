@@ -1,4 +1,5 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
+import { FACTURA_PREVIEW_MOCK_FALLBACK } from '../constants/appConstants';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, Cell,
@@ -133,22 +134,22 @@ const isValid = (v) => !!(v && v.resumen && v.impuestos && v.grafico_barras && v
 const SHOW_EDIT_BUTTON = import.meta.env.DEV;
 
 export default function FacturaPreview({ data = null }) {
-  const [localData, setLocalData] = useState(() => isValid(data) ? data : null);
-  const [editOpen, setEditOpen]   = useState(false);
+  const [editedData, setEditedData] = useState(null);
+  const [editOpen, setEditOpen]     = useState(false);
+  const [editJson, setEditJson]     = useState('');
+  const [editError, setEditError]   = useState('');
 
-  useEffect(() => { if (isValid(data)) setLocalData(data); }, [data]);
-  const [editJson, setEditJson]   = useState('');
-  const [editError, setEditError] = useState('');
+  const resolved = editedData ?? (isValid(data) ? data : null) ?? (FACTURA_PREVIEW_MOCK_FALLBACK ? MOCK_DATA : null);
 
-  const d   = localData;
+  const d   = resolved;
   const r   = d?.resumen;
   const imp = d?.impuestos;
   const barData = useMemo(() => d ? buildBarData(d.grafico_barras, d.produto) : [], [d]);
 
-  if (!localData) return null;
+  if (!resolved) return null;
 
   const handleOpenEdit = () => {
-    setEditJson(JSON.stringify(localData, null, 2));
+    setEditJson(JSON.stringify(resolved, null, 2));
     setEditError('');
     setEditOpen(true);
   };
@@ -157,23 +158,28 @@ export default function FacturaPreview({ data = null }) {
     try {
       const parsed = JSON.parse(editJson);
       if (!isValid(parsed)) { setEditError('JSON incompleto: falta alguna clave requerida (resumen, impuestos, grafico_barras…)'); return; }
-      setLocalData(parsed);
+      setEditedData(parsed);
       setEditOpen(false);
     } catch (e) {
       setEditError('JSON inválido: ' + e.message);
     }
   };
 
-  const resumenRows = [
+  const energyRows = [
     ...(d.produto === 'AR' ? [{ label: 'Autoconsumo remoto', val: r.autoconsumo_remoto, color: '#7CB342' }] : []),
-    { label: 'Energía del mercado', val: r.energia_mercado,     color: '#F5A623' },
-    { label: 'Excedente',    val: r.excedente_remoto,    color: r.excedente_remoto < 0 ? '#3ac628' : '#111' },
+    { label: 'Energía del mercado', val: r.energia_mercado,  color: '#F5A623' },
+    { label: 'Autoconsumo',         val: 0,                   color: '#7CB342' },
+    { label: 'Excedente',           val: r.excedente_remoto, color: r.excedente_remoto < 0 ? '#7CB342' : '#111' },
+  ];
+  const otherRows = [
     { label: 'Potencia',            val: r.potencia },
     { label: 'Otros peajes',        val: r.otros_peajes },
     { label: 'Cuotas reguladas',    val: r.cuotas_reguladas },
     { label: 'Cuota mantenimiento', val: r.cuota_mantenimiento },
     { label: "IVA's",               val: r.ivas },
   ];
+  // cada fila energyRows ≈ 21px → altura barra chart = nº filas × 21 + margens
+  const barHeight = energyRows.length * 45 + 30;
 
   return (
     <div style={{ fontFamily: 'inherit', width: '100%', border: '1px solid #ddd', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
@@ -264,21 +270,31 @@ export default function FacturaPreview({ data = null }) {
 
           {/* Caja de resumen */}
           <div style={{ border: '1.5px solid #bbb', borderRadius: 8, padding: '12px 16px', fontSize: 13, flexShrink: 0 }}>
-            {resumenRows.map(({ label, val, color }) => (
-              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4, alignItems: 'baseline' }}>
+            {/* Grupo energético — alinhado com as barras */}
+            {energyRows.map(({ label, val, color }) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', height: 40 }}>
                 <span style={{ fontSize: 11, color: '#666', whiteSpace: 'nowrap' }}>{label}</span>
                 <span style={{ fontWeight: 600, color: color || '#111' }}>{fmtEur(val)}</span>
               </div>
             ))}
+            {/* Separador alinhado com eixo X do gráfico */}
+            <div style={{ borderTop: '1.5px solid #ccc', marginTop: 6, marginBottom: 6 }} />
+            {/* Grupo otros */}
+            {otherRows.map(({ label, val }) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4, alignItems: 'baseline' }}>
+                <span style={{ fontSize: 11, color: '#666', whiteSpace: 'nowrap' }}>{label}</span>
+                <span style={{ fontWeight: 600 }}>{fmtEur(val)}</span>
+              </div>
+            ))}
             <div style={{ borderTop: '2px solid #111', marginTop: 8, paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: 13 }}>
-              <span>Total</span>
+              <span>Total a pagar</span>
               <span>{fmtEur(imp.total_factura)}</span>
             </div>
           </div>
 
-          {/* Gráfico de barras horizontal */}
+          {/* Gráfico de barras horizontal — altura casa com grupo energético */}
           <div className="flex-1 min-w-[260px]">
-            <ResponsiveContainer width="100%" height={160} style={{ outline: 'none' }}>
+            <ResponsiveContainer width="100%" height={barHeight} style={{ outline: 'none' }}>
               <BarChart layout="vertical" data={barData} margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
                 <XAxis type="number" tick={{ fontSize: 10 }} unit=" kWh" />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} />
@@ -365,7 +381,7 @@ export default function FacturaPreview({ data = null }) {
                 <TD>{e.kwh        != null ? fmtKwh(e.kwh)       : '—'}</TD>
                 <TD />
                 <TD>{e.precio_kwh != null ? fmtP6(e.precio_kwh) : '—'}</TD>
-                <TD style={{ color: e.total != null && e.total < 0 ? '#3ac628' : '#111' }}>
+                <TD style={{ color: e.total != null && e.total < 0 ? '#7CB342' : '#111' }}>
                   {fmtEur(e.total)}
                 </TD>
               </tr>
@@ -409,7 +425,7 @@ export default function FacturaPreview({ data = null }) {
               <td colSpan={4} style={{ textAlign: 'right', padding: '6px 6px', fontSize: 13, fontWeight: 700 }}>
                 TOTAL FACTURA
               </td>
-              <td style={{ background: '#1565C0', color: '#fff', textAlign: 'right', padding: '6px 8px', fontSize: 13, fontWeight: 800 }}>
+              <td style={{ background: '#1565C0', color: '#fff', textAlign: 'right', padding: '6px 8px', fontSize: 13, fontWeight: 800, clipPath: 'inset(0 0 0 0 round 0 0 6px 6px)' }}>
                 {fmtEur(imp.total_factura)}
               </td>
             </tr>
