@@ -74,7 +74,7 @@ const MOCK_DATA = {
     { concepto: "Energía Resto de conceptos",  kwh: 710.24, precio_kwh: 0.06844, total: 48.61 },
   ],
   excedentes: [
-    { concepto: "Excedente remoto",                  kwh: 517.41, precio_kwh: 0.06690, total: -34.61 },
+    { concepto: "Excedente",                  kwh: 517.41, precio_kwh: 0.06690, total: -34.61 },
     { concepto: "Transferencia al Monedero Virtual", kwh: null,   precio_kwh: null,    total: null   },
   ],
   otros_conceptos: [
@@ -122,8 +122,8 @@ const SectionRow = ({ label }) => (
 const buildBarData = (gb, produto) => [
   ...(produto === 'AR' ? [{ name: 'Autoconsumo remoto', value: gb.autoconsumo_remoto_kwh, fill: '#A5D6A7' }] : []),
   { name: 'Energía del mercado', value: gb.energia_mercado_kwh, fill: '#F5A623' },
-  { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,      fill: '#42A5F5' },
-  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#90CAF9' },
+  { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,      fill: '#79AEC4' },
+  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#bbdbf6' },
 ];
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -167,7 +167,7 @@ export default function FacturaPreview({ data = null }) {
   const resumenRows = [
     ...(d.produto === 'AR' ? [{ label: 'Autoconsumo remoto', val: r.autoconsumo_remoto, color: '#7CB342' }] : []),
     { label: 'Energía del mercado', val: r.energia_mercado,     color: '#F5A623' },
-    { label: 'Excedente remoto',    val: r.excedente_remoto,    color: r.excedente_remoto < 0 ? '#C62828' : '#111' },
+    { label: 'Excedente',    val: r.excedente_remoto,    color: r.excedente_remoto < 0 ? '#3ac628' : '#111' },
     { label: 'Potencia',            val: r.potencia },
     { label: 'Otros peajes',        val: r.otros_peajes },
     { label: 'Cuotas reguladas',    val: r.cuotas_reguladas },
@@ -242,7 +242,7 @@ export default function FacturaPreview({ data = null }) {
               <Legend iconType="square" wrapperStyle={{ fontSize: 12 }} />
               <Area type="monotone" dataKey="generada"    name="Energía generada"          stroke="#7CB342" fill="#7CB342" fillOpacity={0.35} />
               <Area type="monotone" dataKey="consumida"   name="Energía consumida" stroke="#F5A623" fill="#F5A623" fillOpacity={0.35} />
-              <Area type="monotone" dataKey="autoconsumo" name="Autoconsumo"          stroke="#42A5F5" fill="#42A5F5" fillOpacity={0.60} />
+              <Area type="monotone" dataKey="autoconsumo" name="Autoconsumo"          stroke="#42A5F5" fill="#42A5F5" fillOpacity={0.50} />
             </AreaChart>
           </ResponsiveContainer>
 
@@ -365,7 +365,7 @@ export default function FacturaPreview({ data = null }) {
                 <TD>{e.kwh        != null ? fmtKwh(e.kwh)       : '—'}</TD>
                 <TD />
                 <TD>{e.precio_kwh != null ? fmtP6(e.precio_kwh) : '—'}</TD>
-                <TD style={{ color: e.total != null && e.total < 0 ? '#C62828' : '#111' }}>
+                <TD style={{ color: e.total != null && e.total < 0 ? '#3ac628' : '#111' }}>
                   {fmtEur(e.total)}
                 </TD>
               </tr>
