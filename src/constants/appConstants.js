@@ -83,7 +83,7 @@ export const RESTRICT_TO_CE = "Mérida 1";
 // CE API proxiada por Vite em dev (evita CORS); em produção usa URL absoluta
 export const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu/server/api/get-ce-info-lat-lng";
 
-export const API_BASE           = "https://extractor.13.38.9.119.nip.io";
+export const API_BASE           = "http://127.0.0.1:8012";
 export const SESION_URL         = `${API_BASE}/sesion`;
 export const PLAN_REDIRECT_URL  = "https://main.d3rqv6h66vhq03.amplifyapp.com/";
 export const QUOTING_URL        = "https://dummyjson.com/test";
