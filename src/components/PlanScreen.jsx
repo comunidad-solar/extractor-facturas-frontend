@@ -42,7 +42,7 @@ export default function PlanScreen({
         if (onSesionLoaded) onSesionLoaded(data);
       })
       .catch(() => {
-        setSesionFailed(true);
+        setSesionFailed(false);
         if (onSesionError) onSesionError();
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

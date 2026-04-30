@@ -85,7 +85,12 @@ export const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catal
 
 export const API_BASE           = "https://extractor.13.38.9.119.nip.io";
 export const SESION_URL         = `${API_BASE}/sesion`;
-export const PLAN_REDIRECT_URL  = "https://main.d3rqv6h66vhq03.amplifyapp.com/";
+const subdomain = window.location.hostname.split(".")[0];
+const cotizadorBase = subdomain === "develop"
+  ? "https://develop.d3rqv6h66vhq03.amplifyapp.com/"
+  : "https://main.d3rqv6h66vhq03.amplifyapp.com/";
+
+export const PLAN_REDIRECT_URL  = cotizadorBase;
 export const QUOTING_URL        = "https://dummyjson.com/test";
 export const LEAD_URL           = "https://dummyjson.com/test";
 export const NOMINATIM_URL      = "https://nominatim.openstreetmap.org";
@@ -100,4 +105,4 @@ export const CE_STATUS_LABELS = {
 // TODO: confirmar endpoint com o backend
 export const ASESOR_ENVIO_URL    = "https://dummyjson.com/test";
 // TODO: confirmar URL de redirecionamento após envío
-export const ASESOR_REDIRECT_URL = "https://main.d3rqv6h66vhq03.amplifyapp.com?cups={{cups}}";
+export const ASESOR_REDIRECT_URL = `${cotizadorBase}?cups={{cups}}`;
