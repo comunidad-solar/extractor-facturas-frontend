@@ -1552,7 +1552,7 @@ export default function FacturaUpload() {
               {clienteErrors.telefono && <span className="cs-field-error">{clienteErrors.telefono}</span>}
             </div>
 
-            {import.meta.env.DEV && (
+            {(import.meta.env.DEV || window.location.hostname.split(".")[0] === "develop") && (
               <div style={{ marginBottom: 8 }}>
                 <select
                   onChange={e => handleDevCESelect(e.target.value)}
