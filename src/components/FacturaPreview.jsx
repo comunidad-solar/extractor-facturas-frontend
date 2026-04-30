@@ -124,7 +124,7 @@ const buildBarData = (gb, produto) => [
   ...(produto === 'AR' ? [{ name: 'Autoconsumo remoto', value: gb.autoconsumo_remoto_kwh, fill: '#A5D6A7' }] : []),
   { name: 'Energía del mercado', value: gb.energia_mercado_kwh, fill: '#F5A623' },
   { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,      fill: '#79AEC4' },
-  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#bbdbf6' },
+  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#9fd1f9' },
 ];
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -168,13 +168,13 @@ export default function FacturaPreview({ data = null }) {
   const energyRows = [
     ...(d.produto === 'AR' ? [{ label: 'Autoconsumo remoto', val: r.autoconsumo_remoto, color: '#7CB342' }] : []),
     { label: 'Energía del mercado', val: r.energia_mercado,  color: '#F5A623' },
-    { label: 'Autoconsumo',         val: 0,                   color: '#7CB342' },
-    { label: 'Excedente',           val: r.excedente_remoto, color: r.excedente_remoto < 0 ? '#7CB342' : '#111' },
+    { label: 'Autoconsumo',         val: 0,                   color: '#79AEC4' },
+    { label: 'Excedente',           val: r.excedente_remoto, color: r.excedente_remoto < 0 ? '#9fd1f9' : '#111' },
   ];
   const otherRows = [
     { label: 'Potencia',            val: r.potencia },
     { label: 'Otros peajes',        val: r.otros_peajes },
-    { label: 'Cuotas reguladas',    val: r.cuotas_reguladas },
+    { label: 'Cuotas reguladas', sublabel: 'peajes + cargos', val: r.cuotas_reguladas },
     { label: 'Cuota mantenimiento', val: r.cuota_mantenimiento },
     { label: "IVA's",               val: r.ivas },
   ];
@@ -265,39 +265,58 @@ export default function FacturaPreview({ data = null }) {
           </div>
         </div>
 
-        {/* ── Resumen + Barras (side-by-side md+, stacked mobile) ─────────── */}
-        <div className="flex flex-col sm:flex-row gap-5 mb-6" style={{ marginTop: 32 }}>
+        {/* ── Caixa valores | Gráfico | Labels ────────────────────────────── */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 32, alignItems: 'flex-start' }}>
 
-          {/* Caja de resumen */}
-          <div style={{ border: '1.5px solid #bbb', borderRadius: 8, padding: '12px 16px', fontSize: 13, flexShrink: 0 }}>
-            {/* Grupo energético — alinhado com as barras */}
+          {/* Col 1: caixa estreita — apenas valores */}
+          <div style={{ border: '1.5px solid #bbb', borderRadius: 8, padding: '0 14px', fontSize: 13, flexShrink: 0 }}>
             {energyRows.map(({ label, val, color }) => (
-              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'center', height: 40 }}>
-                <span style={{ fontSize: 11, color: '#666', whiteSpace: 'nowrap' }}>{label}</span>
+              <div key={label} style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', height: 45 }}>
                 <span style={{ fontWeight: 600, color: color || '#111' }}>{fmtEur(val)}</span>
               </div>
             ))}
-            {/* Separador alinhado com eixo X do gráfico */}
-            <div style={{ borderTop: '1.5px solid #ccc', marginTop: 6, marginBottom: 6 }} />
-            {/* Grupo otros */}
+            {/* Separador com altura = XAxis (30px) */}
+            <div style={{ height: 30, display: 'flex', alignItems: 'center' }}>
+              <div style={{ width: '100%', borderTop: '1.5px solid #ccc' }} />
+            </div>
             {otherRows.map(({ label, val }) => (
-              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4, alignItems: 'baseline' }}>
-                <span style={{ fontSize: 11, color: '#666', whiteSpace: 'nowrap' }}>{label}</span>
+              <div key={label} style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', height: 30 }}>
                 <span style={{ fontWeight: 600 }}>{fmtEur(val)}</span>
               </div>
             ))}
-            <div style={{ borderTop: '2px solid #111', marginTop: 8, paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: 13 }}>
-              <span>Total a pagar</span>
-              <span>{fmtEur(imp.total_factura)}</span>
+            <div style={{ borderTop: '2px solid #111', marginTop: 4, paddingTop: 6, paddingBottom: 10, textAlign: 'right', fontWeight: 800, fontSize: 13 }}>
+              {fmtEur(imp.total_factura)}
             </div>
           </div>
 
-          {/* Gráfico de barras horizontal — altura casa com grupo energético */}
-          <div className="flex-1 min-w-[260px]">
+          {/* Col 2: labels coloridas alinhadas com barras + descriptions otros */}
+          <div style={{ flexShrink: 0, fontSize: 12, textAlign: 'center' }}>
+            {/* Labels das barras — cor da barra correspondente */}
+            {energyRows.map(({ label }, i) => (
+              <div key={label} style={{ height: 45, display: 'flex', alignItems: 'center', justifyContent: 'center', color: barData[i]?.fill || '#111', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                {label}
+              </div>
+            ))}
+            {/* Gap = XAxis height */}
+            <div style={{ height: 30 }} />
+            {/* Descriptions otros */}
+            {otherRows.map(({ label, sublabel }) => (
+              <div key={label} style={{ height: 30, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 4 }}>
+                <span style={{ color: '#444' }}>{label}</span>
+                {sublabel && <span style={{ fontSize: 10, color: '#aaa' }}>({sublabel})</span>}
+              </div>
+            ))}
+            <div style={{ height: 30, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', fontWeight: 700, fontSize: 13, marginTop: 7 }}>
+              Total a pagar en tu Factura
+            </div>
+          </div>
+
+          {/* Col 3: gráfico de barras sem YAxis labels */}
+          <div style={{ flex: 1, minWidth: 0 }}>
             <ResponsiveContainer width="100%" height={barHeight} style={{ outline: 'none' }}>
-              <BarChart layout="vertical" data={barData} margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
+              <BarChart layout="vertical" data={barData} margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
                 <XAxis type="number" tick={{ fontSize: 10 }} unit=" kWh" />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} />
+                <YAxis type="category" dataKey="name" hide />
                 <Tooltip formatter={(v, name) => [`${Number(v).toFixed(2)} kWh`, name]} />
                 <Bar dataKey="value" radius={[0, 3, 3, 0]}>
                   {barData.map((row) => <Cell key={row.name} fill={row.fill} />)}
