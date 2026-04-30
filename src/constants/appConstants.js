@@ -85,7 +85,7 @@ export const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catal
 
 export const FACTURA_PREVIEW_MOCK_FALLBACK = false; // true = muestra mock si no hay datos del cotizador; false = oculta el componente
 
-export const API_BASE           = "https://extractor.13.38.9.119.nip.io";
+export const API_BASE           = import.meta.env.VITE_API_URL || "https://extractor.13.38.9.119.nip.io";
 export const SESION_URL         = `${API_BASE}/sesion`;
 const subdomain = window.location.hostname.split(".")[0];
 const cotizadorBase = subdomain === "develop"
