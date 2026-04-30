@@ -61,7 +61,7 @@ export default function FacturaUpload() {
   const [ceRadio, setCeRadio]         = useState(null); // radioMetros — para banner
   const [zonaWarn, setZonaWarn]       = useState("");   // aviso no bloqueante
   const [listaCE, setListaCE]         = useState(null); // caché de comunidades
-  const [devCESelected, setDevCESelected] = useState(false);
+  const [devCESelected, setDevCESelected] = useState("");
   const listaCERef                    = useRef([]);     // ref para evitar stale closure
 
   // ── Step 2A — PDF upload ──────────────────────────────────────────────────
@@ -369,19 +369,7 @@ export default function FacturaUpload() {
   };
 
   const handleDevCESelect = (ceName) => {
-    if (!ceName) return;
-    const ces = listaCERef.current;
-    console.log("[DEV] CEs disponibles:", ces.length, ces[0]);
-    const ce = ces.find(c => c.name === ceName || c.addressName === ceName)
-            || ces.find(c => (c.name || c.addressName || "").toLowerCase().includes(ceName.toLowerCase()));
-    console.log("[DEV] CE encontrada:", ce);
-    if (ce) {
-      const lat = parseFloat(ce.lat);
-      const lon = parseFloat(ce.lng);
-      setCliente(prev => ({ ...prev, direccion: `${lat}, ${lon}` }));
-      setUserCoords({ lat, lon });
-    }
-    setDevCESelected(true);
+    setDevCESelected(ceName || "");
   };
 
   const handleSelectSuggestion = (item) => {
@@ -554,7 +542,8 @@ export default function FacturaUpload() {
       });
 
       // 3. Calcular proximidad con Haversine
-      const cesFiltradas = ceFijada ? ces.filter(ce => ce.name === ceFijada || ce.addressName === ceFijada) : ces;
+      const cesParaDev = devCESelected ? ces.filter(ce => ce.name === devCESelected || ce.addressName === devCESelected) : null;
+      const cesFiltradas = cesParaDev?.length ? cesParaDev : (ceFijada ? ces.filter(ce => ce.name === ceFijada || ce.addressName === ceFijada) : ces);
       const ceResult = await runZonaCheck(userLat, userLon, cesFiltradas.length ? cesFiltradas : ces);
       enviarLead(LEAD_URL, { cliente, ...ceResult, id_generacion: resolverIdGeneracion(idGeneracion, ceResult?.ceNombre) }, () => setLeadWarn(true)); // fire-and-forget
       const ceRestringida = !devCESelected && RESTRICT_TO_CE && ceResult?.fsmstate === "01_DENTRO_ZONA" && ceResult?.ceNombre !== RESTRICT_TO_CE;
@@ -1364,7 +1353,6 @@ export default function FacturaUpload() {
   return (
     <>
 
-
       <div className="cs-page">
 
         {/* Header */}
@@ -1497,6 +1485,21 @@ export default function FacturaUpload() {
 
         {/* ── STEP 1 — Datos del cliente ── */}
         {!loading && status !== "sent" && status !== "fuera_zona" && status !== "asesor_solicitado" && step === 1 && (
+          <div style={{ position: 'relative', width: '100%', maxWidth: 620 }}>
+            {(import.meta.env.DEV || window.location.hostname.split(".")[0] === "develop") && (
+              <div style={{ position: 'absolute', left: -140, top: 0 }}>
+                <select
+                  onChange={e => handleDevCESelect(e.target.value)}
+                  defaultValue=""
+                  style={{ fontSize: 11, color: '#999', border: '1px dashed #ccc', borderRadius: 4, padding: '4px 8px', background: 'rgba(255,255,255,0.85)', cursor: 'pointer', maxWidth: 130 }}
+                >
+                  <option value="" disabled>🛠 CE</option>
+                  {Object.keys(CE_ID_MAP).map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           <div className="cs-card fade-in">
             <div className="cs-step-indicator">
               <div className="cs-step-dot active">1</div>
@@ -1552,21 +1555,6 @@ export default function FacturaUpload() {
               {clienteErrors.telefono && <span className="cs-field-error">{clienteErrors.telefono}</span>}
             </div>
 
-            {(import.meta.env.DEV || window.location.hostname.split(".")[0] === "develop") && (
-              <div style={{ marginBottom: 8 }}>
-                <select
-                  onChange={e => handleDevCESelect(e.target.value)}
-                  defaultValue=""
-                  style={{ fontSize: 11, color: '#888', border: '1px dashed #ccc', borderRadius: 4, padding: '3px 6px', background: '#fafafa', cursor: 'pointer' }}
-                >
-                  <option value="" disabled>🛠 [DEV] Seleccionar CE</option>
-                  {Object.keys(CE_ID_MAP).map(name => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
             <div className="cs-field-group" style={{ marginBottom:16 }} ref={dropdownRef}>
               <label className="cs-label">
                 Dirección{userCoords && (
@@ -1601,6 +1589,7 @@ export default function FacturaUpload() {
             <button className="cs-btn-primary" onClick={handleContinuar}>
               Continuar →
             </button>
+          </div>
           </div>
         )}
 
