@@ -21,6 +21,7 @@ import {
 } from "../utils/facturaUtils";
 import OptimizerModal from "./OptimizerModal";
 import PlanScreen from "./PlanScreen";
+import { CE_ID_MAP } from "../constants/ceMappings";
 
 export default function FacturaUpload() {
   // ── Steps & navigation ───────────────────────────────────────────────────
@@ -60,6 +61,7 @@ export default function FacturaUpload() {
   const [ceRadio, setCeRadio]         = useState(null); // radioMetros — para banner
   const [zonaWarn, setZonaWarn]       = useState("");   // aviso no bloqueante
   const [listaCE, setListaCE]         = useState(null); // caché de comunidades
+  const [devCESelected, setDevCESelected] = useState(false);
   const listaCERef                    = useRef([]);     // ref para evitar stale closure
 
   // ── Step 2A — PDF upload ──────────────────────────────────────────────────
@@ -366,6 +368,22 @@ export default function FacturaUpload() {
     }, 500);
   };
 
+  const handleDevCESelect = (ceName) => {
+    if (!ceName) return;
+    const ces = listaCERef.current;
+    console.log("[DEV] CEs disponibles:", ces.length, ces[0]);
+    const ce = ces.find(c => c.name === ceName || c.addressName === ceName)
+            || ces.find(c => (c.name || c.addressName || "").toLowerCase().includes(ceName.toLowerCase()));
+    console.log("[DEV] CE encontrada:", ce);
+    if (ce) {
+      const lat = parseFloat(ce.lat);
+      const lon = parseFloat(ce.lng);
+      setCliente(prev => ({ ...prev, direccion: `${lat}, ${lon}` }));
+      setUserCoords({ lat, lon });
+    }
+    setDevCESelected(true);
+  };
+
   const handleSelectSuggestion = (item) => {
     setCliente((prev) => ({ ...prev, direccion: item.display_name }));
     setUserCoords({ lat: parseFloat(item.lat), lon: parseFloat(item.lon) });
@@ -539,7 +557,7 @@ export default function FacturaUpload() {
       const cesFiltradas = ceFijada ? ces.filter(ce => ce.name === ceFijada || ce.addressName === ceFijada) : ces;
       const ceResult = await runZonaCheck(userLat, userLon, cesFiltradas.length ? cesFiltradas : ces);
       enviarLead(LEAD_URL, { cliente, ...ceResult, id_generacion: resolverIdGeneracion(idGeneracion, ceResult?.ceNombre) }, () => setLeadWarn(true)); // fire-and-forget
-      const ceRestringida = RESTRICT_TO_CE && ceResult?.fsmstate === "01_DENTRO_ZONA" && ceResult?.ceNombre !== RESTRICT_TO_CE;
+      const ceRestringida = !devCESelected && RESTRICT_TO_CE && ceResult?.fsmstate === "01_DENTRO_ZONA" && ceResult?.ceNombre !== RESTRICT_TO_CE;
       if (ceRestringida) {
         updateFsmstate("02_FUERA_ZONA");
         setStatus("fuera_zona");
@@ -1533,6 +1551,21 @@ export default function FacturaUpload() {
                 value={cliente.telefono} onChange={handleCliente} />
               {clienteErrors.telefono && <span className="cs-field-error">{clienteErrors.telefono}</span>}
             </div>
+
+            {import.meta.env.DEV && (
+              <div style={{ marginBottom: 8 }}>
+                <select
+                  onChange={e => handleDevCESelect(e.target.value)}
+                  defaultValue=""
+                  style={{ fontSize: 11, color: '#888', border: '1px dashed #ccc', borderRadius: 4, padding: '3px 6px', background: '#fafafa', cursor: 'pointer' }}
+                >
+                  <option value="" disabled>🛠 [DEV] Seleccionar CE</option>
+                  {Object.keys(CE_ID_MAP).map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="cs-field-group" style={{ marginBottom:16 }} ref={dropdownRef}>
               <label className="cs-label">
