@@ -1,4 +1,5 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
+import { FACTURA_PREVIEW_MOCK_FALLBACK } from '../constants/appConstants';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, Cell,
@@ -123,7 +124,7 @@ const buildBarData = (gb, produto) => [
   ...(produto === 'AR' ? [{ name: 'Autoconsumo remoto', value: gb.autoconsumo_remoto_kwh, fill: '#A5D6A7' }] : []),
   { name: 'Energía del mercado', value: gb.energia_mercado_kwh, fill: '#F5A623' },
   { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,      fill: '#79AEC4' },
-  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#bbdbf6' },
+  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#9fd1f9' },
 ];
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -133,22 +134,22 @@ const isValid = (v) => !!(v && v.resumen && v.impuestos && v.grafico_barras && v
 const SHOW_EDIT_BUTTON = import.meta.env.DEV;
 
 export default function FacturaPreview({ data = null }) {
-  const [localData, setLocalData] = useState(() => isValid(data) ? data : null);
-  const [editOpen, setEditOpen]   = useState(false);
+  const [editedData, setEditedData] = useState(null);
+  const [editOpen, setEditOpen]     = useState(false);
+  const [editJson, setEditJson]     = useState('');
+  const [editError, setEditError]   = useState('');
 
-  useEffect(() => { if (isValid(data)) setLocalData(data); }, [data]);
-  const [editJson, setEditJson]   = useState('');
-  const [editError, setEditError] = useState('');
+  const resolved = editedData ?? (isValid(data) ? data : null) ?? (FACTURA_PREVIEW_MOCK_FALLBACK ? MOCK_DATA : null);
 
-  const d   = localData;
+  const d   = resolved;
   const r   = d?.resumen;
   const imp = d?.impuestos;
   const barData = useMemo(() => d ? buildBarData(d.grafico_barras, d.produto) : [], [d]);
 
-  if (!localData) return null;
+  if (!resolved) return null;
 
   const handleOpenEdit = () => {
-    setEditJson(JSON.stringify(localData, null, 2));
+    setEditJson(JSON.stringify(resolved, null, 2));
     setEditError('');
     setEditOpen(true);
   };
@@ -157,23 +158,28 @@ export default function FacturaPreview({ data = null }) {
     try {
       const parsed = JSON.parse(editJson);
       if (!isValid(parsed)) { setEditError('JSON incompleto: falta alguna clave requerida (resumen, impuestos, grafico_barras…)'); return; }
-      setLocalData(parsed);
+      setEditedData(parsed);
       setEditOpen(false);
     } catch (e) {
       setEditError('JSON inválido: ' + e.message);
     }
   };
 
-  const resumenRows = [
+  const energyRows = [
     ...(d.produto === 'AR' ? [{ label: 'Autoconsumo remoto', val: r.autoconsumo_remoto, color: '#7CB342' }] : []),
-    { label: 'Energía del mercado', val: r.energia_mercado,     color: '#F5A623' },
-    { label: 'Excedente',    val: r.excedente_remoto,    color: r.excedente_remoto < 0 ? '#3ac628' : '#111' },
+    { label: 'Energía del mercado', val: r.energia_mercado,  color: '#F5A623' },
+    { label: 'Autoconsumo',         val: 0,                   color: '#79AEC4' },
+    { label: 'Excedente',           val: r.excedente_remoto, color: r.excedente_remoto < 0 ? '#9fd1f9' : '#111' },
+  ];
+  const otherRows = [
     { label: 'Potencia',            val: r.potencia },
     { label: 'Otros peajes',        val: r.otros_peajes },
-    { label: 'Cuotas reguladas',    val: r.cuotas_reguladas },
+    { label: 'Cuotas reguladas', sublabel: 'peajes + cargos', val: r.cuotas_reguladas },
     { label: 'Cuota mantenimiento', val: r.cuota_mantenimiento },
     { label: "IVA's",               val: r.ivas },
   ];
+  // cada fila energyRows ≈ 21px → altura barra chart = nº filas × 21 + margens
+  const barHeight = energyRows.length * 45 + 30;
 
   return (
     <div style={{ fontFamily: 'inherit', width: '100%', border: '1px solid #ddd', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
@@ -259,29 +265,58 @@ export default function FacturaPreview({ data = null }) {
           </div>
         </div>
 
-        {/* ── Resumen + Barras (side-by-side md+, stacked mobile) ─────────── */}
-        <div className="flex flex-col sm:flex-row gap-5 mb-6" style={{ marginTop: 32 }}>
+        {/* ── Caixa valores | Gráfico | Labels ────────────────────────────── */}
+        <div style={{ display: 'flex', gap: 8, marginTop: 32, alignItems: 'flex-start' }}>
 
-          {/* Caja de resumen */}
-          <div style={{ border: '1.5px solid #bbb', borderRadius: 8, padding: '12px 16px', fontSize: 13, flexShrink: 0 }}>
-            {resumenRows.map(({ label, val, color }) => (
-              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: 16, marginBottom: 4, alignItems: 'baseline' }}>
-                <span style={{ fontSize: 11, color: '#666', whiteSpace: 'nowrap' }}>{label}</span>
+          {/* Col 1: caixa estreita — apenas valores */}
+          <div style={{ border: '1.5px solid #bbb', borderRadius: 8, padding: '0 14px', fontSize: 13, flexShrink: 0 }}>
+            {energyRows.map(({ label, val, color }) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', height: 45 }}>
                 <span style={{ fontWeight: 600, color: color || '#111' }}>{fmtEur(val)}</span>
               </div>
             ))}
-            <div style={{ borderTop: '2px solid #111', marginTop: 8, paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: 13 }}>
-              <span>Total</span>
-              <span>{fmtEur(imp.total_factura)}</span>
+            {/* Separador com altura = XAxis (30px) */}
+            <div style={{ height: 30, display: 'flex', alignItems: 'center' }}>
+              <div style={{ width: '100%', borderTop: '1.5px solid #ccc' }} />
+            </div>
+            {otherRows.map(({ label, val }) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', height: 30 }}>
+                <span style={{ fontWeight: 600 }}>{fmtEur(val)}</span>
+              </div>
+            ))}
+            <div style={{ borderTop: '2px solid #111', marginTop: 4, paddingTop: 6, paddingBottom: 10, textAlign: 'right', fontWeight: 800, fontSize: 13 }}>
+              {fmtEur(imp.total_factura)}
             </div>
           </div>
 
-          {/* Gráfico de barras horizontal */}
-          <div className="flex-1 min-w-[260px]">
-            <ResponsiveContainer width="100%" height={160} style={{ outline: 'none' }}>
-              <BarChart layout="vertical" data={barData} margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
+          {/* Col 2: labels coloridas alinhadas com barras + descriptions otros */}
+          <div style={{ flexShrink: 0, fontSize: 12, textAlign: 'center' }}>
+            {/* Labels das barras — cor da barra correspondente */}
+            {energyRows.map(({ label }, i) => (
+              <div key={label} style={{ height: 45, display: 'flex', alignItems: 'center', justifyContent: 'center', color: barData[i]?.fill || '#111', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                {label}
+              </div>
+            ))}
+            {/* Gap = XAxis height */}
+            <div style={{ height: 30 }} />
+            {/* Descriptions otros */}
+            {otherRows.map(({ label, sublabel }) => (
+              <div key={label} style={{ height: 30, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 4 }}>
+                <span style={{ color: '#444' }}>{label}</span>
+                {sublabel && <span style={{ fontSize: 10, color: '#aaa' }}>({sublabel})</span>}
+              </div>
+            ))}
+            <div style={{ height: 30, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', fontWeight: 700, fontSize: 13, marginTop: 7 }}>
+              Total a pagar en tu Factura
+            </div>
+          </div>
+
+          {/* Col 3: gráfico de barras sem YAxis labels */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <ResponsiveContainer width="100%" height={barHeight} style={{ outline: 'none' }}>
+              <BarChart layout="vertical" data={barData} margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
                 <XAxis type="number" tick={{ fontSize: 10 }} unit=" kWh" />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} />
+                <YAxis type="category" dataKey="name" hide />
                 <Tooltip formatter={(v, name) => [`${Number(v).toFixed(2)} kWh`, name]} />
                 <Bar dataKey="value" radius={[0, 3, 3, 0]}>
                   {barData.map((row) => <Cell key={row.name} fill={row.fill} />)}
@@ -365,7 +400,7 @@ export default function FacturaPreview({ data = null }) {
                 <TD>{e.kwh        != null ? fmtKwh(e.kwh)       : '—'}</TD>
                 <TD />
                 <TD>{e.precio_kwh != null ? fmtP6(e.precio_kwh) : '—'}</TD>
-                <TD style={{ color: e.total != null && e.total < 0 ? '#3ac628' : '#111' }}>
+                <TD style={{ color: e.total != null && e.total < 0 ? '#7CB342' : '#111' }}>
                   {fmtEur(e.total)}
                 </TD>
               </tr>
@@ -409,7 +444,7 @@ export default function FacturaPreview({ data = null }) {
               <td colSpan={4} style={{ textAlign: 'right', padding: '6px 6px', fontSize: 13, fontWeight: 700 }}>
                 TOTAL FACTURA
               </td>
-              <td style={{ background: '#1565C0', color: '#fff', textAlign: 'right', padding: '6px 8px', fontSize: 13, fontWeight: 800 }}>
+              <td style={{ background: '#1565C0', color: '#fff', textAlign: 'right', padding: '6px 8px', fontSize: 13, fontWeight: 800, clipPath: 'inset(0 0 0 0 round 0 0 6px 6px)' }}>
                 {fmtEur(imp.total_factura)}
               </td>
             </tr>
