@@ -183,18 +183,22 @@ export default function FacturaPreview({ data = null }) {
 
   // stroke = cor da linha de contorno | legendColor = cor do quadrado na legenda | fill = preenchimento da área
   const AREA_CFG = [
-    { key: 'autoconsumo', name: 'Autoconsumo',        stroke: '#057adb', legendColor: '#49a1a9', fill: '#42A5F5', fillOpacity: 0.50 },
-    { key: 'consumida',   name: 'Energía consumida', stroke: '#c87b00', legendColor: '#F5A623', fill: '#F5A623', fillOpacity: 0.35 },
-    { key: 'generada',    name: 'Energía generada',  stroke: 'rgb(80, 151, 4)', legendColor: '#7CB342', fill: '#7CB342', fillOpacity: 0.35 }
+    { key: 'generada',    name: 'Energía generada',  stroke: 'rgb(80, 151, 4)', legendColor: '#7CB342', fill: '#7CB342', fillOpacity: 0.35 },
+    { key: 'consumida',   name: 'Energía consumida', stroke: '#c87b00',         legendColor: '#F5A623', fill: '#F5A623', fillOpacity: 0.35 },
+    { key: 'autoconsumo', name: 'Autoconsumo',        stroke: '#057adb',         legendColor: '#49a1a9', fill: '#42A5F5', fillOpacity: 0.50 },
   ];
+  const LEGEND_ORDER = ['autoconsumo', 'consumida', 'generada'];
   const areaChartLegend = () => (
     <div style={{ display: 'flex', justifyContent: 'center', gap: 16, fontSize: 12, marginTop: 4 }}>
-      {AREA_CFG.map(cfg => (
-        <span key={cfg.key} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ width: 12, height: 12, background: cfg.legendColor, opacity: 0.5, display: 'inline-block', borderRadius: 2 }} />
-          {cfg.name}
-        </span>
-      ))}
+      {LEGEND_ORDER.map(key => {
+        const cfg = AREA_CFG.find(c => c.key === key);
+        return (
+          <span key={key} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 12, height: 12, background: cfg.legendColor, opacity: 0.5, display: 'inline-block', borderRadius: 2 }} />
+            {cfg.name}
+          </span>
+        );
+      })}
     </div>
   );
 

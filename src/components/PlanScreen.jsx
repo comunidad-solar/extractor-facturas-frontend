@@ -26,6 +26,15 @@ export default function PlanScreen({
   // eslint-disable-next-line no-unused-vars
   const [sesionData, setSesionData] = useState(sesionDataProp ?? null);
   const [sesionFailed, setSesionFailed] = useState(false);
+  const [ceFotoUrl, setCeFotoUrl] = useState(null);
+
+  useEffect(() => {
+    if (!ceNombre) return;
+    fetch(`${API_BASE}/ce/foto?name=${encodeURIComponent(ceNombre)}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data?.foto_url) setCeFotoUrl(data.foto_url); })
+      .catch(() => {});
+  }, [ceNombre]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const sessionId = localStorage.getItem("cs_session_id");
@@ -128,7 +137,7 @@ export default function PlanScreen({
           {/* Columna derecha: imagen */}
           <div className="cs-plan-hero-img" style={{ flex:"0 0 auto", display:"flex", alignItems:"flex-start" }}>
             <img
-              src="/Intersect.png"
+              src={ceFotoUrl || "/Intersect.png"}
               alt="Instalación solar"
               style={{ width:300, height:340, objectFit:"cover", borderRadius:20, display:"block" }}
             />
@@ -181,7 +190,7 @@ export default function PlanScreen({
           {/* Tarjeta Origen — CE */}
           <div style={{ flex:1, background:"#fff", borderRadius:14, overflow:"hidden", boxShadow:"0 2px 12px rgba(0,0,0,0.06)" }}>
             <div style={{ position:"relative" }}>
-              <img src="/Intersect.png" alt="Comunidad Energética" style={{ width:"100%", height:160, objectFit:"cover", display:"block" }} />
+              <img src={ceFotoUrl || "/Intersect.png"} alt="Comunidad Energética" style={{ width:"100%", height:160, objectFit:"cover", display:"block" }} />
               <span style={{ position:"absolute", top:10, left:10, background:"#EF931D", color:"#fff", fontSize:11, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", padding:"5px 12px", borderRadius:20 }}>
                 {CE_STATUS_LABELS[ceStatus] || ceStatus || "—"}
               </span>
