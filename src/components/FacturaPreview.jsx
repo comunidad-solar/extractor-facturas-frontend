@@ -434,7 +434,7 @@ export default function FacturaPreview({ data = null }) {
             {d.otros_conceptos.map(o => (
               <tr key={o.concepto}>
                 <td style={{ padding: '2px 6px 2px 0', fontSize: 12 }}>
-                  {o.concepto}
+                  {o.concepto.replace(/\s*MEGAPARK\s*/gi, '').trim()}
                   {o.porcentaje != null && (
                     <span style={{ color: '#555', marginLeft: 6 }}>{o.porcentaje}%</span>
                   )}
