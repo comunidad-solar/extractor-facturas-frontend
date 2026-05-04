@@ -83,7 +83,7 @@ export const RESTRICT_TO_CE = "Mérida 1";
 // CE API proxiada por Vite em dev (evita CORS); em produção usa URL absoluta
 export const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu/server/api/get-ce-info-lat-lng";
 
-export const FACTURA_PREVIEW_MOCK_FALLBACK = false; // true = muestra mock si no hay datos del cotizador; false = oculta el componente
+export const FACTURA_PREVIEW_MOCK_FALLBACK = true; // true = muestra mock si no hay datos del cotizador; false = oculta el componente
 
 export const API_BASE           = import.meta.env.VITE_API_URL || "https://extractor.13.38.9.119.nip.io";
 export const SESION_URL         = `${API_BASE}/sesion`;
