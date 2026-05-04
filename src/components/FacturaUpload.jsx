@@ -107,6 +107,7 @@ export default function FacturaUpload() {
   const [extractSessionId,  setExtractSessionId]  = useState(null);
   const [extract1SessionId, setExtract1SessionId] = useState(null);
   const [extract2SessionId, setExtract2SessionId] = useState(null);
+  const [continuarSessionId, setContinuarSessionId] = useState(null);
   const [dealId, setDealId]                     = useState(null);
   const [mpklogId, setMpklogId]                 = useState(null);
   const [sesionData, setSesionData]             = useState(null);
@@ -485,6 +486,31 @@ export default function FacturaUpload() {
     }
   };
 
+  const chamarContinuar = async (ceResult) => {
+    try {
+      const payload = {
+        cliente: { nombre: cliente.nombre, apellidos: cliente.apellidos, correo: cliente.correo, telefono: cliente.telefono, direccion: cliente.direccion },
+        ce: { nombre: ceResult?.ceNombre ?? ceNombre, direccion: ceResult?.ceDireccion ?? ceDireccion, status: ceResult?.ceStatus ?? ceStatus, etiqueta: ceResult?.ceEtiqueta ?? ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceResult?.ceNombre ?? ceNombre) },
+        Fsmstate: ceResult?.fsmstate ?? "02_FUERA_ZONA",
+        FsmPrevious: null,
+      };
+      console.log("[/continuar] enviando payload:", payload);
+      const fd = new FormData();
+      fd.append("data", JSON.stringify(payload));
+      const res = await fetch(`${API_BASE}/continuar`, { method: "POST", body: fd });
+      if (res.ok) {
+        const { session_id } = await res.json();
+        console.log("[/continuar] session_id recebido:", session_id ?? null);
+        if (session_id) {
+          setContinuarSessionId(session_id);
+          localStorage.setItem("cs_session_id", session_id);
+        }
+      } else {
+        console.warn("[/continuar] resposta não ok:", res.status);
+      }
+    } catch (e) { console.error("[/continuar] erro:", e); }
+  };
+
   const handleContinuar = async () => {
     if (!validateCliente()) return;
 
@@ -553,12 +579,14 @@ export default function FacturaUpload() {
       } else if (ceResult?.fsmstate === "02_FUERA_ZONA") {
         setStatus("fuera_zona");
       } else {
+        await chamarContinuar(ceResult);
         setStep(2);
       }
     } catch {
       setZonaWarn("No pudimos verificar tu zona. Continuamos sin verificación de cobertura.");
       updateFsmstate("02_FUERA_ZONA");
       setCeNombre(""); setCeDireccion(""); setCeDistancia(null); setCeRadio(null);
+      await chamarContinuar(null);
       setStep(2);
     } finally {
       setLoading(false);
@@ -954,7 +982,7 @@ export default function FacturaUpload() {
 
         // Enviar ao Zoho Flow via /enviar (igual ao fluxo normal)
         const fd = new FormData();
-        fd.append("data", JSON.stringify({ cliente: buildClientePayload(), factura: facturaAsesor, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload, session_id: extractSessionId }));
+        fd.append("data", JSON.stringify({ cliente: buildClientePayload(), factura: facturaAsesor, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload, session_id: extractSessionId, continuar_session_id: continuarSessionId }));
         if (mode === "pdf" && file) fd.append("file", file, file.name);
 
         // Enviar em paralelo: /enviar (Zoho Flow) + ASESOR_ENVIO_URL
@@ -1008,6 +1036,7 @@ export default function FacturaUpload() {
       const dataPayload = {
         cliente: buildClientePayload(), factura, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload,
         session_id: extractSessionId,
+        continuar_session_id: continuarSessionId,
         ...(factura1Data && { factura_1: buildFactura1(), session_id_1: extract1SessionId }),
         ...(factura2Data && { factura_2: buildFactura2(), session_id_2: extract2SessionId }),
       };
