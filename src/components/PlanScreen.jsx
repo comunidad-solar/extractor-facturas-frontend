@@ -29,6 +29,22 @@ export default function PlanScreen({
   const [ceFotoUrl, setCeFotoUrl] = useState(null);
 
   useEffect(() => {
+    const sessionId = new URLSearchParams(window.location.search).get("session_id")
+      ?? localStorage.getItem("cs_session_id");
+    const planUrl = window.location.href;
+    console.log("[/deals/lead-source] session_id:", sessionId, "plan_url:", planUrl);
+    if (sessionId) {
+      fetch(`${API_BASE}/deals/lead-source`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId, plan_url: planUrl }),
+      })
+        .then(res => res.json().then(data => console.log("[/deals/lead-source] resposta:", data)).catch(() => {}))
+        .catch(() => {});
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     if (!ceNombre) return;
     fetch(`${API_BASE}/ce/foto?name=${encodeURIComponent(ceNombre)}`)
       .then(res => res.ok ? res.json() : null)
