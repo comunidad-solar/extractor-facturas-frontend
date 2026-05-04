@@ -245,7 +245,7 @@ export default function PlanScreen({
             <p style={{ fontSize:22, fontWeight:800, color:"#121212", marginBottom:16 }}>Tu plan</p>
             <table className="cs-table">
               <tbody>
-                <tr><td>Numero de paneles</td><td>{panelesSel}</td></tr>
+                <tr><td>Número de paneles</td><td>{panelesSel}</td></tr>
                 <tr><td>Potencia total</td><td>{parseInt(fmtES(planData?.potenciaTotal ?? 3))} kWh</td></tr>
                 <tr><td>Producción de energía anual estimada*</td><td>{fmtES(planData?.produccionAnual ?? 4101.25)} kWh</td></tr>
                 <tr><td>Ahorro anual medio estimado*</td><td>{fmtES(planData?.ahorroAnual ?? 522.48)} €</td></tr>
@@ -423,13 +423,13 @@ export default function PlanScreen({
           </div>
         </div>
 
-        {/* ── VOLVER ── */}
-        <button className="cs-btn-ghost" style={{ marginTop:24 }} onClick={onVolver}>← Volver al inicio</button>
-
         {/* ── FOOTNOTE ── */}
-        <p style={{ fontSize:11, color:"#aaa", marginTop:16, lineHeight:1.6 }}>
+        <p style={{ fontSize:11, color:"#111", marginTop:16, lineHeight:1.6 }}>
           * La electricidad a 0€ es la producida por tus paneles solares, seguirás pagando la energía que no produzcas.
         </p>
+
+        {/* ── VOLVER ── */}
+        <button className="cs-btn-ghost" style={{ marginTop:16 }} onClick={onVolver}>← Volver al inicio</button>
       </div>
     </div>
     </>

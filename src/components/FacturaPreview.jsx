@@ -82,7 +82,7 @@ const MOCK_DATA = {
     { concepto: "Impuesto eléctrico",           porcentaje: 5.11, dias: null, precio_dia: null,     total:  2.82 },
     { concepto: "Financiación del bono social", porcentaje: null, dias: 30,   precio_dia: 0.006282, total:  0.19 },
     { concepto: "Alquiler de equipo de medida", porcentaje: null, dias: 30,   precio_dia: 0.026630, total:  0.80 },
-    { concepto: "Cuota mantenimiento MEGAPARK", porcentaje: null, dias: 30,   precio_dia: 0.333333, total: 10.00 },
+    { concepto: "Cuota mantenimiento", porcentaje: null, dias: 30,   precio_dia: 0.333333, total: 10.00 },
   ],
   impuestos: {
     base_imponible:   68.97,
@@ -181,6 +181,23 @@ export default function FacturaPreview({ data = null }) {
   // cada fila energyRows ≈ 21px → altura barra chart = nº filas × 21 + margens
   const barHeight = energyRows.length * 45 + 30;
 
+  // stroke = cor da linha de contorno | legendColor = cor do quadrado na legenda | fill = preenchimento da área
+  const AREA_CFG = [
+    { key: 'autoconsumo', name: 'Autoconsumo',        stroke: '#057adb', legendColor: '#49a1a9', fill: '#42A5F5', fillOpacity: 0.50 },
+    { key: 'consumida',   name: 'Energía consumida', stroke: '#c87b00', legendColor: '#F5A623', fill: '#F5A623', fillOpacity: 0.35 },
+    { key: 'generada',    name: 'Energía generada',  stroke: 'rgb(80, 151, 4)', legendColor: '#7CB342', fill: '#7CB342', fillOpacity: 0.35 }
+  ];
+  const areaChartLegend = () => (
+    <div style={{ display: 'flex', justifyContent: 'center', gap: 16, fontSize: 12, marginTop: 4 }}>
+      {AREA_CFG.map(cfg => (
+        <span key={cfg.key} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ width: 12, height: 12, background: cfg.legendColor, opacity: 0.5, display: 'inline-block', borderRadius: 2 }} />
+          {cfg.name}
+        </span>
+      ))}
+    </div>
+  );
+
   return (
     <div style={{ fontFamily: 'inherit', width: '100%', border: '1px solid #ddd', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
 
@@ -244,11 +261,12 @@ export default function FacturaPreview({ data = null }) {
             <AreaChart data={d.grafico_horario} margin={{ top: 36, right: 16, left: 0, bottom: 0 }}>
               <XAxis dataKey="hora" tick={{ fontSize: 10 }} ticks={[0, 4, 8, 12, 16, 20]} tickFormatter={v => `${v}h`} />
               <YAxis tickFormatter={v => `${v} kWh`} tick={{ fontSize: 10 }} width={58} />
-              <Tooltip formatter={(v, name) => [`${Number(v).toFixed(2)} kWh`, name]} labelFormatter={v => `${v}h`} />
-              <Legend iconType="square" wrapperStyle={{ fontSize: 12 }} />
-              <Area type="monotone" dataKey="generada"    name="Energía generada"          stroke="#7CB342" fill="#7CB342" fillOpacity={0.35} />
-              <Area type="monotone" dataKey="consumida"   name="Energía consumida" stroke="#F5A623" fill="#F5A623" fillOpacity={0.35} />
-              <Area type="monotone" dataKey="autoconsumo" name="Autoconsumo"          stroke="#42A5F5" fill="#42A5F5" fillOpacity={0.50} />
+              <Tooltip formatter={(v, name) => [`${Number(v).toFixed(2)} kWh`, name]} labelFormatter={v => `${v}h`} contentStyle={{ fontSize: 11, padding: '4px 8px' }} itemStyle={{ margin: 0, padding: '1px 0' }} />
+              <Legend content={areaChartLegend} />
+              {AREA_CFG.map(cfg => (
+                <Area key={cfg.key} type="monotone" dataKey={cfg.key} name={cfg.name}
+                  stroke={cfg.stroke} fill={cfg.fill} fillOpacity={cfg.fillOpacity} />
+              ))}
             </AreaChart>
           </ResponsiveContainer>
 
