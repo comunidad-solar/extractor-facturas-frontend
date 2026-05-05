@@ -290,6 +290,13 @@ export default function FacturaUpload() {
       if (csMpklogId) setMpklogId(prev => prev || csMpklogId);
       if (csFsmstate) setFsmstate(prev => prev || csFsmstate);
 
+      // Se session_id veio na URL (acesso anónimo), persistir para PlanScreen
+      const urlSessionId = params.get("session_id");
+      if (urlSessionId) {
+        console.log("[plan-demo] session_id encontrado na URL:", urlSessionId, "→ guardando em cs_session_id");
+        localStorage.setItem("cs_session_id", urlSessionId);
+      }
+
       // Limpar localStorage após restaurar
       localStorage.removeItem("cs_cliente");
       localStorage.removeItem("cs_factura");
