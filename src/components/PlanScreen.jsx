@@ -53,8 +53,9 @@ export default function PlanScreen({
   }, [ceNombre]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const sessionId = localStorage.getItem("cs_session_id");
-    console.log("[PlanScreen] cs_session_id:", sessionId);
+    const sessionId = new URLSearchParams(window.location.search).get("session_id")
+      ?? localStorage.getItem("cs_session_id");
+    console.log("[PlanScreen] session_id:", sessionId, "(url:", new URLSearchParams(window.location.search).get("session_id"), "/ ls:", localStorage.getItem("cs_session_id"), ")");
     if (!sessionId) return;
     fetch(`${API_BASE}/sesion/${sessionId}`)
       .then(res => {
