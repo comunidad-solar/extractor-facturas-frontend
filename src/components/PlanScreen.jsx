@@ -460,7 +460,7 @@ export default function PlanScreen({
       </div>
     </div>
       {modalListaEspera && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+        <div style={{ position:"fixed", inset:0, zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
           <div style={{ background:"#fff", borderRadius:16, padding:"36px 28px", maxWidth:420, width:"100%", textAlign:"center", boxShadow:"0 8px 40px rgba(0,0,0,0.18)" }}>
             <p style={{ fontSize:22, fontWeight:800, color:"#000", marginBottom:16, lineHeight:1.3 }}>¡Ya estás en lista de espera!</p>
             <p style={{ fontSize:15, color:"#444", lineHeight:1.7, marginBottom:28 }}>
