@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { fmtES } from "../utils/facturaUtils";
-import { API_BASE, CE_STATUS_LABELS } from "../constants/appConstants";
+import { API_BASE, CE_STATUS_LABELS, CE_FOTO_ENABLED } from "../constants/appConstants";
 import FacturaPreview from "./FacturaPreview";
 
 export default function PlanScreen({
@@ -45,7 +45,7 @@ export default function PlanScreen({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!ceNombre) return;
+    if (!CE_FOTO_ENABLED || !ceNombre) return;
     fetch(`${API_BASE}/ce/foto?name=${encodeURIComponent(ceNombre)}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => { if (data?.foto_url) setCeFotoUrl(data.foto_url); })
