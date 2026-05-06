@@ -511,6 +511,24 @@ export default function FacturaUpload() {
         if (session_id) {
           setContinuarSessionId(session_id);
           localStorage.setItem("cs_session_id", session_id);
+          // Polling background: Zoho callback chega ~3-4s depois
+          (async () => {
+            for (let i = 0; i < 15; i++) {
+              await new Promise(r => setTimeout(r, 3000));
+              try {
+                const pr = await fetch(`${API_BASE}/sesion/${session_id}`);
+                if (!pr.ok) break;
+                const pd = await pr.json();
+                if (pd.dealId && pd.mpklogId) {
+                  console.log("[/continuar] polling IDs recebidos:", { dealId: pd.dealId, mpklogId: pd.mpklogId });
+                  setDealId(prev  => prev || pd.dealId);
+                  setMpklogId(prev => prev || pd.mpklogId);
+                  return;
+                }
+              } catch (_) {}
+            }
+            console.warn("[/continuar] polling encerrado sem IDs");
+          })();
         }
       } else {
         console.warn("[/continuar] resposta não ok:", res.status);
@@ -639,21 +657,21 @@ export default function FacturaUpload() {
       dias_facturados:  f.dias_facturados,
       importe_factura:  f.importe_factura,
       // potencias
-      pot_p1_kw: pot.p1, pot_p2_kw: pot.p2, pot_p3_kw: pot.p3,
-      pot_p4_kw: pot.p4, pot_p5_kw: pot.p5, pot_p6_kw: pot.p6,
+      pot_p1_kw: pot.p1 ?? f.pot_p1_kw, pot_p2_kw: pot.p2 ?? f.pot_p2_kw, pot_p3_kw: pot.p3 ?? f.pot_p3_kw,
+      pot_p4_kw: pot.p4 ?? f.pot_p4_kw, pot_p5_kw: pot.p5 ?? f.pot_p5_kw, pot_p6_kw: pot.p6 ?? f.pot_p6_kw,
       // consumos
-      consumo_p1_kwh: con.p1, consumo_p2_kwh: con.p2, consumo_p3_kwh: con.p3,
-      consumo_p4_kwh: con.p4, consumo_p5_kwh: con.p5, consumo_p6_kwh: con.p6,
+      consumo_p1_kwh: con.p1 ?? f.consumo_p1_kwh, consumo_p2_kwh: con.p2 ?? f.consumo_p2_kwh, consumo_p3_kwh: con.p3 ?? f.consumo_p3_kwh,
+      consumo_p4_kwh: con.p4 ?? f.consumo_p4_kwh, consumo_p5_kwh: con.p5 ?? f.consumo_p5_kwh, consumo_p6_kwh: con.p6 ?? f.consumo_p6_kwh,
       // precios potencia
-      pp_p1: pp.p1, pp_p2: pp.p2, pp_p3: pp.p3,
-      pp_p4: pp.p4, pp_p5: pp.p5, pp_p6: pp.p6,
+      pp_p1: pp.p1 ?? f.pp_p1, pp_p2: pp.p2 ?? f.pp_p2, pp_p3: pp.p3 ?? f.pp_p3,
+      pp_p4: pp.p4 ?? f.pp_p4, pp_p5: pp.p5 ?? f.pp_p5, pp_p6: pp.p6 ?? f.pp_p6,
       // precios energia
-      pe_p1: pe.pe_p1, pe_p2: pe.pe_p2, pe_p3: pe.pe_p3,
-      pe_p4: pe.pe_p4, pe_p5: pe.pe_p5, pe_p6: pe.pe_p6,
+      pe_p1: pe.pe_p1 ?? f.pe_p1, pe_p2: pe.pe_p2 ?? f.pe_p2, pe_p3: pe.pe_p3 ?? f.pe_p3,
+      pe_p4: pe.pe_p4 ?? f.pe_p4, pe_p5: pe.pe_p5 ?? f.pe_p5, pe_p6: pe.pe_p6 ?? f.pe_p6,
       // impuestos
-      imp_ele: imp.imp_ele, iva: imp.iva,
+      imp_ele: imp.imp_ele ?? f.imp_ele, iva: imp.iva ?? f.iva,
       // otros básicos
-      alq_eq_dia: otros.alq_eq_dia, bono_social: desc.bono_social,
+      alq_eq_dia: otros.alq_eq_dia ?? f.alq_eq_dia, bono_social: desc.bono_social ?? f.bono_social,
       // otros nuevos
       consumo_periodo1_kwh:        otros.consumo_periodo1_kwh,
       precio_periodo1_eur_kwh:     otros.precio_periodo1_eur_kwh,
