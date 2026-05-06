@@ -5,7 +5,12 @@
       "Bash(npm run:*)",
       "Bash(npx eslint:*)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(claude plugin *)",
+      "Bash(ls ~/.claude/skills/napkin)",
+      "Read(//c/Users/ianro/.claude/skills/napkin/**)",
+      "Bash(not exist *)",
+      "PowerShell(if \\(-not \\(Test-Path \".claude\"\\)\\) { New-Item -ItemType Directory -Path \".claude\" })"
     ]
   }
 }
