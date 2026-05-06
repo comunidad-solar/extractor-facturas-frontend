@@ -87,7 +87,7 @@ export const FACTURA_PREVIEW_MOCK_FALLBACK = false;
 export const CE_FOTO_ENABLED = false; // true = busca foto da CE via GET /ce/foto; false = usa /Intersect.png
 export const FORCE_WAITING_LIST = true; // true = fuerza badge "En Espera", botón lista espera y Fsmstate 02_FUERA_ZONA al contratar // true = muestra mock si no hay datos del cotizador; false = oculta el componente
 
-export const API_BASE           = import.meta.env.VITE_API_URL || "https://extractor.13.38.9.119.nip.io";
+export const API_BASE           = "http://127.0.0.1:8012";
 export const SESION_URL         = `${API_BASE}/sesion`;
 const subdomain = window.location.hostname.split(".")[0];
 const cotizadorBase = subdomain === "develop"
