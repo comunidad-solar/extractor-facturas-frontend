@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { fmtES } from "../utils/facturaUtils";
-import { API_BASE, CE_STATUS_LABELS, CE_FOTO_ENABLED, FORCE_WAITING_LIST } from "../constants/appConstants";
+import { API_BASE, CE_STATUS_LABELS, CE_FOTO_ENABLED } from "../constants/appConstants";
 import FacturaPreview from "./FacturaPreview";
 
 export default function PlanScreen({
@@ -121,7 +121,7 @@ export default function PlanScreen({
                 <button
                   style={{ width:"100%", background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em" }}
                   onClick={onContratar}>
-                  {!FORCE_WAITING_LIST && ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
+                  {ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
                 </button>
               </div>
             </div>
@@ -186,7 +186,7 @@ export default function PlanScreen({
                 <button
                   style={{ marginTop:12, background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"12px 32px", fontSize:14, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em" }}
                   onClick={onContratar}>
-                  {!FORCE_WAITING_LIST && ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
+                  {ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
                 </button>
               </div>
               <div style={{ background:"#fff", borderRadius:14, padding:"28px 24px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, boxShadow:"0 2px 12px rgba(0,0,0,0.06)" }}>
@@ -209,7 +209,7 @@ export default function PlanScreen({
             <div style={{ position:"relative" }}>
               <img src={ceFotoUrl || "/Intersect.png"} alt="Comunidad Energética" style={{ width:"100%", height:160, objectFit:"cover", display:"block" }} />
               <span style={{ position:"absolute", top:10, left:10, background:"#EF931D", color:"#fff", fontSize:11, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", padding:"5px 12px", borderRadius:20 }}>
-                {FORCE_WAITING_LIST ? CE_STATUS_LABELS["Waiting list"] : (CE_STATUS_LABELS[ceStatus] || ceStatus || "—")}
+                {CE_STATUS_LABELS[ceStatus] || ceStatus || "—"}
               </span>
             </div>
             <div style={{ padding:"16px 18px" }}>

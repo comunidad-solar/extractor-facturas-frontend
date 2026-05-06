@@ -497,8 +497,8 @@ export default function FacturaUpload() {
     try {
       const payload = {
         cliente: { nombre: cliente.nombre, apellidos: cliente.apellidos, correo: cliente.correo, telefono: cliente.telefono, direccion: cliente.direccion },
-        ce: { nombre: ceResult?.ceNombre ?? ceNombre, direccion: ceResult?.ceDireccion ?? ceDireccion, status: ceResult?.ceStatus ?? ceStatus, etiqueta: ceResult?.ceEtiqueta ?? ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceResult?.ceNombre ?? ceNombre) },
-        Fsmstate: ceResult?.fsmstate ?? "02_FUERA_ZONA",
+        ce: { nombre: ceResult?.ceNombre ?? ceNombre, direccion: ceResult?.ceDireccion ?? ceDireccion, status: FORCE_WAITING_LIST ? "Waiting list" : (ceResult?.ceStatus ?? ceStatus), etiqueta: ceResult?.ceEtiqueta ?? ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceResult?.ceNombre ?? ceNombre) },
+        Fsmstate: FORCE_WAITING_LIST ? "02_FUERA_ZONA" : (ceResult?.fsmstate ?? "02_FUERA_ZONA"),
         FsmPrevious: null,
       };
       console.log("[/continuar] enviando payload:", payload);
@@ -1269,7 +1269,7 @@ export default function FacturaUpload() {
           manualFields.importe_factura || rawData.importe_factura || facturaLS?.importe_factura
         ) || null,
       },
-      Fsmstate:    FORCE_WAITING_LIST ? "02_FUERA_ZONA" : "08_PROPUESTA_ALQ",
+      Fsmstate:    "08_PROPUESTA_ALQ",
       FsmPrevious: Fsmstate || sd?.Fsmstate || urlRef.fsmstate || null,
       plan: {
         ahorro25Anos:            planData?.ahorro25Anos,
@@ -2313,7 +2313,7 @@ export default function FacturaUpload() {
                 onClick={handleContratar}
                 disabled={enviandoContrato}
               >
-                {enviandoContrato ? "Enviando..." : "Contratar ahora →"}
+                {enviandoContrato ? "Enviando..." : (ceStatus !== "Available" ? "Entrar en lista de espera →" : "Contratar ahora →")}
               </button>
             </div>
           </div>
