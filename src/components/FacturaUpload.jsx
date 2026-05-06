@@ -586,6 +586,10 @@ export default function FacturaUpload() {
       } else if (ceResult?.fsmstate === "02_FUERA_ZONA") {
         setStatus("fuera_zona");
       } else {
+        if (FORCE_WAITING_LIST) {
+          updateFsmstate("02_FUERA_ZONA");
+          setCeStatus("Waiting list");
+        }
         await chamarContinuar(ceResult);
         setStep(2);
       }
