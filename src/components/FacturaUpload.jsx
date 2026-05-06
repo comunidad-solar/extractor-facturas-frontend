@@ -12,7 +12,7 @@ import {
   PERIODOS_POR_MES_3TD, TARIFAS_MULTI_FACTURA,
   CE_API_URL, API_BASE, SESION_URL, PLAN_REDIRECT_URL, QUOTING_URL, LEAD_URL,
   NOMINATIM_URL, CE_DETAIL_URL, CE_STATUS_LABELS,
-  ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL, RESTRICT_TO_CE,
+  ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL, RESTRICT_TO_CE, FORCE_WAITING_LIST,
 } from "../constants/appConstants";
 import {
   hasValue, emptyManual, resolverIdGeneracion, getCeNombreById,
@@ -1269,7 +1269,7 @@ export default function FacturaUpload() {
           manualFields.importe_factura || rawData.importe_factura || facturaLS?.importe_factura
         ) || null,
       },
-      Fsmstate:    "08_PROPUESTA_ALQ",
+      Fsmstate:    FORCE_WAITING_LIST ? "02_FUERA_ZONA" : "08_PROPUESTA_ALQ",
       FsmPrevious: Fsmstate || sd?.Fsmstate || urlRef.fsmstate || null,
       plan: {
         ahorro25Anos:            planData?.ahorro25Anos,
