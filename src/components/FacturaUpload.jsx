@@ -1449,7 +1449,28 @@ export default function FacturaUpload() {
             onSetTabActiva={setTabActiva}
             onSesionError={() => setSesionError(true)}
             facturaPreviewData={facturaPreviewData}
-            onSesionLoaded={(data) => { setSesionData(data); if (data?.facturaPreview) setFacturaPreviewData(data.facturaPreview); }}
+            onSesionLoaded={(data) => {
+              setSesionData(data);
+              if (data?.facturaPreview) setFacturaPreviewData(data.facturaPreview);
+              if (data?.ce) {
+                if (data.ce.nombre)        setCeNombre(data.ce.nombre);
+                if (data.ce.status)        setCeStatus(data.ce.status);
+                if (data.ce.etiqueta)      setCeEtiqueta(data.ce.etiqueta);
+                if (data.ce.direccion)     setCeDireccion(data.ce.direccion);
+                if (data.ce.id_generacion) setIdGeneracion(String(data.ce.id_generacion));
+              }
+              if (data?.dealId)   setDealId(prev   => prev || data.dealId);
+              if (data?.mpklogId) setMpklogId(prev => prev || data.mpklogId);
+              if (data?.cliente) {
+                setCliente(prev => ({
+                  nombre:    prev.nombre    || data.cliente.nombre    || "",
+                  apellidos: prev.apellidos || data.cliente.apellidos || "",
+                  correo:    prev.correo    || data.cliente.correo    || "",
+                  telefono:  prev.telefono  || data.cliente.telefono  || "",
+                  direccion: prev.direccion || data.cliente.direccion || "",
+                }));
+              }
+            }}
           />
         )}
 
