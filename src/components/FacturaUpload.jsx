@@ -498,7 +498,7 @@ export default function FacturaUpload() {
       const payload = {
         cliente: { nombre: cliente.nombre, apellidos: cliente.apellidos, correo: cliente.correo, telefono: cliente.telefono, direccion: cliente.direccion },
         ce: { nombre: ceResult?.ceNombre ?? ceNombre, direccion: ceResult?.ceDireccion ?? ceDireccion, status: FORCE_WAITING_LIST ? "Waiting list" : (ceResult?.ceStatus ?? ceStatus), etiqueta: ceResult?.ceEtiqueta ?? ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceResult?.ceNombre ?? ceNombre) },
-        Fsmstate: FORCE_WAITING_LIST ? "02_FUERA_ZONA" : (ceResult?.fsmstate ?? "02_FUERA_ZONA"),
+        Fsmstate: ceResult?.fsmstate ?? "02_FUERA_ZONA",
         FsmPrevious: null,
       };
       console.log("[/continuar] enviando payload:", payload);
@@ -605,7 +605,6 @@ export default function FacturaUpload() {
         setStatus("fuera_zona");
       } else {
         if (FORCE_WAITING_LIST) {
-          updateFsmstate("02_FUERA_ZONA");
           setCeStatus("Waiting list");
         }
         await chamarContinuar(ceResult);
