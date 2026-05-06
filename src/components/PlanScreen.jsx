@@ -27,6 +27,7 @@ export default function PlanScreen({
   const [sesionData, setSesionData] = useState(sesionDataProp ?? null);
   const [sesionFailed, setSesionFailed] = useState(false);
   const [ceFotoUrl, setCeFotoUrl] = useState(null);
+  const [modalListaEspera, setModalListaEspera] = useState(false);
 
   useEffect(() => {
     const sessionId = new URLSearchParams(window.location.search).get("session_id")
@@ -120,7 +121,7 @@ export default function PlanScreen({
                 <p style={{ fontSize:12, color:"#aaa", marginTop:4, marginBottom:18 }}>IVA incluido</p>
                 <button
                   style={{ width:"100%", background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em" }}
-                  onClick={onContratar}>
+                  onClick={ceStatus === "Available" ? onContratar : () => setModalListaEspera(true)}>
                   {ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
                 </button>
               </div>
@@ -185,7 +186,7 @@ export default function PlanScreen({
                 <p style={{ fontSize:11, color:"#aaa" }}>IVA 21% incluido</p>
                 <button
                   style={{ marginTop:12, background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"12px 32px", fontSize:14, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em" }}
-                  onClick={onContratar}>
+                  onClick={ceStatus === "Available" ? onContratar : () => setModalListaEspera(true)}>
                   {ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
                 </button>
               </div>
@@ -458,6 +459,21 @@ export default function PlanScreen({
         <button className="cs-btn-ghost" style={{ marginTop:16 }} onClick={onVolver}>← Volver al inicio</button>
       </div>
     </div>
+      {modalListaEspera && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+          <div style={{ background:"#fff", borderRadius:16, padding:"36px 28px", maxWidth:420, width:"100%", textAlign:"center", boxShadow:"0 8px 40px rgba(0,0,0,0.18)" }}>
+            <p style={{ fontSize:22, fontWeight:800, color:"#000", marginBottom:16, lineHeight:1.3 }}>¡Ya estás en lista de espera!</p>
+            <p style={{ fontSize:15, color:"#444", lineHeight:1.7, marginBottom:28 }}>
+              Ahora ya estás en nuestro sistema, te contactaremos en cuanto haya una comunidad energética disponible en tu localidad.
+            </p>
+            <button
+              style={{ background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"13px 40px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:"pointer" }}
+              onClick={() => setModalListaEspera(false)}>
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
