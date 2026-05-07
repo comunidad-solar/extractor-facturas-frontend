@@ -11,7 +11,7 @@ import {
   PRECIOS_ENERGIA_BASE_KEYS, PRECIOS_ENERGIA_3TD_KEYS, API_AUTO_KEYS,
   PERIODOS_POR_MES_3TD, TARIFAS_MULTI_FACTURA,
   CE_API_URL, API_BASE, SESION_URL, PLAN_REDIRECT_URL, QUOTING_URL, LEAD_URL,
-  NOMINATIM_URL, CE_DETAIL_URL, CE_STATUS_LABELS,
+  NOMINATIM_URL, CE_STATUS_LABELS, CE_ESTATUS_MAP,
   ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL, RESTRICT_TO_CE, FORCE_WAITING_LIST, SUMINISTRO_ZONA_CHECK,
 } from "../constants/appConstants";
 import {
@@ -429,28 +429,10 @@ export default function FacturaUpload() {
       setCeRadio(nearest.radioMetros);
       updateFsmstate("01_DENTRO_ZONA");
 
-      // Fallback con datos de la lista
-      let ceNombreVal    = nearest.name || nearest.addressName || "";
-      let ceDireccionVal = nearest.addressName || "";
-      let ceStatusVal    = nearest.status || "";
-      let ceEtiquetaVal  = nearest.etiqueta || "";
-
-      try {
-        const detailRes = await fetch(
-          `${CE_DETAIL_URL}/server/api/get-ce-info?name=${encodeURIComponent(ceNombreVal)}`,
-          { method: "POST" }
-        );
-        const detailData = await detailRes.json();
-        console.log("📋 Detalle CE:", detailData);
-        if (detailData?.data) {
-          ceNombreVal    = detailData.data.name    || ceNombreVal;
-          ceDireccionVal = detailData.data.addressName || ceDireccionVal;
-          ceStatusVal    = detailData.data.status  || "";
-          ceEtiquetaVal  = detailData.data.etiqueta || "";
-        }
-      } catch (e) {
-        console.log("⚠️ Error cargando detalle CE, usando datos de lista:", e);
-      }
+      const ceNombreVal    = nearest.name || nearest.addressName || "";
+      const ceDireccionVal = nearest.addressName || "";
+      const ceStatusVal    = CE_ESTATUS_MAP[nearest.status] ?? "Waiting list";
+      const ceEtiquetaVal  = nearest.etiqueta || "";
 
       setCeNombre(ceNombreVal);
       setCeDireccion(ceDireccionVal);
@@ -464,29 +446,10 @@ export default function FacturaUpload() {
       setCeDistancia(distanciaCEMasCercana);
       setCeRadio(nearestAll ? nearestAll.radioMetros : null);
 
-      let ceNombreVal    = nearestAll ? (nearestAll.name || nearestAll.addressName || "") : "";
-      let ceDireccionVal = nearestAll ? (nearestAll.addressName || "") : "";
-      let ceStatusVal    = "";
-      let ceEtiquetaVal  = "";
-
-      if (nearestAll && ceNombreVal) {
-        try {
-          const detailRes = await fetch(
-            `${CE_DETAIL_URL}/server/api/get-ce-info?name=${encodeURIComponent(ceNombreVal)}`,
-            { method: "POST" }
-          );
-          const detailData = await detailRes.json();
-          console.log("📋 Detalle CE (fuera zona):", detailData);
-          if (detailData?.data) {
-            ceNombreVal    = detailData.data.name        || ceNombreVal;
-            ceDireccionVal = detailData.data.addressName || ceDireccionVal;
-            ceStatusVal    = detailData.data.status      || "";
-            ceEtiquetaVal  = detailData.data.etiqueta    || "";
-          }
-        } catch (e) {
-          console.log("⚠️ Error cargando detalle CE (fuera zona), usando datos de lista:", e);
-        }
-      }
+      const ceNombreVal    = nearestAll ? (nearestAll.name || nearestAll.addressName || "") : "";
+      const ceDireccionVal = nearestAll ? (nearestAll.addressName || "") : "";
+      const ceStatusVal    = nearestAll ? (CE_ESTATUS_MAP[nearestAll.status] ?? "Waiting list") : "";
+      const ceEtiquetaVal  = nearestAll ? (nearestAll.etiqueta || "") : "";
 
       setCeNombre(ceNombreVal);
       setCeDireccion(ceDireccionVal);
