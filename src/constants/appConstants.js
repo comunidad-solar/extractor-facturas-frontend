@@ -86,6 +86,7 @@ export const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catal
 export const FACTURA_PREVIEW_MOCK_FALLBACK = false;
 export const CE_FOTO_ENABLED = false; // true = busca foto da CE via GET /ce/foto; false = usa /Intersect.png
 export const FORCE_WAITING_LIST = true; // true = fuerza badge "En Espera", botón lista espera y Fsmstate 02_FUERA_ZONA al contratar // true = muestra mock si no hay datos del cotizador; false = oculta el componente
+export const SUMINISTRO_ZONA_CHECK = false; // true = aviso discreto si el suministro de la factura queda fuera de zona
 
 export const API_BASE           = import.meta.env.VITE_API_URL || "https://extractor.13.38.9.119.nip.io";
 export const SESION_URL         = `${API_BASE}/sesion`;
