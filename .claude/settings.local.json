@@ -10,7 +10,10 @@
       "Bash(ls ~/.claude/skills/napkin)",
       "Read(//c/Users/ianro/.claude/skills/napkin/**)",
       "Bash(not exist *)",
-      "PowerShell(if \\(-not \\(Test-Path \".claude\"\\)\\) { New-Item -ItemType Directory -Path \".claude\" })"
+      "PowerShell(if \\(-not \\(Test-Path \".claude\"\\)\\) { New-Item -ItemType Directory -Path \".claude\" })",
+      "Bash(grep -r \"zoho\\\\|ZOHO\\\\|client_id\\\\|access_token\" --include=\"*.js\" --include=\"*.jsx\" --include=\"*.py\" --include=\"*.env*\" -l)",
+      "Bash(ls *.py)",
+      "Bash(ls .env*)"
     ]
   }
 }

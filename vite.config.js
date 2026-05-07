@@ -12,6 +12,7 @@ export default defineConfig({
       '/facturas': API_URL,
       '/cups':     API_URL,
       '/enviar':   API_URL,
+      '/ces':      API_URL,
       '/ce-api': {
         target: CE_DETAIL_URL,
         changeOrigin: true,
