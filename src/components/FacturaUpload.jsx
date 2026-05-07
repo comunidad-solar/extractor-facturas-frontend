@@ -1290,6 +1290,7 @@ export default function FacturaUpload() {
         plazoRecuperacion:       planData?.plazoRecuperacion,
         panelesSel:              planData?.panelesSel,
         cuotaAlquilerMes:        planData?.cuotaAlquilerMes,
+        ahorroAnualPercent:      planData?.ahorroAnualPercent,
       },
       ce: {
         nombre:        ceNombre    || sdCe.nombre    || urlRef.ce?.nombre    || "",
