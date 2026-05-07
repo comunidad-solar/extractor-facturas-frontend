@@ -1278,6 +1278,7 @@ export default function FacturaUpload() {
       },
       Fsmstate:    "08_PROPUESTA_ALQ",
       FsmPrevious: Fsmstate || sd?.Fsmstate || urlRef.fsmstate || null,
+      session_id:  extractSessionId ?? localStorage.getItem("cs_session_id") ?? null,
       plan: {
         ahorro25Anos:            planData?.ahorro25Anos,
         pagoUnico:               planData?.pagoUnico,
