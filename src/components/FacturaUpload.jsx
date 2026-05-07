@@ -12,7 +12,7 @@ import {
   PERIODOS_POR_MES_3TD, TARIFAS_MULTI_FACTURA,
   CE_API_URL, API_BASE, SESION_URL, PLAN_REDIRECT_URL, QUOTING_URL, LEAD_URL,
   NOMINATIM_URL, CE_DETAIL_URL, CE_STATUS_LABELS,
-  ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL, RESTRICT_TO_CE, FORCE_WAITING_LIST,
+  ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL, RESTRICT_TO_CE, FORCE_WAITING_LIST, SUMINISTRO_ZONA_CHECK,
 } from "../constants/appConstants";
 import {
   hasValue, emptyManual, resolverIdGeneracion, getCeNombreById,
@@ -61,6 +61,10 @@ export default function FacturaUpload() {
   const [ceRadio, setCeRadio]         = useState(null); // radioMetros — para banner
   const [zonaWarn, setZonaWarn]       = useState("");   // aviso no bloqueante
   const [listaCE, setListaCE]         = useState(null); // caché de comunidades
+  const [suministroLat, setSuministroLat]             = useState(null);
+  const [suministroLon, setSuministroLon]             = useState(null);
+  const [nombreCliente, setNombreCliente]             = useState(null);
+  const [direccionSuministro, setDireccionSuministro] = useState(null);
   const [devCESelected, setDevCESelected] = useState("");
   const listaCERef                    = useRef([]);     // ref para evitar stale closure
 
@@ -732,6 +736,19 @@ export default function FacturaUpload() {
       const flat = flattenFacturaResponse(data);
       setFacturaData(flat);
       setAdvertenciaAno(data.advertencia_ano === true);
+      setSuministroLat(data.suministro_lat ?? null);
+      setSuministroLon(data.suministro_lon ?? null);
+      setNombreCliente(data.nombre_cliente ?? null);
+      setDireccionSuministro(data.direccion_suministro ?? null);
+      if (SUMINISTRO_ZONA_CHECK && data.suministro_lat && data.suministro_lon) {
+        const ces = listaCERef.current.length > 0 ? listaCERef.current : listaCE;
+        if (ces && ces.length > 0) {
+          const dentroZona = ces.some(ce =>
+            haversineDistance(data.suministro_lat, data.suministro_lon, parseFloat(ce.lat), parseFloat(ce.lng)) <= parseFloat(ce.radioMetros)
+          );
+          if (!dentroZona) setZonaWarn("El punto de suministro de la factura está fuera de la zona de cobertura.");
+        }
+      }
       setStatus("analyzed");
       if (TARIFAS_MULTI_FACTURA.includes(data.tarifa_acceso)) {
         const mes = parseInt(data.periodo_fin?.split("/")?.[1]);
@@ -957,7 +974,13 @@ export default function FacturaUpload() {
     const merged = { ...facturaData, ...Object.fromEntries(
       Object.entries(manualFields).filter(([, v]) => v !== "")
     ), modo: modoAlquiler ? "alquiler" : "venta" };
-    return buildFactura(merged);
+    return {
+      ...buildFactura(merged),
+      nombre_cliente:       nombreCliente,
+      direccion_suministro: direccionSuministro,
+      suministro_lat:       suministroLat,
+      suministro_lon:       suministroLon,
+    };
   };
 
   const buildFacturaCUPS = () =>
