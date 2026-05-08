@@ -12,7 +12,7 @@ import {
   PERIODOS_POR_MES_3TD, TARIFAS_MULTI_FACTURA,
   CE_API_URL, API_BASE, SESION_URL, PLAN_REDIRECT_URL, QUOTING_URL, LEAD_URL,
   NOMINATIM_URL, CE_STATUS_LABELS, CE_ESTATUS_MAP,
-  ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL, RESTRICT_TO_CE, FORCE_WAITING_LIST, SUMINISTRO_ZONA_CHECK,
+  ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL, RESTRICT_TO_CE, FORCE_WAITING_LIST, SUMINISTRO_ZONA_CHECK, CUPS_ENABLED, ASESOR_ENABLED,
 } from "../constants/appConstants";
 import {
   hasValue, emptyManual, resolverIdGeneracion, getCeNombreById,
@@ -1686,7 +1686,7 @@ export default function FacturaUpload() {
                   ¿Tienes tu factura?
                 </h1>
                 <p style={{ fontSize:14, color:"#777", marginBottom: zonaWarn ? 16 : 28 }}>
-                  Elige cómo quieres introducir los datos de tu suministro.
+                  Solo necesitas tu factura en PDF para empezar.
                 </p>
 
                 {zonaWarn && (
@@ -1703,6 +1703,7 @@ export default function FacturaUpload() {
                       <div className="cs-option-desc">Extraemos automáticamente todos los datos</div>
                     </div>
                   </button>
+                  {CUPS_ENABLED && (
                   <button className="cs-option-btn" onClick={() => setMode("cups")}>
                     <span className="cs-option-icon">🔍</span>
                     <div>
@@ -1710,13 +1711,16 @@ export default function FacturaUpload() {
                       <div className="cs-option-desc">Consulta los datos de tu suministro con el código CUPS</div>
                     </div>
                   </button>
+                  )}
                 </div>
 
-                <div className="cs-divider" style={{ marginTop:20 }}>
-                  <div className="cs-divider-line" />
-                  <span>o</span>
-                  <div className="cs-divider-line" />
-                </div>
+                {ASESOR_ENABLED && (
+                  <div className="cs-divider" style={{ marginTop:20 }}>
+                    <div className="cs-divider-line" />
+                    <span>o</span>
+                    <div className="cs-divider-line" />
+                  </div>
+                )}
 
                 {error && (
                   <div className="cs-alert-err" style={{ marginBottom:12 }}>
@@ -1724,12 +1728,16 @@ export default function FacturaUpload() {
                   </div>
                 )}
 
-                <button className="cs-btn-phone" onClick={handleEnviarAsesor} disabled={sending}>
-                  📞 {sending ? "Enviando..." : "Hablar con un asesor"}
-                </button>
-                <p style={{ fontSize:12, color:"#aaa", textAlign:"center", marginTop:8 }}>
-                  Te llamaremos para ayudarte personalmente
-                </p>
+                {ASESOR_ENABLED && (
+                  <>
+                    <button className="cs-btn-phone" onClick={handleEnviarAsesor} disabled={sending}>
+                      📞 {sending ? "Enviando..." : "Hablar con un asesor"}
+                    </button>
+                    <p style={{ fontSize:12, color:"#aaa", textAlign:"center", marginTop:8 }}>
+                      Te llamaremos para ayudarte personalmente
+                    </p>
+                  </>
+                )}
 
                 {!modoAsesor && (
                   <button className="cs-btn-ghost" style={{ marginTop:12 }} onClick={() => setStep(1)}>
