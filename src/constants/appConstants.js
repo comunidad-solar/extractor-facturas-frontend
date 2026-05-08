@@ -78,15 +78,17 @@ export const PERIODOS_POR_MES_3TD = {
 };
 
 // Restrição de CE: só permite avançar se a CE mais próxima for esta. null = desativado.
-export const RESTRICT_TO_CE = "Mérida 1";
+export const RESTRICT_TO_CE = null;
 
-// CE API proxiada por Vite em dev (evita CORS); em produção usa URL absoluta
-export const CE_API_URL = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu/server/api/get-ce-info-lat-lng";
+export const FACTURA_PREVIEW_MOCK_FALLBACK = false;
+export const CE_FOTO_ENABLED = false; // true = busca foto da CE via GET /ce/foto; false = usa /Intersect.png
+export const FORCE_WAITING_LIST = true; // true = fuerza badge "En Espera", botón lista espera al contratar //
+export const SUMINISTRO_ZONA_CHECK = false; // true = aviso discreto si el suministro de la factura queda fuera de zona
 
-export const FACTURA_PREVIEW_MOCK_FALLBACK = false; // true = muestra mock si no hay datos del cotizador; false = oculta el componente
-
-export const API_BASE           = (import.meta.env.VITE_API_URL || "https://extractor.13.38.9.119.nip.io").replace(/\/$/, '');
+export const API_BASE           =  import.meta.env.VITE_API_URL || "https://extractor.13.38.9.119.nip.io";
 export const SESION_URL         = `${API_BASE}/sesion`;
+// CE API proxiada por Vite em dev (evita CORS); em produção usa URL absoluta
+export const CE_API_URL         = `${API_BASE}/ces`;
 const subdomain = window.location.hostname.split(".")[0];
 const cotizadorBase = subdomain === "develop"
   ? "https://develop.d3rqv6h66vhq03.amplifyapp.com/"
@@ -99,9 +101,23 @@ export const NOMINATIM_URL      = "https://nominatim.openstreetmap.org";
 export const CE_DETAIL_URL      = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu";
 
 // Mapa de estados de la CE a etiquetas visibles
+// Mapeamento Zoho Estatus → valor interno usado no frontend e enviado ao Flow
+export const CE_ESTATUS_MAP = {
+  "Abierta contratación": "Available",
+  "Activa":               "Available",
+  "Lista de espera":      "Quoting",
+  "Completa":             "Completa",
+  // "Inactiva" → filtrada no loop (não incluída)
+  // resto → "Waiting list"
+};
+
 export const CE_STATUS_LABELS = {
-  "Waiting list": "En Espera",
-  "Available":    "En Contratación",
+  "Waiting list":     "En Espera",
+  "Quoting":          "En Espera",
+  "Available":        "En Contratación",
+  "Completa":         "Completa",
+  "En planificación": "En Planificación",
+  "Próximamente":     "Próximamente",
 };
 
 // TODO: confirmar endpoint com o backend

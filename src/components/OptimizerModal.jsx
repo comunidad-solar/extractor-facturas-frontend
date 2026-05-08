@@ -31,7 +31,7 @@ export default function OptimizerModal({
             </h3>
             <table className="cs-table" style={{ marginBottom:20, fontSize:16 }}>
               <tbody>
-                <tr><td>Numero de paneles</td><td>{panelesPropuesta}</td></tr>
+                <tr><td>Número de paneles</td><td>{panelesPropuesta}</td></tr>
                 <tr><td>Potencia total</td><td>{parseInt(fmtES(modalOptimizar?.potenciaTotal ?? 0))} kWh</td></tr>
                 <tr><td>Producción de energía anual estimada*</td><td>{fmtES(modalOptimizar?.produccionAnual ?? 0)} kWh</td></tr>
                 <tr><td>Ahorro anual medio estimado*</td><td>{fmtES(modalOptimizar?.ahorroAnual ?? 0)} €</td></tr>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { fmtES } from "../utils/facturaUtils";
-import { API_BASE, CE_STATUS_LABELS } from "../constants/appConstants";
+import { API_BASE, CE_STATUS_LABELS, CE_FOTO_ENABLED } from "../constants/appConstants";
 import FacturaPreview from "./FacturaPreview";
 
 export default function PlanScreen({
@@ -26,10 +26,37 @@ export default function PlanScreen({
   // eslint-disable-next-line no-unused-vars
   const [sesionData, setSesionData] = useState(sesionDataProp ?? null);
   const [sesionFailed, setSesionFailed] = useState(false);
+  const [ceFotoUrl, setCeFotoUrl] = useState(null);
+  const [modalListaEspera, setModalListaEspera] = useState(false);
 
   useEffect(() => {
-    const sessionId = localStorage.getItem("cs_session_id");
-    console.log("[PlanScreen] cs_session_id:", sessionId);
+    const sessionId = new URLSearchParams(window.location.search).get("session_id")
+      ?? localStorage.getItem("cs_session_id");
+    const planUrl = window.location.href;
+    console.log("[/deals/lead-source] session_id:", sessionId, "plan_url:", planUrl);
+    if (sessionId) {
+      fetch(`${API_BASE}/deals/lead-source`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId, plan_url: planUrl }),
+      })
+        .then(res => res.json().then(data => console.log("[/deals/lead-source] resposta:", data)).catch(() => {}))
+        .catch(() => {});
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!CE_FOTO_ENABLED || !ceNombre) return;
+    fetch(`${API_BASE}/ce/foto?name=${encodeURIComponent(ceNombre)}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data?.foto_url) setCeFotoUrl(data.foto_url); })
+      .catch(() => {});
+  }, [ceNombre]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const sessionId = new URLSearchParams(window.location.search).get("session_id")
+      ?? localStorage.getItem("cs_session_id");
+    console.log("[PlanScreen] session_id:", sessionId, "(url:", new URLSearchParams(window.location.search).get("session_id"), "/ ls:", localStorage.getItem("cs_session_id"), ")");
     if (!sessionId) return;
     fetch(`${API_BASE}/sesion/${sessionId}`)
       .then(res => {
@@ -94,7 +121,7 @@ export default function PlanScreen({
                 <p style={{ fontSize:12, color:"#aaa", marginTop:4, marginBottom:18 }}>IVA incluido</p>
                 <button
                   style={{ width:"100%", background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em" }}
-                  onClick={onContratar}>
+                  onClick={ceStatus === "Available" ? onContratar : () => setModalListaEspera(true)}>
                   {ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
                 </button>
               </div>
@@ -128,7 +155,7 @@ export default function PlanScreen({
           {/* Columna derecha: imagen */}
           <div className="cs-plan-hero-img" style={{ flex:"0 0 auto", display:"flex", alignItems:"flex-start" }}>
             <img
-              src="/Intersect.png"
+              src={ceFotoUrl || "/Intersect.png"}
               alt="Instalación solar"
               style={{ width:300, height:340, objectFit:"cover", borderRadius:20, display:"block" }}
             />
@@ -159,7 +186,7 @@ export default function PlanScreen({
                 <p style={{ fontSize:11, color:"#aaa" }}>IVA 21% incluido</p>
                 <button
                   style={{ marginTop:12, background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"12px 32px", fontSize:14, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em" }}
-                  onClick={onContratar}>
+                  onClick={ceStatus === "Available" ? onContratar : () => setModalListaEspera(true)}>
                   {ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
                 </button>
               </div>
@@ -181,7 +208,7 @@ export default function PlanScreen({
           {/* Tarjeta Origen — CE */}
           <div style={{ flex:1, background:"#fff", borderRadius:14, overflow:"hidden", boxShadow:"0 2px 12px rgba(0,0,0,0.06)" }}>
             <div style={{ position:"relative" }}>
-              <img src="/Intersect.png" alt="Comunidad Energética" style={{ width:"100%", height:160, objectFit:"cover", display:"block" }} />
+              <img src={ceFotoUrl || "/Intersect.png"} alt="Comunidad Energética" style={{ width:"100%", height:160, objectFit:"cover", display:"block" }} />
               <span style={{ position:"absolute", top:10, left:10, background:"#EF931D", color:"#fff", fontSize:11, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", padding:"5px 12px", borderRadius:20 }}>
                 {CE_STATUS_LABELS[ceStatus] || ceStatus || "—"}
               </span>
@@ -245,7 +272,7 @@ export default function PlanScreen({
             <p style={{ fontSize:22, fontWeight:800, color:"#121212", marginBottom:16 }}>Tu plan</p>
             <table className="cs-table">
               <tbody>
-                <tr><td>Numero de paneles</td><td>{panelesSel}</td></tr>
+                <tr><td>Número de paneles</td><td>{panelesSel}</td></tr>
                 <tr><td>Potencia total</td><td>{parseInt(fmtES(planData?.potenciaTotal ?? 3))} kWh</td></tr>
                 <tr><td>Producción de energía anual estimada*</td><td>{fmtES(planData?.produccionAnual ?? 4101.25)} kWh</td></tr>
                 <tr><td>Ahorro anual medio estimado*</td><td>{fmtES(planData?.ahorroAnual ?? 522.48)} €</td></tr>
@@ -423,15 +450,30 @@ export default function PlanScreen({
           </div>
         </div>
 
-        {/* ── VOLVER ── */}
-        <button className="cs-btn-ghost" style={{ marginTop:24 }} onClick={onVolver}>← Volver al inicio</button>
-
         {/* ── FOOTNOTE ── */}
-        <p style={{ fontSize:11, color:"#aaa", marginTop:16, lineHeight:1.6 }}>
+        <p style={{ fontSize:11, color:"#111", marginTop:16, lineHeight:1.6 }}>
           * La electricidad a 0€ es la producida por tus paneles solares, seguirás pagando la energía que no produzcas.
         </p>
+
+        {/* ── VOLVER ── */}
+        <button className="cs-btn-ghost" style={{ marginTop:16 }} onClick={onVolver}>← Volver al inicio</button>
       </div>
     </div>
+      {modalListaEspera && (
+        <div style={{ position:"fixed", inset:0, zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+          <div style={{ background:"#fff", borderRadius:16, padding:"36px 28px", maxWidth:420, width:"100%", textAlign:"center", boxShadow:"0 8px 40px rgba(0,0,0,0.18)" }}>
+            <p style={{ fontSize:22, fontWeight:800, color:"#000", marginBottom:16, lineHeight:1.3 }}>¡Ya estás en lista de espera!</p>
+            <p style={{ fontSize:15, color:"#444", lineHeight:1.7, marginBottom:28 }}>
+              Ahora ya estás en nuestro sistema, te contactaremos en cuanto haya una comunidad energética disponible en tu localidad.
+            </p>
+            <button
+              style={{ background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"13px 40px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:"pointer" }}
+              onClick={() => setModalListaEspera(false)}>
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

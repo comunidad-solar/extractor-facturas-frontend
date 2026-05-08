@@ -11,8 +11,8 @@ import {
   PRECIOS_ENERGIA_BASE_KEYS, PRECIOS_ENERGIA_3TD_KEYS, API_AUTO_KEYS,
   PERIODOS_POR_MES_3TD, TARIFAS_MULTI_FACTURA,
   CE_API_URL, API_BASE, SESION_URL, PLAN_REDIRECT_URL, QUOTING_URL, LEAD_URL,
-  NOMINATIM_URL, CE_DETAIL_URL, CE_STATUS_LABELS,
-  ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL, RESTRICT_TO_CE,
+  NOMINATIM_URL, CE_STATUS_LABELS, CE_ESTATUS_MAP,
+  ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL, RESTRICT_TO_CE, FORCE_WAITING_LIST, SUMINISTRO_ZONA_CHECK,
 } from "../constants/appConstants";
 import {
   hasValue, emptyManual, resolverIdGeneracion, getCeNombreById,
@@ -21,6 +21,7 @@ import {
 } from "../utils/facturaUtils";
 import OptimizerModal from "./OptimizerModal";
 import PlanScreen from "./PlanScreen";
+import { CE_ID_MAP } from "../constants/ceMappings";
 
 export default function FacturaUpload() {
   // ── Steps & navigation ───────────────────────────────────────────────────
@@ -60,6 +61,11 @@ export default function FacturaUpload() {
   const [ceRadio, setCeRadio]         = useState(null); // radioMetros — para banner
   const [zonaWarn, setZonaWarn]       = useState("");   // aviso no bloqueante
   const [listaCE, setListaCE]         = useState(null); // caché de comunidades
+  const [suministroLat, setSuministroLat]             = useState(null);
+  const [suministroLon, setSuministroLon]             = useState(null);
+  const [nombreCliente, setNombreCliente]             = useState(null);
+  const [direccionSuministro, setDireccionSuministro] = useState(null);
+  const [devCESelected, setDevCESelected] = useState("");
   const listaCERef                    = useRef([]);     // ref para evitar stale closure
 
   // ── Step 2A — PDF upload ──────────────────────────────────────────────────
@@ -105,6 +111,7 @@ export default function FacturaUpload() {
   const [extractSessionId,  setExtractSessionId]  = useState(null);
   const [extract1SessionId, setExtract1SessionId] = useState(null);
   const [extract2SessionId, setExtract2SessionId] = useState(null);
+  const [continuarSessionId, setContinuarSessionId] = useState(null);
   const [dealId, setDealId]                     = useState(null);
   const [mpklogId, setMpklogId]                 = useState(null);
   const [sesionData, setSesionData]             = useState(null);
@@ -287,6 +294,13 @@ export default function FacturaUpload() {
       if (csMpklogId) setMpklogId(prev => prev || csMpklogId);
       if (csFsmstate) setFsmstate(prev => prev || csFsmstate);
 
+      // Se session_id veio na URL (acesso anónimo), persistir para PlanScreen
+      const urlSessionId = params.get("session_id");
+      if (urlSessionId) {
+        console.log("[plan-demo] session_id encontrado na URL:", urlSessionId, "→ guardando em cs_session_id");
+        localStorage.setItem("cs_session_id", urlSessionId);
+      }
+
       // Limpar localStorage após restaurar
       localStorage.removeItem("cs_cliente");
       localStorage.removeItem("cs_factura");
@@ -366,6 +380,10 @@ export default function FacturaUpload() {
     }, 500);
   };
 
+  const handleDevCESelect = (ceName) => {
+    setDevCESelected(ceName || "");
+  };
+
   const handleSelectSuggestion = (item) => {
     setCliente((prev) => ({ ...prev, direccion: item.display_name }));
     setUserCoords({ lat: parseFloat(item.lat), lon: parseFloat(item.lon) });
@@ -411,28 +429,10 @@ export default function FacturaUpload() {
       setCeRadio(nearest.radioMetros);
       updateFsmstate("01_DENTRO_ZONA");
 
-      // Fallback con datos de la lista
-      let ceNombreVal    = nearest.name || nearest.addressName || "";
-      let ceDireccionVal = nearest.addressName || "";
-      let ceStatusVal    = nearest.status || "";
-      let ceEtiquetaVal  = nearest.etiqueta || "";
-
-      try {
-        const detailRes = await fetch(
-          `${CE_DETAIL_URL}/server/api/get-ce-info?name=${encodeURIComponent(ceNombreVal)}`,
-          { method: "POST" }
-        );
-        const detailData = await detailRes.json();
-        console.log("📋 Detalle CE:", detailData);
-        if (detailData?.data) {
-          ceNombreVal    = detailData.data.name    || ceNombreVal;
-          ceDireccionVal = detailData.data.addressName || ceDireccionVal;
-          ceStatusVal    = detailData.data.status  || "";
-          ceEtiquetaVal  = detailData.data.etiqueta || "";
-        }
-      } catch (e) {
-        console.log("⚠️ Error cargando detalle CE, usando datos de lista:", e);
-      }
+      const ceNombreVal    = nearest.name || nearest.addressName || "";
+      const ceDireccionVal = nearest.addressName || "";
+      const ceStatusVal    = CE_ESTATUS_MAP[nearest.status] ?? "Waiting list";
+      const ceEtiquetaVal  = nearest.etiqueta || "";
 
       setCeNombre(ceNombreVal);
       setCeDireccion(ceDireccionVal);
@@ -446,29 +446,10 @@ export default function FacturaUpload() {
       setCeDistancia(distanciaCEMasCercana);
       setCeRadio(nearestAll ? nearestAll.radioMetros : null);
 
-      let ceNombreVal    = nearestAll ? (nearestAll.name || nearestAll.addressName || "") : "";
-      let ceDireccionVal = nearestAll ? (nearestAll.addressName || "") : "";
-      let ceStatusVal    = "";
-      let ceEtiquetaVal  = "";
-
-      if (nearestAll && ceNombreVal) {
-        try {
-          const detailRes = await fetch(
-            `${CE_DETAIL_URL}/server/api/get-ce-info?name=${encodeURIComponent(ceNombreVal)}`,
-            { method: "POST" }
-          );
-          const detailData = await detailRes.json();
-          console.log("📋 Detalle CE (fuera zona):", detailData);
-          if (detailData?.data) {
-            ceNombreVal    = detailData.data.name        || ceNombreVal;
-            ceDireccionVal = detailData.data.addressName || ceDireccionVal;
-            ceStatusVal    = detailData.data.status      || "";
-            ceEtiquetaVal  = detailData.data.etiqueta    || "";
-          }
-        } catch (e) {
-          console.log("⚠️ Error cargando detalle CE (fuera zona), usando datos de lista:", e);
-        }
-      }
+      const ceNombreVal    = nearestAll ? (nearestAll.name || nearestAll.addressName || "") : "";
+      const ceDireccionVal = nearestAll ? (nearestAll.addressName || "") : "";
+      const ceStatusVal    = nearestAll ? (CE_ESTATUS_MAP[nearestAll.status] ?? "Waiting list") : "";
+      const ceEtiquetaVal  = nearestAll ? (nearestAll.etiqueta || "") : "";
 
       setCeNombre(ceNombreVal);
       setCeDireccion(ceDireccionVal);
@@ -477,6 +458,49 @@ export default function FacturaUpload() {
       console.log("📊 Resultado:", { Fmstate: "02_FUERA_ZONA", ceNombreVal, ceDireccionVal, ceStatusVal, ceEtiquetaVal, distanciaCEMasCercana });
       return { fsmstate: "02_FUERA_ZONA", ceNombre: ceNombreVal, ceDireccion: ceDireccionVal, ceStatus: ceStatusVal, ceEtiqueta: ceEtiquetaVal };
     }
+  };
+
+  const chamarContinuar = async (ceResult) => {
+    try {
+      const payload = {
+        cliente: { nombre: cliente.nombre, apellidos: cliente.apellidos, correo: cliente.correo, telefono: cliente.telefono, direccion: cliente.direccion },
+        ce: { nombre: ceResult?.ceNombre ?? ceNombre, direccion: ceResult?.ceDireccion ?? ceDireccion, status: FORCE_WAITING_LIST ? "Waiting list" : (ceResult?.ceStatus ?? ceStatus), etiqueta: ceResult?.ceEtiqueta ?? ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceResult?.ceNombre ?? ceNombre) },
+        Fsmstate: ceResult?.fsmstate ?? "02_FUERA_ZONA",
+        FsmPrevious: null,
+      };
+      console.log("[/continuar] enviando payload:", payload);
+      const fd = new FormData();
+      fd.append("data", JSON.stringify(payload));
+      const res = await fetch(`${API_BASE}/continuar`, { method: "POST", body: fd });
+      if (res.ok) {
+        const { session_id } = await res.json();
+        console.log("[/continuar] session_id recebido:", session_id ?? null);
+        if (session_id) {
+          setContinuarSessionId(session_id);
+          localStorage.setItem("cs_session_id", session_id);
+          // Polling background: Zoho callback chega ~3-4s depois
+          (async () => {
+            for (let i = 0; i < 15; i++) {
+              await new Promise(r => setTimeout(r, 3000));
+              try {
+                const pr = await fetch(`${API_BASE}/sesion/${session_id}`);
+                if (!pr.ok) break;
+                const pd = await pr.json();
+                if (pd.dealId && pd.mpklogId) {
+                  console.log("[/continuar] polling IDs recebidos:", { dealId: pd.dealId, mpklogId: pd.mpklogId });
+                  setDealId(prev  => prev || pd.dealId);
+                  setMpklogId(prev => prev || pd.mpklogId);
+                  return;
+                }
+              } catch (_) {}
+            }
+            console.warn("[/continuar] polling encerrado sem IDs");
+          })();
+        }
+      } else {
+        console.warn("[/continuar] resposta não ok:", res.status);
+      }
+    } catch (e) { console.error("[/continuar] erro:", e); }
   };
 
   const handleContinuar = async () => {
@@ -536,22 +560,28 @@ export default function FacturaUpload() {
       });
 
       // 3. Calcular proximidad con Haversine
-      const cesFiltradas = ceFijada ? ces.filter(ce => ce.name === ceFijada || ce.addressName === ceFijada) : ces;
+      const cesParaDev = devCESelected ? ces.filter(ce => ce.name === devCESelected || ce.addressName === devCESelected) : null;
+      const cesFiltradas = cesParaDev?.length ? cesParaDev : (ceFijada ? ces.filter(ce => ce.name === ceFijada || ce.addressName === ceFijada) : ces);
       const ceResult = await runZonaCheck(userLat, userLon, cesFiltradas.length ? cesFiltradas : ces);
       enviarLead(LEAD_URL, { cliente, ...ceResult, id_generacion: resolverIdGeneracion(idGeneracion, ceResult?.ceNombre) }, () => setLeadWarn(true)); // fire-and-forget
-      const ceRestringida = RESTRICT_TO_CE && ceResult?.fsmstate === "01_DENTRO_ZONA" && ceResult?.ceNombre !== RESTRICT_TO_CE;
+      const ceRestringida = !devCESelected && RESTRICT_TO_CE && ceResult?.fsmstate === "01_DENTRO_ZONA" && ceResult?.ceNombre !== RESTRICT_TO_CE;
       if (ceRestringida) {
         updateFsmstate("02_FUERA_ZONA");
         setStatus("fuera_zona");
       } else if (ceResult?.fsmstate === "02_FUERA_ZONA") {
         setStatus("fuera_zona");
       } else {
+        if (FORCE_WAITING_LIST) {
+          setCeStatus("Waiting list");
+        }
+        await chamarContinuar(ceResult);
         setStep(2);
       }
     } catch {
       setZonaWarn("No pudimos verificar tu zona. Continuamos sin verificación de cobertura.");
       updateFsmstate("02_FUERA_ZONA");
       setCeNombre(""); setCeDireccion(""); setCeDistancia(null); setCeRadio(null);
+      await chamarContinuar(null);
       setStep(2);
     } finally {
       setLoading(false);
@@ -593,21 +623,21 @@ export default function FacturaUpload() {
       dias_facturados:  f.dias_facturados,
       importe_factura:  f.importe_factura,
       // potencias
-      pot_p1_kw: pot.p1, pot_p2_kw: pot.p2, pot_p3_kw: pot.p3,
-      pot_p4_kw: pot.p4, pot_p5_kw: pot.p5, pot_p6_kw: pot.p6,
+      pot_p1_kw: pot.p1 ?? f.pot_p1_kw, pot_p2_kw: pot.p2 ?? f.pot_p2_kw, pot_p3_kw: pot.p3 ?? f.pot_p3_kw,
+      pot_p4_kw: pot.p4 ?? f.pot_p4_kw, pot_p5_kw: pot.p5 ?? f.pot_p5_kw, pot_p6_kw: pot.p6 ?? f.pot_p6_kw,
       // consumos
-      consumo_p1_kwh: con.p1, consumo_p2_kwh: con.p2, consumo_p3_kwh: con.p3,
-      consumo_p4_kwh: con.p4, consumo_p5_kwh: con.p5, consumo_p6_kwh: con.p6,
+      consumo_p1_kwh: con.p1 ?? f.consumo_p1_kwh, consumo_p2_kwh: con.p2 ?? f.consumo_p2_kwh, consumo_p3_kwh: con.p3 ?? f.consumo_p3_kwh,
+      consumo_p4_kwh: con.p4 ?? f.consumo_p4_kwh, consumo_p5_kwh: con.p5 ?? f.consumo_p5_kwh, consumo_p6_kwh: con.p6 ?? f.consumo_p6_kwh,
       // precios potencia
-      pp_p1: pp.p1, pp_p2: pp.p2, pp_p3: pp.p3,
-      pp_p4: pp.p4, pp_p5: pp.p5, pp_p6: pp.p6,
+      pp_p1: pp.p1 ?? f.pp_p1, pp_p2: pp.p2 ?? f.pp_p2, pp_p3: pp.p3 ?? f.pp_p3,
+      pp_p4: pp.p4 ?? f.pp_p4, pp_p5: pp.p5 ?? f.pp_p5, pp_p6: pp.p6 ?? f.pp_p6,
       // precios energia
-      pe_p1: pe.pe_p1, pe_p2: pe.pe_p2, pe_p3: pe.pe_p3,
-      pe_p4: pe.pe_p4, pe_p5: pe.pe_p5, pe_p6: pe.pe_p6,
+      pe_p1: pe.pe_p1 ?? f.pe_p1, pe_p2: pe.pe_p2 ?? f.pe_p2, pe_p3: pe.pe_p3 ?? f.pe_p3,
+      pe_p4: pe.pe_p4 ?? f.pe_p4, pe_p5: pe.pe_p5 ?? f.pe_p5, pe_p6: pe.pe_p6 ?? f.pe_p6,
       // impuestos
-      imp_ele: imp.imp_ele, iva: imp.iva,
+      imp_ele: imp.imp_ele ?? f.imp_ele, iva: imp.iva ?? f.iva,
       // otros básicos
-      alq_eq_dia: otros.alq_eq_dia, bono_social: desc.bono_social,
+      alq_eq_dia: otros.alq_eq_dia ?? f.alq_eq_dia, bono_social: desc.bono_social ?? f.bono_social,
       // otros nuevos
       consumo_periodo1_kwh:        otros.consumo_periodo1_kwh,
       precio_periodo1_eur_kwh:     otros.precio_periodo1_eur_kwh,
@@ -669,6 +699,19 @@ export default function FacturaUpload() {
       const flat = flattenFacturaResponse(data);
       setFacturaData(flat);
       setAdvertenciaAno(data.advertencia_ano === true);
+      setSuministroLat(data.suministro_lat ?? null);
+      setSuministroLon(data.suministro_lon ?? null);
+      setNombreCliente(data.nombre_cliente ?? null);
+      setDireccionSuministro(data.direccion_suministro ?? null);
+      if (SUMINISTRO_ZONA_CHECK && data.suministro_lat && data.suministro_lon) {
+        const ces = listaCERef.current.length > 0 ? listaCERef.current : listaCE;
+        if (ces && ces.length > 0) {
+          const dentroZona = ces.some(ce =>
+            haversineDistance(data.suministro_lat, data.suministro_lon, parseFloat(ce.lat), parseFloat(ce.lng)) <= parseFloat(ce.radioMetros)
+          );
+          if (!dentroZona) setZonaWarn("El punto de suministro de la factura está fuera de la zona de cobertura.");
+        }
+      }
       setStatus("analyzed");
       if (TARIFAS_MULTI_FACTURA.includes(data.tarifa_acceso)) {
         const mes = parseInt(data.periodo_fin?.split("/")?.[1]);
@@ -894,7 +937,13 @@ export default function FacturaUpload() {
     const merged = { ...facturaData, ...Object.fromEntries(
       Object.entries(manualFields).filter(([, v]) => v !== "")
     ), modo: modoAlquiler ? "alquiler" : "venta" };
-    return buildFactura(merged);
+    return {
+      ...buildFactura(merged),
+      nombre_cliente:       nombreCliente,
+      direccion_suministro: direccionSuministro,
+      suministro_lat:       suministroLat,
+      suministro_lon:       suministroLon,
+    };
   };
 
   const buildFacturaCUPS = () =>
@@ -947,7 +996,7 @@ export default function FacturaUpload() {
 
         // Enviar ao Zoho Flow via /enviar (igual ao fluxo normal)
         const fd = new FormData();
-        fd.append("data", JSON.stringify({ cliente: buildClientePayload(), factura: facturaAsesor, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload, session_id: extractSessionId }));
+        fd.append("data", JSON.stringify({ cliente: buildClientePayload(), factura: facturaAsesor, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload, session_id: extractSessionId, continuar_session_id: continuarSessionId }));
         if (mode === "pdf" && file) fd.append("file", file, file.name);
 
         // Enviar em paralelo: /enviar (Zoho Flow) + ASESOR_ENVIO_URL
@@ -1001,6 +1050,7 @@ export default function FacturaUpload() {
       const dataPayload = {
         cliente: buildClientePayload(), factura, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload,
         session_id: extractSessionId,
+        continuar_session_id: continuarSessionId,
         ...(factura1Data && { factura_1: buildFactura1(), session_id_1: extract1SessionId }),
         ...(factura2Data && { factura_2: buildFactura2(), session_id_2: extract2SessionId }),
       };
@@ -1228,6 +1278,7 @@ export default function FacturaUpload() {
       },
       Fsmstate:    "08_PROPUESTA_ALQ",
       FsmPrevious: Fsmstate || sd?.Fsmstate || urlRef.fsmstate || null,
+      session_id:  extractSessionId ?? localStorage.getItem("cs_session_id") ?? null,
       plan: {
         ahorro25Anos:            planData?.ahorro25Anos,
         pagoUnico:               planData?.pagoUnico,
@@ -1240,6 +1291,7 @@ export default function FacturaUpload() {
         plazoRecuperacion:       planData?.plazoRecuperacion,
         panelesSel:              planData?.panelesSel,
         cuotaAlquilerMes:        planData?.cuotaAlquilerMes,
+        ahorroAnualPercent:      planData?.ahorroAnualPercent,
       },
       ce: {
         nombre:        ceNombre    || sdCe.nombre    || urlRef.ce?.nombre    || "",
@@ -1346,7 +1398,6 @@ export default function FacturaUpload() {
   return (
     <>
 
-
       <div className="cs-page">
 
         {/* Header */}
@@ -1407,7 +1458,28 @@ export default function FacturaUpload() {
             onSetTabActiva={setTabActiva}
             onSesionError={() => setSesionError(true)}
             facturaPreviewData={facturaPreviewData}
-            onSesionLoaded={(data) => { setSesionData(data); if (data?.facturaPreview) setFacturaPreviewData(data.facturaPreview); }}
+            onSesionLoaded={(data) => {
+              setSesionData(data);
+              if (data?.facturaPreview) setFacturaPreviewData(data.facturaPreview);
+              if (data?.ce) {
+                if (data.ce.nombre)        setCeNombre(data.ce.nombre);
+                if (data.ce.status)        setCeStatus(data.ce.status);
+                if (data.ce.etiqueta)      setCeEtiqueta(data.ce.etiqueta);
+                if (data.ce.direccion)     setCeDireccion(data.ce.direccion);
+                if (data.ce.id_generacion) setIdGeneracion(String(data.ce.id_generacion));
+              }
+              if (data?.dealId)   setDealId(prev   => prev || data.dealId);
+              if (data?.mpklogId) setMpklogId(prev => prev || data.mpklogId);
+              if (data?.cliente) {
+                setCliente(prev => ({
+                  nombre:    prev.nombre    || data.cliente.nombre    || "",
+                  apellidos: prev.apellidos || data.cliente.apellidos || "",
+                  correo:    prev.correo    || data.cliente.correo    || "",
+                  telefono:  prev.telefono  || data.cliente.telefono  || "",
+                  direccion: prev.direccion || data.cliente.direccion || "",
+                }));
+              }
+            }}
           />
         )}
 
@@ -1479,6 +1551,21 @@ export default function FacturaUpload() {
 
         {/* ── STEP 1 — Datos del cliente ── */}
         {!loading && status !== "sent" && status !== "fuera_zona" && status !== "asesor_solicitado" && step === 1 && (
+          <div style={{ position: 'relative', width: '100%', maxWidth: 620 }}>
+            {(import.meta.env.DEV || window.location.hostname.split(".")[0] === "develop") && (
+              <div style={{ position: 'absolute', left: -140, top: 0 }}>
+                <select
+                  onChange={e => handleDevCESelect(e.target.value)}
+                  defaultValue=""
+                  style={{ fontSize: 11, color: '#999', border: '1px dashed #ccc', borderRadius: 4, padding: '4px 8px', background: 'rgba(255,255,255,0.85)', cursor: 'pointer', maxWidth: 130 }}
+                >
+                  <option value="" disabled>🛠 CE</option>
+                  {Object.keys(CE_ID_MAP).map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           <div className="cs-card fade-in">
             <div className="cs-step-indicator">
               <div className="cs-step-dot active">1</div>
@@ -1568,6 +1655,7 @@ export default function FacturaUpload() {
             <button className="cs-btn-primary" onClick={handleContinuar}>
               Continuar →
             </button>
+          </div>
           </div>
         )}
 
@@ -2234,7 +2322,7 @@ export default function FacturaUpload() {
                 onClick={handleContratar}
                 disabled={enviandoContrato}
               >
-                {enviandoContrato ? "Enviando..." : "Contratar ahora →"}
+                {enviandoContrato ? "Enviando..." : (ceStatus !== "Available" ? "Entrar en lista de espera →" : "Contratar ahora →")}
               </button>
             </div>
           </div>
