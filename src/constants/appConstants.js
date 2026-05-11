@@ -100,7 +100,6 @@ export const PLAN_REDIRECT_URL  = cotizadorBase;
 export const QUOTING_URL        = "https://dummyjson.com/test";
 export const LEAD_URL           = "https://dummyjson.com/test";
 export const NOMINATIM_URL      = "https://nominatim.openstreetmap.org";
-export const CE_DETAIL_URL      = "https://comunidades-energeticas-api-20084454554.catalystserverless.eu";
 
 // Mapa de estados de la CE a etiquetas visibles
 // Mapeamento Zoho Estatus → valor interno usado no frontend e enviado ao Flow
