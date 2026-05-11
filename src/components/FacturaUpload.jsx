@@ -1238,7 +1238,6 @@ export default function FacturaUpload() {
           .catch(() => `HTTP ${res.status}`);
         throw new Error(detail);
       }
-      setStatus("asesor_solicitado");
     } catch (err) {
       setError(err.message);
     } finally {
