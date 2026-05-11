@@ -87,7 +87,7 @@ export const SUMINISTRO_ZONA_CHECK = false; // true = aviso discreto si el sumin
 export const CUPS_ENABLED = false; // false = oculta opción "Introducir CUPS" en paso 2
 export const ASESOR_ENABLED = false; // false = oculta botón "Hablar con un asesor" y divisor "o" en paso 2
 
-export const API_BASE           = (import.meta.env.VITE_API_URL || "https://extractor.13.38.9.119.nip.io").replace(/\/$/, "");
+export const API_BASE           = "http://127.0.0.1:8012";
 export const SESION_URL         = `${API_BASE}/sesion`;
 // CE API proxiada por Vite em dev (evita CORS); em produção usa URL absoluta
 export const CE_API_URL         = `${API_BASE}/ces`;
