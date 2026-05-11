@@ -15,6 +15,7 @@ export default function PlanScreen({
   tabActiva,
   sesionData: sesionDataProp,
   onContratar,
+  onListaEspera,
   onVolver,
   onOptimizar,
   onSetPanelesPropuesta,
@@ -28,22 +29,6 @@ export default function PlanScreen({
   const [sesionFailed, setSesionFailed] = useState(false);
   const [ceFotoUrl, setCeFotoUrl] = useState(null);
   const [modalListaEspera, setModalListaEspera] = useState(false);
-
-  useEffect(() => {
-    const sessionId = new URLSearchParams(window.location.search).get("session_id")
-      ?? localStorage.getItem("cs_session_id");
-    const planUrl = window.location.href;
-    console.log("[/deals/lead-source] session_id:", sessionId, "plan_url:", planUrl);
-    if (sessionId) {
-      fetch(`${API_BASE}/deals/lead-source`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sessionId, plan_url: planUrl }),
-      })
-        .then(res => res.json().then(data => console.log("[/deals/lead-source] resposta:", data)).catch(() => {}))
-        .catch(() => {});
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!CE_FOTO_ENABLED || !ceNombre) return;
@@ -121,7 +106,7 @@ export default function PlanScreen({
                 <p style={{ fontSize:12, color:"#aaa", marginTop:4, marginBottom:18 }}>IVA incluido</p>
                 <button
                   style={{ width:"100%", background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em" }}
-                  onClick={ceStatus === "Available" ? onContratar : () => setModalListaEspera(true)}>
+                  onClick={ceStatus === "Available" ? onContratar : () => { setModalListaEspera(true); onListaEspera?.(); }}>
                   {ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
                 </button>
               </div>
@@ -186,7 +171,7 @@ export default function PlanScreen({
                 <p style={{ fontSize:11, color:"#aaa" }}>IVA 21% incluido</p>
                 <button
                   style={{ marginTop:12, background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"12px 32px", fontSize:14, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em" }}
-                  onClick={ceStatus === "Available" ? onContratar : () => setModalListaEspera(true)}>
+                  onClick={ceStatus === "Available" ? onContratar : () => { setModalListaEspera(true); onListaEspera?.(); }}>
                   {ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
                 </button>
               </div>

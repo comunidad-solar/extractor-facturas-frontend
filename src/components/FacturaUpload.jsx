@@ -67,6 +67,7 @@ export default function FacturaUpload() {
   const [direccionSuministro, setDireccionSuministro] = useState(null);
   const [devCESelected, setDevCESelected] = useState("");
   const listaCERef                    = useRef([]);     // ref para evitar stale closure
+  const cotizacionEnviadaRef          = useRef(false);  // guard: dispara 09_COTIZACION_ALQ só uma vez
 
   // ── Step 2A — PDF upload ──────────────────────────────────────────────────
   const [file, setFile]               = useState(null);
@@ -1137,6 +1138,114 @@ export default function FacturaUpload() {
     }).catch(() => {});
   };
 
+  const handleEntrarListaEspera = async () => {
+    setEnviandoContrato(true);
+    const sd        = sesionData ?? null;
+    const sdCliente = sd?.cliente ?? {};
+    const sdFactura = sd?.factura ?? null;
+    const sdCe      = sd?.ce      ?? {};
+    const urlRef    = urlParamsRef.current;
+    const urlFact   = urlRef.factura   ?? {};
+    const urlCli    = urlRef.cliente   ?? {};
+    const facturaLS = urlRef.facturaLS ?? null;
+    const modeEff   = mode ?? sd?.mode ?? urlRef.modeLS ?? null;
+    const rawData   = facturaData ?? cupsData ?? (urlFact.cups || urlFact.comercializadora ? urlFact : null) ?? {};
+    const ensureStructured = (obj) => {
+      if (!obj || Object.keys(obj).length === 0) return {};
+      if (obj.potencias_kw !== undefined) return obj;
+      return buildFactura(obj);
+    };
+    let factura;
+    if (modeEff === "pdf") {
+      factura = facturaData
+        ? ensureStructured({ ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null })
+        : ensureStructured(sdFactura ?? facturaLS);
+    } else if (modeEff === "cups") {
+      factura = cupsData
+        ? ensureStructured({ cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null })
+        : ensureStructured(sdFactura ?? facturaLS);
+    } else {
+      factura = ensureStructured(sdFactura ?? facturaLS ?? rawData);
+    }
+    let dealIdFinal   = dealId   ?? sd?.dealId   ?? urlRef.dealId   ?? null;
+    let mpklogIdFinal = mpklogId ?? sd?.mpklogId ?? urlRef.mpklogId ?? null;
+    const cleanUrl = (val) => (!val || val === "—") ? "" : val;
+    const payload = {
+      cliente: {
+        nombre:         cliente.nombre    || sdCliente.nombre    || cleanUrl(urlCli.nombre)    || "",
+        apellidos:      cliente.apellidos || sdCliente.apellidos || cleanUrl(urlCli.apellidos) || "",
+        correo:         cliente.correo    || sdCliente.correo    || cleanUrl(urlCli.correo)    || "",
+        telefono:       cliente.telefono  || sdCliente.telefono  || cleanUrl(urlCli.telefono)  || "",
+        direccion:      cliente.direccion || sdCliente.direccion || cleanUrl(urlCli.direccion) || "",
+        dealId:         dealIdFinal    ?? null,
+        mpklogId:       mpklogIdFinal  ?? null,
+        databaseId:     "00001",
+        lat:            userCoords?.lat ?? null,
+        lon:            userCoords?.lon ?? null,
+        dni:            "",
+        iban:           "",
+        tipoVenta:      modoAlquiler ? "Alquiler" : "Venta",
+        planContratado: true,
+        listaDeEspera:  true,
+      },
+      factura: {
+        ...factura,
+        precios_energia: {
+          pe_p1: parseFloat(manualFields.pe_p1 || rawData.pe_p1 || facturaLS?.precios_energia?.pe_p1) || null,
+          pe_p2: parseFloat(manualFields.pe_p2 || rawData.pe_p2 || facturaLS?.precios_energia?.pe_p2) || null,
+          pe_p3: parseFloat(manualFields.pe_p3 || rawData.pe_p3 || facturaLS?.precios_energia?.pe_p3) || null,
+          pe_p4: parseFloat(manualFields.pe_p4 || rawData.pe_p4 || facturaLS?.precios_energia?.pe_p4) || null,
+          pe_p5: parseFloat(manualFields.pe_p5 || rawData.pe_p5 || facturaLS?.precios_energia?.pe_p5) || null,
+          pe_p6: parseFloat(manualFields.pe_p6 || rawData.pe_p6 || facturaLS?.precios_energia?.pe_p6) || null,
+        },
+        importe_factura: parseFloat(manualFields.importe_factura || rawData.importe_factura || facturaLS?.importe_factura) || null,
+      },
+      Fsmstate:    "08_PROPUESTA_ALQ",
+      FsmPrevious: Fsmstate || sd?.Fsmstate || urlRef.fsmstate || null,
+      session_id:  extractSessionId ?? localStorage.getItem("cs_session_id") ?? null,
+      plan: {
+        ahorro25Anos:            planData?.ahorro25Anos,
+        pagoUnico:               planData?.pagoUnico,
+        pagoFinanciado:          planData?.pagoFinanciado,
+        ahorroMensual:           planData?.ahorroMensual,
+        ahorroAnual:             planData?.ahorroAnual,
+        ahorroAnualPercent:      planData?.ahorroAnualPercent,
+        produccionAnual:         planData?.produccionAnual,
+        potenciaTotal:           planData?.potenciaTotal,
+        coeficienteDistribucion: planData?.coeficienteDistribucion,
+        plazoRecuperacion:       planData?.plazoRecuperacion,
+        panelesSel:              planData?.panelesSel,
+        cuotaAlquilerMes:        planData?.cuotaAlquilerMes,
+      },
+      ce: {
+        nombre:        ceNombre    || sdCe.nombre    || urlRef.ce?.nombre    || "",
+        direccion:     ceDireccion || sdCe.direccion || urlRef.ce?.direccion || "",
+        status:        ceStatus    || sdCe.status    || urlRef.ce?.status    || "",
+        etiqueta:      ceEtiqueta  || sdCe.etiqueta  || urlRef.ce?.etiqueta  || "",
+        id_generacion: resolverIdGeneracion(idGeneracion || sdCe.id_generacion || urlRef.idGen, ceNombre || sdCe.nombre || urlRef.ce?.nombre),
+      },
+      ...((sesionData?.factura_1 || factura1Data) && { factura_1: sesionData?.factura_1 ?? buildFactura1() }),
+      ...((sesionData?.factura_2 || factura2Data) && { factura_2: sesionData?.factura_2 ?? buildFactura2() }),
+    };
+    try {
+      const fd = new FormData();
+      fd.append("data", JSON.stringify(payload));
+      if (mode === "pdf" && file) fd.append("file", file, file.name);
+      const res = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
+      if (!res.ok) {
+        const detail = await res.json()
+          .then((d) => typeof d.detail === "string" ? d.detail : JSON.stringify(d.detail))
+          .catch(() => `HTTP ${res.status}`);
+        throw new Error(detail);
+      }
+      setStatus("asesor_solicitado");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setEnviandoContrato(false);
+    }
+  };
+
   const handleContratar = async () => {
     if (!dniContrato.trim()) {
       setDniError("El DNI es obligatorio"); return;
@@ -1257,10 +1366,13 @@ export default function FacturaUpload() {
         dealId:         dealIdFinal    ?? null,
         mpklogId:       mpklogIdFinal  ?? null,
         databaseId:     "00001",
+        lat:            userCoords?.lat ?? null,
+        lon:            userCoords?.lon ?? null,
         dni:            dniContrato.trim().toUpperCase(),
         iban:           ibanContrato.trim().toUpperCase(),
         tipoVenta:      modoAlquiler ? "Alquiler" : "Venta",
         planContratado: true,
+        listaDeEspera:  false,
       },
       factura: {
         ...factura,
@@ -1452,6 +1564,7 @@ export default function FacturaUpload() {
             tabActiva={tabActiva}
             sesionData={sesionData}
             onContratar={() => setModalContratar(true)}
+            onListaEspera={handleEntrarListaEspera}
             onVolver={handleReset}
             onOptimizar={handleOptimizar}
             onSetPanelesPropuesta={setPanelesPropuesta}
@@ -1479,6 +1592,51 @@ export default function FacturaUpload() {
                   direccion: prev.direccion || data.cliente.direccion || "",
                 }));
               }
+
+              // Notificar Zoho que el usuario llegó a la pantalla del plan (só uma vez)
+              if (cotizacionEnviadaRef.current) return;
+              cotizacionEnviadaRef.current = true;
+              const sessionIdCotiz = extractSessionId ?? localStorage.getItem("cs_session_id") ?? null;
+              const cotizPayload = {
+                plan_url: window.location.href,
+                cliente: {
+                  ...(data?.cliente ?? {}),
+                  dealId:         data?.dealId   ?? dealId   ?? null,
+                  mpklogId:       data?.mpklogId ?? mpklogId ?? null,
+                  databaseId:     "00001",
+                  dni:            "",
+                  iban:           "",
+                  tipoVenta:      modoAlquiler ? "Alquiler" : "Venta",
+                  planContratado: false,
+                },
+                Fsmstate:    "09_COTIZACION_ALQ",
+                FsmPrevious: data?.Fsmstate ?? Fsmstate ?? null,
+                session_id:  sessionIdCotiz,
+                plan: {
+                  ahorro25Anos:            planData?.ahorro25Anos,
+                  pagoUnico:               planData?.pagoUnico,
+                  pagoFinanciado:          planData?.pagoFinanciado,
+                  ahorroMensual:           planData?.ahorroMensual,
+                  ahorroAnual:             planData?.ahorroAnual,
+                  ahorroAnualPercent:      planData?.ahorroAnualPercent,
+                  produccionAnual:         planData?.produccionAnual,
+                  potenciaTotal:           planData?.potenciaTotal,
+                  coeficienteDistribucion: planData?.coeficienteDistribucion,
+                  plazoRecuperacion:       planData?.plazoRecuperacion,
+                  panelesSel:              planData?.panelesSel,
+                  cuotaAlquilerMes:        planData?.cuotaAlquilerMes,
+                },
+                ce: {
+                  nombre:        data?.ce?.nombre        ?? ceNombre    ?? "",
+                  direccion:     data?.ce?.direccion     ?? ceDireccion ?? "",
+                  status:        data?.ce?.status        ?? ceStatus    ?? "",
+                  etiqueta:      data?.ce?.etiqueta      ?? ceEtiqueta  ?? "",
+                  id_generacion: data?.ce?.id_generacion ?? idGeneracion ?? null,
+                },
+              };
+              const fdCotiz = new FormData();
+              fdCotiz.append("data", JSON.stringify(cotizPayload));
+              fetch(`${API_BASE}/enviar`, { method: "POST", body: fdCotiz }).catch(() => {});
             }}
           />
         )}
