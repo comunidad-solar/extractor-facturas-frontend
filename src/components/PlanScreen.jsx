@@ -15,6 +15,7 @@ export default function PlanScreen({
   tabActiva,
   sesionData: sesionDataProp,
   onContratar,
+  onListaEspera,
   onVolver,
   onOptimizar,
   onSetPanelesPropuesta,
@@ -27,9 +28,25 @@ export default function PlanScreen({
   const [sesionData, setSesionData] = useState(sesionDataProp ?? null);
   const [sesionFailed, setSesionFailed] = useState(false);
 
+<<<<<<< Updated upstream
   useEffect(() => {
     const sessionId = localStorage.getItem("cs_session_id");
     console.log("[PlanScreen] cs_session_id:", sessionId);
+=======
+
+  useEffect(() => {
+    if (!CE_FOTO_ENABLED || !ceNombre) return;
+    fetch(`${API_BASE}/ce/foto?name=${encodeURIComponent(ceNombre)}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data?.foto_url) setCeFotoUrl(data.foto_url); })
+      .catch(() => {});
+  }, [ceNombre]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const sessionId = new URLSearchParams(window.location.search).get("session_id")
+      ?? localStorage.getItem("cs_session_id");
+    console.log("[PlanScreen] session_id:", sessionId, "(url:", new URLSearchParams(window.location.search).get("session_id"), "/ ls:", localStorage.getItem("cs_session_id"), ")");
+>>>>>>> Stashed changes
     if (!sessionId) return;
     fetch(`${API_BASE}/sesion/${sessionId}`)
       .then(res => {
@@ -94,7 +111,11 @@ export default function PlanScreen({
                 <p style={{ fontSize:12, color:"#aaa", marginTop:4, marginBottom:18 }}>IVA incluido</p>
                 <button
                   style={{ width:"100%", background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em" }}
+<<<<<<< Updated upstream
                   onClick={onContratar}>
+=======
+                  onClick={ceStatus === "Available" ? onContratar : () => { setModalListaEspera(true); onListaEspera?.(); }}>
+>>>>>>> Stashed changes
                   {ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
                 </button>
               </div>
@@ -159,7 +180,11 @@ export default function PlanScreen({
                 <p style={{ fontSize:11, color:"#aaa" }}>IVA 21% incluido</p>
                 <button
                   style={{ marginTop:12, background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"12px 32px", fontSize:14, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em" }}
+<<<<<<< Updated upstream
                   onClick={onContratar}>
+=======
+                  onClick={ceStatus === "Available" ? onContratar : () => { setModalListaEspera(true); onListaEspera?.(); }}>
+>>>>>>> Stashed changes
                   {ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
                 </button>
               </div>
