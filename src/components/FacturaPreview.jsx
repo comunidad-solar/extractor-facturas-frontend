@@ -82,7 +82,7 @@ const MOCK_DATA = {
     { concepto: "Impuesto eléctrico",           porcentaje: 5.11, dias: null, precio_dia: null,     total:  2.82 },
     { concepto: "Financiación del bono social", porcentaje: null, dias: 30,   precio_dia: 0.006282, total:  0.19 },
     { concepto: "Alquiler de equipo de medida", porcentaje: null, dias: 30,   precio_dia: 0.026630, total:  0.80 },
-    { concepto: "Cuota mantenimiento", porcentaje: null, dias: 30,   precio_dia: 0.333333, total: 10.00 },
+    { concepto: "Cuota club", porcentaje: null, dias: 30,   precio_dia: 0.333333, total: 10.00 },
   ],
   impuestos: {
     base_imponible:   68.97,
@@ -173,9 +173,9 @@ export default function FacturaPreview({ data = null }) {
   ];
   const otherRows = [
     { label: 'Potencia',            val: r.potencia },
-    { label: 'Otros peajes',        val: r.otros_peajes },
-    { label: 'Cuotas reguladas', sublabel: 'peajes + cargos', val: r.cuotas_reguladas },
-    { label: 'Cuota mantenimiento', val: r.cuota_mantenimiento },
+    { label: 'Otros peajes',     sublabel: 'peajes regulados + IE',  val: r.otros_peajes },
+    { label: 'Cuotas reguladas', sublabel: 'bono social + alquiler', val: r.cuotas_reguladas },
+    { label: 'Cuota club',       val: r.cuota_mantenimiento },
     { label: "IVA's",               val: r.ivas },
   ];
   // cada fila energyRows ≈ 21px → altura barra chart = nº filas × 21 + margens
@@ -185,7 +185,7 @@ export default function FacturaPreview({ data = null }) {
   const AREA_CFG = [
     { key: 'generada',    name: 'Energía generada',  stroke: 'rgb(80, 151, 4)', legendColor: '#7CB342', fill: '#7CB342', fillOpacity: 0.35 },
     { key: 'consumida',   name: 'Energía consumida', stroke: '#c87b00',         legendColor: '#F5A623', fill: '#F5A623', fillOpacity: 0.35 },
-    { key: 'autoconsumo', name: 'Autoconsumo',        stroke: '#057adb',         legendColor: '#49a1a9', fill: '#42A5F5', fillOpacity: 0.50 },
+    { key: 'autoconsumo', name: 'Autoconsumo',        stroke: '#057adb',         legendColor: '#46939a', fill: '#42A5F5', fillOpacity: 0.50 },
   ];
   const LEGEND_ORDER = ['autoconsumo', 'consumida', 'generada'];
   const areaChartLegend = () => (
@@ -264,7 +264,7 @@ export default function FacturaPreview({ data = null }) {
           <ResponsiveContainer width="100%" height={220} style={{ outline: 'none' }}>
             <AreaChart data={d.grafico_horario} margin={{ top: 36, right: 16, left: 0, bottom: 0 }}>
               <XAxis dataKey="hora" tick={{ fontSize: 10 }} ticks={[0, 4, 8, 12, 16, 20]} tickFormatter={v => `${v}h`} />
-              <YAxis tickFormatter={v => `${v} kWh`} tick={{ fontSize: 10 }} width={58} />
+              <YAxis tickFormatter={v => `${v} kWh`} tick={{ fontSize: 10 }} width={68} />
               <Tooltip formatter={(v, name) => [`${Number(v).toFixed(2)} kWh`, name]} labelFormatter={v => `${v}h`} contentStyle={{ fontSize: 11, padding: '4px 8px' }} itemStyle={{ margin: 0, padding: '1px 0' }} />
               <Legend content={areaChartLegend} />
               {AREA_CFG.map(cfg => (
@@ -434,7 +434,7 @@ export default function FacturaPreview({ data = null }) {
             {d.otros_conceptos.map(o => (
               <tr key={o.concepto}>
                 <td style={{ padding: '2px 6px 2px 0', fontSize: 12 }}>
-                  {o.concepto.replace(/\s*MEGAPARK\s*/gi, '').trim()}
+                  {o.concepto.replace(/\s*MEGAPARK\s*/gi, '').replace(/cuota\s+mantenimiento/gi, 'Cuota club').trim()}
                   {o.porcentaje != null && (
                     <span style={{ color: '#555', marginLeft: 6 }}>{o.porcentaje}%</span>
                   )}
