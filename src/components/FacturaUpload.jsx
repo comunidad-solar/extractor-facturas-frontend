@@ -1202,7 +1202,9 @@ export default function FacturaUpload() {
       },
       Fsmstate:    "08_PROPUESTA_ALQ",
       FsmPrevious: Fsmstate || sd?.Fsmstate || urlRef.fsmstate || null,
+      plan_url:    window.location.href,
       session_id:  extractSessionId ?? localStorage.getItem("cs_session_id") ?? null,
+      ...(sd?.facturaPreview && { facturaPreview: sd.facturaPreview }),
       plan: {
         ahorro25Anos:            planData?.ahorro25Anos,
         pagoUnico:               planData?.pagoUnico,
@@ -1389,7 +1391,9 @@ export default function FacturaUpload() {
       },
       Fsmstate:    "08_PROPUESTA_ALQ",
       FsmPrevious: Fsmstate || sd?.Fsmstate || urlRef.fsmstate || null,
+      plan_url:    window.location.href,
       session_id:  extractSessionId ?? localStorage.getItem("cs_session_id") ?? null,
+      ...(sd?.facturaPreview && { facturaPreview: sd.facturaPreview }),
       plan: {
         ahorro25Anos:            planData?.ahorro25Anos,
         pagoUnico:               planData?.pagoUnico,
@@ -1596,46 +1600,50 @@ export default function FacturaUpload() {
               if (cotizacionEnviadaRef.current) return;
               cotizacionEnviadaRef.current = true;
               const sessionIdCotiz = extractSessionId ?? localStorage.getItem("cs_session_id") ?? null;
-              const cotizPayload = {
-                plan_url: window.location.href,
-                cliente: {
-                  ...(data?.cliente ?? {}),
-                  dealId:         data?.dealId   ?? dealId   ?? null,
-                  mpklogId:       data?.mpklogId ?? mpklogId ?? null,
-                  databaseId:     "00001",
-                  dni:            "",
-                  iban:           "",
-                  tipoVenta:      modoAlquiler ? "Alquiler" : "Venta",
-                  planContratado: false,
-                },
-                Fsmstate:    "09_COTIZACION_ALQ",
-                FsmPrevious: data?.Fsmstate ?? Fsmstate ?? null,
-                session_id:  sessionIdCotiz,
-                plan: {
-                  ahorro25Anos:            planData?.ahorro25Anos,
-                  pagoUnico:               planData?.pagoUnico,
-                  pagoFinanciado:          planData?.pagoFinanciado,
-                  ahorroMensual:           planData?.ahorroMensual,
-                  ahorroAnual:             planData?.ahorroAnual,
-                  ahorroAnualPercent:      planData?.ahorroAnualPercent,
-                  produccionAnual:         planData?.produccionAnual,
-                  potenciaTotal:           planData?.potenciaTotal,
-                  coeficienteDistribucion: planData?.coeficienteDistribucion,
-                  plazoRecuperacion:       planData?.plazoRecuperacion,
-                  panelesSel:              planData?.panelesSel,
-                  cuotaAlquilerMes:        planData?.cuotaAlquilerMes,
-                },
-                ce: {
-                  nombre:        data?.ce?.nombre        ?? ceNombre    ?? "",
-                  direccion:     data?.ce?.direccion     ?? ceDireccion ?? "",
-                  status:        data?.ce?.status        ?? ceStatus    ?? "",
-                  etiqueta:      data?.ce?.etiqueta      ?? ceEtiqueta  ?? "",
-                  id_generacion: data?.ce?.id_generacion ?? idGeneracion ?? null,
-                },
+              const sendCotiz = () => {
+                const cotizPayload = {
+                  plan_url: window.location.href,
+                  cliente: {
+                    ...(data?.cliente ?? {}),
+                    dealId:         data?.dealId   ?? dealId   ?? null,
+                    mpklogId:       data?.mpklogId ?? mpklogId ?? null,
+                    databaseId:     "00001",
+                    dni:            "",
+                    iban:           "",
+                    tipoVenta:      modoAlquiler ? "Alquiler" : "Venta",
+                    planContratado: false,
+                  },
+                  Fsmstate:    "09_COTIZACION_ALQ",
+                  FsmPrevious: data?.Fsmstate ?? Fsmstate ?? null,
+                  session_id:  sessionIdCotiz,
+                  ...(data?.facturaPreview && { facturaPreview: data.facturaPreview }),
+                  plan: {
+                    ahorro25Anos:            planData?.ahorro25Anos,
+                    pagoUnico:               planData?.pagoUnico,
+                    pagoFinanciado:          planData?.pagoFinanciado,
+                    ahorroMensual:           planData?.ahorroMensual,
+                    ahorroAnual:             planData?.ahorroAnual,
+                    ahorroAnualPercent:      planData?.ahorroAnualPercent,
+                    produccionAnual:         planData?.produccionAnual,
+                    potenciaTotal:           planData?.potenciaTotal,
+                    coeficienteDistribucion: planData?.coeficienteDistribucion,
+                    plazoRecuperacion:       planData?.plazoRecuperacion,
+                    panelesSel:              planData?.panelesSel,
+                    cuotaAlquilerMes:        planData?.cuotaAlquilerMes,
+                  },
+                  ce: {
+                    nombre:        data?.ce?.nombre        ?? ceNombre    ?? "",
+                    direccion:     data?.ce?.direccion     ?? ceDireccion ?? "",
+                    status:        data?.ce?.status        ?? ceStatus    ?? "",
+                    etiqueta:      data?.ce?.etiqueta      ?? ceEtiqueta  ?? "",
+                    id_generacion: data?.ce?.id_generacion ?? idGeneracion ?? null,
+                  },
+                };
+                const fdCotiz = new FormData();
+                fdCotiz.append("data", JSON.stringify(cotizPayload));
+                fetch(`${API_BASE}/enviar`, { method: "POST", body: fdCotiz }).catch(() => {});
               };
-              const fdCotiz = new FormData();
-              fdCotiz.append("data", JSON.stringify(cotizPayload));
-              fetch(`${API_BASE}/enviar`, { method: "POST", body: fdCotiz }).catch(() => {});
+              sendCotiz();
             }}
           />
         )}
