@@ -1597,49 +1597,52 @@ export default function FacturaUpload() {
               cotizacionEnviadaRef.current = true;
               const sessionIdCotiz = extractSessionId ?? localStorage.getItem("cs_session_id") ?? null;
               const fullPlanUrl = window.location.href;
-              const shortPlanUrl = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(fullPlanUrl)}`)
-                .then(r => r.ok ? r.text() : null)
-                .catch(() => null);
-              const cotizPayload = {
-                plan_url: shortPlanUrl ?? fullPlanUrl,
-                cliente: {
-                  ...(data?.cliente ?? {}),
-                  dealId:         data?.dealId   ?? dealId   ?? null,
-                  mpklogId:       data?.mpklogId ?? mpklogId ?? null,
-                  databaseId:     "00001",
-                  dni:            "",
-                  iban:           "",
-                  tipoVenta:      modoAlquiler ? "Alquiler" : "Venta",
-                  planContratado: false,
-                },
-                Fsmstate:    "09_COTIZACION_ALQ",
-                FsmPrevious: data?.Fsmstate ?? Fsmstate ?? null,
-                session_id:  sessionIdCotiz,
-                plan: {
-                  ahorro25Anos:            planData?.ahorro25Anos,
-                  pagoUnico:               planData?.pagoUnico,
-                  pagoFinanciado:          planData?.pagoFinanciado,
-                  ahorroMensual:           planData?.ahorroMensual,
-                  ahorroAnual:             planData?.ahorroAnual,
-                  ahorroAnualPercent:      planData?.ahorroAnualPercent,
-                  produccionAnual:         planData?.produccionAnual,
-                  potenciaTotal:           planData?.potenciaTotal,
-                  coeficienteDistribucion: planData?.coeficienteDistribucion,
-                  plazoRecuperacion:       planData?.plazoRecuperacion,
-                  panelesSel:              planData?.panelesSel,
-                  cuotaAlquilerMes:        planData?.cuotaAlquilerMes,
-                },
-                ce: {
-                  nombre:        data?.ce?.nombre        ?? ceNombre    ?? "",
-                  direccion:     data?.ce?.direccion     ?? ceDireccion ?? "",
-                  status:        data?.ce?.status        ?? ceStatus    ?? "",
-                  etiqueta:      data?.ce?.etiqueta      ?? ceEtiqueta  ?? "",
-                  id_generacion: data?.ce?.id_generacion ?? idGeneracion ?? null,
-                },
+              const sendCotiz = (planUrl) => {
+                const cotizPayload = {
+                  plan_url: planUrl,
+                  cliente: {
+                    ...(data?.cliente ?? {}),
+                    dealId:         data?.dealId   ?? dealId   ?? null,
+                    mpklogId:       data?.mpklogId ?? mpklogId ?? null,
+                    databaseId:     "00001",
+                    dni:            "",
+                    iban:           "",
+                    tipoVenta:      modoAlquiler ? "Alquiler" : "Venta",
+                    planContratado: false,
+                  },
+                  Fsmstate:    "09_COTIZACION_ALQ",
+                  FsmPrevious: data?.Fsmstate ?? Fsmstate ?? null,
+                  session_id:  sessionIdCotiz,
+                  plan: {
+                    ahorro25Anos:            planData?.ahorro25Anos,
+                    pagoUnico:               planData?.pagoUnico,
+                    pagoFinanciado:          planData?.pagoFinanciado,
+                    ahorroMensual:           planData?.ahorroMensual,
+                    ahorroAnual:             planData?.ahorroAnual,
+                    ahorroAnualPercent:      planData?.ahorroAnualPercent,
+                    produccionAnual:         planData?.produccionAnual,
+                    potenciaTotal:           planData?.potenciaTotal,
+                    coeficienteDistribucion: planData?.coeficienteDistribucion,
+                    plazoRecuperacion:       planData?.plazoRecuperacion,
+                    panelesSel:              planData?.panelesSel,
+                    cuotaAlquilerMes:        planData?.cuotaAlquilerMes,
+                  },
+                  ce: {
+                    nombre:        data?.ce?.nombre        ?? ceNombre    ?? "",
+                    direccion:     data?.ce?.direccion     ?? ceDireccion ?? "",
+                    status:        data?.ce?.status        ?? ceStatus    ?? "",
+                    etiqueta:      data?.ce?.etiqueta      ?? ceEtiqueta  ?? "",
+                    id_generacion: data?.ce?.id_generacion ?? idGeneracion ?? null,
+                  },
+                };
+                const fdCotiz = new FormData();
+                fdCotiz.append("data", JSON.stringify(cotizPayload));
+                fetch(`${API_BASE}/enviar`, { method: "POST", body: fdCotiz }).catch(() => {});
               };
-              const fdCotiz = new FormData();
-              fdCotiz.append("data", JSON.stringify(cotizPayload));
-              fetch(`${API_BASE}/enviar`, { method: "POST", body: fdCotiz }).catch(() => {});
+              fetch(`https://is.gd/create.php?format=simple&url=${encodeURIComponent(fullPlanUrl)}`)
+                .then(r => r.ok ? r.text() : null)
+                .catch(() => null)
+                .then(short => sendCotiz(short ?? fullPlanUrl));
             }}
           />
         )}
