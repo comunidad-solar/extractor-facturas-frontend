@@ -1204,6 +1204,7 @@ export default function FacturaUpload() {
       FsmPrevious: Fsmstate || sd?.Fsmstate || urlRef.fsmstate || null,
       plan_url:    window.location.href,
       session_id:  extractSessionId ?? localStorage.getItem("cs_session_id") ?? null,
+      ...(sd?.facturaPreview && { facturaPreview: sd.facturaPreview }),
       plan: {
         ahorro25Anos:            planData?.ahorro25Anos,
         pagoUnico:               planData?.pagoUnico,
@@ -1392,6 +1393,7 @@ export default function FacturaUpload() {
       FsmPrevious: Fsmstate || sd?.Fsmstate || urlRef.fsmstate || null,
       plan_url:    window.location.href,
       session_id:  extractSessionId ?? localStorage.getItem("cs_session_id") ?? null,
+      ...(sd?.facturaPreview && { facturaPreview: sd.facturaPreview }),
       plan: {
         ahorro25Anos:            planData?.ahorro25Anos,
         pagoUnico:               planData?.pagoUnico,
@@ -1614,6 +1616,7 @@ export default function FacturaUpload() {
                   Fsmstate:    "09_COTIZACION_ALQ",
                   FsmPrevious: data?.Fsmstate ?? Fsmstate ?? null,
                   session_id:  sessionIdCotiz,
+                  ...(data?.facturaPreview && { facturaPreview: data.facturaPreview }),
                   plan: {
                     ahorro25Anos:            planData?.ahorro25Anos,
                     pagoUnico:               planData?.pagoUnico,
