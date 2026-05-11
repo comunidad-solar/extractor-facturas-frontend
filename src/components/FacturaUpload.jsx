@@ -1917,12 +1917,9 @@ export default function FacturaUpload() {
                 </h2>
 
                 {error && (
-                  <div className="cs-alert-err">
-                    <span>⚠️</span>
-                    <div>
-                      <strong>Error al analizar la factura</strong>
-                      <p style={{ marginTop:4 }}>{error}</p>
-                    </div>
+                  <div className="cs-alert-warn">
+                    <span>ℹ️</span>
+                    <div>{error}</div>
                   </div>
                 )}
 
