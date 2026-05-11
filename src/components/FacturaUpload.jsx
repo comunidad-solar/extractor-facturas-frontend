@@ -1202,6 +1202,7 @@ export default function FacturaUpload() {
       },
       Fsmstate:    "08_PROPUESTA_ALQ",
       FsmPrevious: Fsmstate || sd?.Fsmstate || urlRef.fsmstate || null,
+      plan_url:    window.location.href,
       session_id:  extractSessionId ?? localStorage.getItem("cs_session_id") ?? null,
       plan: {
         ahorro25Anos:            planData?.ahorro25Anos,
@@ -1389,6 +1390,7 @@ export default function FacturaUpload() {
       },
       Fsmstate:    "08_PROPUESTA_ALQ",
       FsmPrevious: Fsmstate || sd?.Fsmstate || urlRef.fsmstate || null,
+      plan_url:    window.location.href,
       session_id:  extractSessionId ?? localStorage.getItem("cs_session_id") ?? null,
       plan: {
         ahorro25Anos:            planData?.ahorro25Anos,
@@ -1596,10 +1598,9 @@ export default function FacturaUpload() {
               if (cotizacionEnviadaRef.current) return;
               cotizacionEnviadaRef.current = true;
               const sessionIdCotiz = extractSessionId ?? localStorage.getItem("cs_session_id") ?? null;
-              const fullPlanUrl = window.location.href;
-              const sendCotiz = (planUrl) => {
+              const sendCotiz = () => {
                 const cotizPayload = {
-                  plan_url: planUrl,
+                  plan_url: window.location.href,
                   cliente: {
                     ...(data?.cliente ?? {}),
                     dealId:         data?.dealId   ?? dealId   ?? null,
@@ -1639,10 +1640,7 @@ export default function FacturaUpload() {
                 fdCotiz.append("data", JSON.stringify(cotizPayload));
                 fetch(`${API_BASE}/enviar`, { method: "POST", body: fdCotiz }).catch(() => {});
               };
-              fetch(`https://is.gd/create.php?format=simple&url=${encodeURIComponent(fullPlanUrl)}`)
-                .then(r => r.ok ? r.text() : null)
-                .catch(() => null)
-                .then(short => sendCotiz(short ?? fullPlanUrl));
+              sendCotiz();
             }}
           />
         )}
