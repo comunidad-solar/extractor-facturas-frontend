@@ -693,7 +693,7 @@ export default function FacturaUpload() {
     formData.append("file", file);
     try {
       const res = await fetch(`${API_BASE}/facturas/extraer`, { method: "POST", body: formData });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error("Tu factura requiere revisión manual. Un asesor se pondrá en contacto contigo en breve.");
       const data = await res.json();
       if (data.session_id) setExtractSessionId(data.session_id);
       console.log("[extraer] session_id recebido:", data.session_id ?? null);
@@ -750,7 +750,7 @@ export default function FacturaUpload() {
       const fd = new FormData();
       fd.append("file", f, f.name);
       const res = await fetch(`${API_BASE}/facturas/extraer`, { method: "POST", body: fd });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error("Tu factura requiere revisión manual. Un asesor se pondrá en contacto contigo en breve.");
       const data = await res.json();
 
       const flat1 = flattenFacturaResponse(data);
@@ -784,7 +784,7 @@ export default function FacturaUpload() {
       const fd = new FormData();
       fd.append("file", f, f.name);
       const res = await fetch(`${API_BASE}/facturas/extraer`, { method: "POST", body: fd });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error("Tu factura requiere revisión manual. Un asesor se pondrá en contacto contigo en breve.");
       const data = await res.json();
 
       const flat2 = flattenFacturaResponse(data);
@@ -1917,12 +1917,9 @@ export default function FacturaUpload() {
                 </h2>
 
                 {error && (
-                  <div className="cs-alert-err">
-                    <span>⚠️</span>
-                    <div>
-                      <strong>Error al analizar la factura</strong>
-                      <p style={{ marginTop:4 }}>{error}</p>
-                    </div>
+                  <div className="cs-alert-warn">
+                    <span>ℹ️</span>
+                    <div>{error}</div>
                   </div>
                 )}
 
