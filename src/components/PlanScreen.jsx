@@ -28,7 +28,7 @@ export default function PlanScreen({
   const [sesionData, setSesionData] = useState(sesionDataProp ?? null);
   const [sesionFailed, setSesionFailed] = useState(false);
   const [ceFotoUrl, setCeFotoUrl] = useState(null);
-  const [modalListaEspera, setModalListaEspera] = useState(false);
+
 
   useEffect(() => {
     if (!CE_FOTO_ENABLED || !ceNombre) return;
@@ -106,7 +106,7 @@ export default function PlanScreen({
                 <p style={{ fontSize:12, color:"#aaa", marginTop:4, marginBottom:18 }}>IVA incluido</p>
                 <button
                   style={{ width:"100%", background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em" }}
-                  onClick={ceStatus === "Available" ? onContratar : () => { setModalListaEspera(true); onListaEspera?.(); }}>
+                  onClick={ceStatus === "Available" ? onContratar : onListaEspera}>
                   {ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
                 </button>
               </div>
@@ -171,7 +171,7 @@ export default function PlanScreen({
                 <p style={{ fontSize:11, color:"#aaa" }}>IVA 21% incluido</p>
                 <button
                   style={{ marginTop:12, background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"12px 32px", fontSize:14, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em" }}
-                  onClick={ceStatus === "Available" ? onContratar : () => { setModalListaEspera(true); onListaEspera?.(); }}>
+                  onClick={ceStatus === "Available" ? onContratar : onListaEspera}>
                   {ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
                 </button>
               </div>
@@ -202,9 +202,13 @@ export default function PlanScreen({
               <p style={{ fontSize:11, color:"#aaa", marginBottom:2 }}>Origen</p>
               <p style={{ fontSize:12, color:"#777", marginBottom:4 }}>Comunidad Energética</p>
               <p style={{ fontSize:15, fontWeight:700, color:"#121212", marginBottom:14 }}>{ceNombre || "—"}</p>
-              <button style={{ width:"100%", background:"#EF931D", color:"#fff", border:"none", borderRadius:24, padding:"10px", fontSize:13, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em" }}>
+              <a
+                href="https://comunidadsolar.es/comunidades-energeticas/"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display:"block", width:"100%", background:"#EF931D", color:"#fff", border:"none", borderRadius:24, padding:"10px", fontSize:13, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em", textDecoration:"none", textAlign:"center", boxSizing:"border-box" }}>
                 Ver Más
-              </button>
+              </a>
             </div>
           </div>
 
@@ -258,7 +262,7 @@ export default function PlanScreen({
             <table className="cs-table">
               <tbody>
                 <tr><td>Número de paneles</td><td>{panelesSel}</td></tr>
-                <tr><td>Potencia total</td><td>{parseInt(fmtES(planData?.potenciaTotal ?? 3))} kWh</td></tr>
+                <tr><td>Potencia total</td><td>{fmtES(planData?.potenciaTotal ?? 3)} kW</td></tr>
                 <tr><td>Producción de energía anual estimada*</td><td>{fmtES(planData?.produccionAnual ?? 4101.25)} kWh</td></tr>
                 <tr><td>Ahorro anual medio estimado*</td><td>{fmtES(planData?.ahorroAnual ?? 522.48)} €</td></tr>
                 {modoAlquiler ? (
@@ -266,7 +270,7 @@ export default function PlanScreen({
                 ) : (
                   <>
                     <tr><td>Ahorro total estimado durante 25 años*</td><td>{fmtES(planData?.ahorro25Anos ?? 15707.25)} €</td></tr>
-                    <tr><td>Coeficiente de distribución sobre total de la instalación</td><td>{fmtES(planData?.coeficienteDistribucion ?? 5, 0)} %</td></tr>
+                    <tr><td>Coeficiente de distribución sobre total de la instalación</td><td>{fmtES((planData?.coeficienteDistribucion ?? 0.05) * 100)} %</td></tr>
                     <tr><td>Pago al contado</td><td>{fmtES(planData?.pagoUnico ?? 3480.75)} €</td></tr>
                     <tr><td>Plazo estimado de recuperación del coste inicial*</td><td>{fmtES(planData?.plazoRecuperacion ?? 6.7, 1)} años</td></tr>
                   </>
@@ -298,8 +302,8 @@ export default function PlanScreen({
               Te recomendamos {panelesPropuesta === 1 ? "1 panel solar" : `${panelesPropuesta} paneles solares`}, pero puedes solicitar una cantidad diferente optimizando tu plan de participación con un asesor energético.
             </p>
             <button
-              onClick={onOptimizar}
-              style={{ background:"#fff", color:"#EF931D", border:"2px solid #EF931D", borderRadius:24, padding:"10px 24px", fontSize:13, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em", width:"100%" }}>
+              disabled
+              style={{ background:"#fff", color:"#ccc", border:"2px solid #ccc", borderRadius:24, padding:"10px 24px", fontSize:13, fontWeight:700, fontFamily:"inherit", cursor:"not-allowed", letterSpacing:"0.04em", width:"100%", opacity:0.6 }}>
               Optimizar
             </button>
           </div>
@@ -366,7 +370,7 @@ export default function PlanScreen({
                   <li>Ahorro promedio de <strong>{fmtES(planData?.ahorroAnual)}€</strong> al año.</li>
                   <li>Ahorro total estimado de <strong>{fmtES(planData?.ahorro25Anos)}€</strong> en 25 años (considerando una subida del precio de la energía del 0% anual).</li>
                 </ul>
-                <p>{panelesSel === 1 ? "El panel" : `Los ${panelesSel} paneles`} contiene{panelesSel === 1 ? "" : "n"} una potencia nominal total de <strong>{fmtES(planData?.potenciaTotal)} kW</strong>. Lo que quiere decir que el coeficiente de reparto que te pertenece es del <strong>{planData?.coeficienteDistribucion ?? "—"}%</strong> de toda la Comunidad Energética.</p>
+                <p>{panelesSel === 1 ? "El panel" : `Los ${panelesSel} paneles`} contiene{panelesSel === 1 ? "" : "n"} una potencia nominal total de <strong>{fmtES(planData?.potenciaTotal)} kW</strong>. Lo que quiere decir que el coeficiente de reparto que te pertenece es del <strong>{planData?.coeficienteDistribucion != null ? fmtES(planData.coeficienteDistribucion * 100) : "—"}%</strong> de toda la Comunidad Energética.</p>
               </div>
             )}
 
@@ -425,9 +429,13 @@ export default function PlanScreen({
             <p style={{ fontSize:13, color:"rgba(0, 0, 0, 0.72)", lineHeight:1.75, marginBottom:32 }}>
               Nuestra app te permitirá <strong style={{ color:"#000000" }}>optimizar el uso de energía</strong> en tu hogar, proporcionándote toda la información necesaria para ahorrar y mejorar tu eficiencia energética.
             </p>
-            <button style={{ background:"#EF931D", color:"#000000", border:"none", borderRadius:28, padding:"14px 40px", fontSize:14, fontWeight:800, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.06em" }}>
+            <a
+              href="https://play.google.com/store/apps/details?id=comunidadsolar.clever.gy&hl=pt_BR"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display:"inline-block", background:"#EF931D", color:"#000000", border:"none", borderRadius:28, padding:"14px 40px", fontSize:14, fontWeight:800, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.06em", textDecoration:"none" }}>
               Descargar
-            </button>
+            </a>
           </div>
           <div style={{ flex:"0 0 auto" }}>
             <img src="/App.png" alt="App Comunidad Solar" style={{ height:280, display:"block", objectFit:"contain" }} />
@@ -443,21 +451,6 @@ export default function PlanScreen({
         <button className="cs-btn-ghost" style={{ marginTop:16 }} onClick={onVolver}>← Volver al inicio</button>
       </div>
     </div>
-      {modalListaEspera && (
-        <div style={{ position:"fixed", inset:0, zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
-          <div style={{ background:"#fff", borderRadius:16, padding:"36px 28px", maxWidth:420, width:"100%", textAlign:"center", boxShadow:"0 8px 40px rgba(0,0,0,0.18)" }}>
-            <p style={{ fontSize:22, fontWeight:800, color:"#000", marginBottom:16, lineHeight:1.3 }}>¡Ya estás en lista de espera!</p>
-            <p style={{ fontSize:15, color:"#444", lineHeight:1.7, marginBottom:28 }}>
-              Ahora ya estás en nuestro sistema, te contactaremos en cuanto haya una comunidad energética disponible en tu localidad.
-            </p>
-            <button
-              style={{ background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"13px 40px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:"pointer" }}
-              onClick={() => setModalListaEspera(false)}>
-              Entendido
-            </button>
-          </div>
-        </div>
-      )}
     </>
   );
 }
