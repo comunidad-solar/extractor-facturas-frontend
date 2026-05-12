@@ -344,21 +344,6 @@ export default function FacturaUpload() {
       });
   }, []);
 
-  // ── Verificar estado contratación/lista espera via backend ───────────────
-  useEffect(() => {
-    if (status !== "sent") return;
-    const sessionId = localStorage.getItem("cs_session_id") ?? new URLSearchParams(window.location.search).get("session_id");
-    if (!sessionId) return;
-    fetch(`${API_BASE}/sesion/${sessionId}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(data => {
-        if (!data?.cliente) return;
-        const { planContratado, listaDeEspera } = data.cliente;
-        if (planContratado && listaDeEspera)  setAccionRealizada("lista_espera");
-        else if (planContratado)              setAccionRealizada("contratado");
-      })
-      .catch(() => {});
-  }, [status]);
 
   // ── Cerrar dropdown al click fuera ────────────────────────────────────────
   useEffect(() => {
@@ -1616,6 +1601,10 @@ export default function FacturaUpload() {
                   telefono:  prev.telefono  || data.cliente.telefono  || "",
                   direccion: prev.direccion || data.cliente.direccion || "",
                 }));
+                const { planContratado, listaDeEspera } = data.cliente;
+                if (listaDeEspera)       setAccionRealizada("lista_espera");
+                else if (planContratado) setAccionRealizada("contratado");
+                if (planContratado || listaDeEspera) cotizacionEnviadaRef.current = true;
               }
 
               // Notificar Zoho que el usuario llegó a la pantalla del plan (só uma vez)
