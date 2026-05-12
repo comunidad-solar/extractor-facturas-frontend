@@ -122,6 +122,7 @@ export default function FacturaUpload() {
   const [dniContrato, setDniContrato]           = useState("");
   const [dniError, setDniError]                 = useState("");
   const [enviandoContrato, setEnviandoContrato] = useState(false);
+  const [accionRealizada, setAccionRealizada]   = useState(null); // null | "contratado" | "lista_espera"
   const [planAbierto, setPlanAbierto]           = useState(false);
   const [advertenciaAno, setAdvertenciaAno]     = useState(false);
   const [ibanContrato, setIbanContrato]         = useState("");
@@ -342,6 +343,22 @@ export default function FacturaUpload() {
         setListaCE([]);
       });
   }, []);
+
+  // ── Verificar estado contratación/lista espera via backend ───────────────
+  useEffect(() => {
+    if (status !== "sent") return;
+    const sessionId = localStorage.getItem("cs_session_id") ?? new URLSearchParams(window.location.search).get("session_id");
+    if (!sessionId) return;
+    fetch(`${API_BASE}/sesion/${sessionId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data?.cliente) return;
+        const { planContratado, listaDeEspera } = data.cliente;
+        if (planContratado && listaDeEspera)  setAccionRealizada("lista_espera");
+        else if (planContratado)              setAccionRealizada("contratado");
+      })
+      .catch(() => {});
+  }, [status]);
 
   // ── Cerrar dropdown al click fuera ────────────────────────────────────────
   useEffect(() => {
@@ -1240,8 +1257,11 @@ export default function FacturaUpload() {
           .catch(() => `HTTP ${res.status}`);
         throw new Error(detail);
       }
+      setAccionRealizada("lista_espera");
+      setStatus("lista_espera");
     } catch (err) {
       setError(err.message);
+      setStatus("lista_espera");
     } finally {
       setEnviandoContrato(false);
     }
@@ -1441,6 +1461,7 @@ export default function FacturaUpload() {
       }
       setModalContratar(false);
       setDniContrato("");
+      setAccionRealizada("contratado");
       setStatus("asesor_solicitado");
 
       // Descomentar para abrir contrato em nova aba quando backend enviar contractUrl via webhook
@@ -1566,6 +1587,7 @@ export default function FacturaUpload() {
             panelesPropuesta={panelesPropuesta}
             tabActiva={tabActiva}
             sesionData={sesionData}
+            accionRealizada={accionRealizada}
             onContratar={() => setModalContratar(true)}
             onListaEspera={handleEntrarListaEspera}
             onVolver={handleReset}
@@ -1700,6 +1722,20 @@ export default function FacturaUpload() {
           </div>
         )}
 
+        {/* ── LISTA DE ESPERA ── */}
+        {!loading && status === "lista_espera" && (
+          <div className="cs-card fade-in" style={{ textAlign:"center" }}>
+            <div style={{ fontSize:48, marginBottom:16 }}>☀️</div>
+            <h2 style={{ fontSize:20, fontWeight:700, color:"#111", marginBottom:8 }}>
+              ¡Gracias por tu interés!
+            </h2>
+            <p style={{ fontSize:14, color:"#555", marginBottom:28, lineHeight:1.7 }}>
+              Te hemos añadido a la lista de espera. En cuanto haya disponibilidad en tu Comunidad Energética, nos pondremos en contacto contigo.
+            </p>
+            <button className="cs-btn-ghost" onClick={handleReset}>← Volver al inicio</button>
+          </div>
+        )}
+
         {/* ── ASESOR SOLICITADO ── */}
         {!loading && status === "asesor_solicitado" && (
           <div className="cs-card fade-in" style={{ textAlign:"center" }}>
@@ -1715,7 +1751,7 @@ export default function FacturaUpload() {
         )}
 
         {/* ── STEP 1 — Datos del cliente ── */}
-        {!loading && status !== "sent" && status !== "fuera_zona" && status !== "asesor_solicitado" && step === 1 && (
+        {!loading && status !== "sent" && status !== "fuera_zona" && status !== "asesor_solicitado" && status !== "lista_espera" && step === 1 && (
           <div style={{ position: 'relative', width: '100%', maxWidth: 620 }}>
             {(import.meta.env.DEV || window.location.hostname.split(".")[0] === "develop") && (
               <div style={{ position: 'absolute', left: -140, top: 0 }}>
@@ -1825,7 +1861,7 @@ export default function FacturaUpload() {
         )}
 
         {/* ── STEP 2 — Factura ── */}
-        {!loading && status !== "sent" && status !== "asesor_solicitado" && status !== "loading_plan" && step === 2 && (
+        {!loading && status !== "sent" && status !== "asesor_solicitado" && status !== "lista_espera" && status !== "loading_plan" && step === 2 && (
           <>
             {/* Option selector */}
             {mode === null && (
