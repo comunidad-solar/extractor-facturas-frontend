@@ -122,6 +122,7 @@ export default function FacturaUpload() {
   const [dniContrato, setDniContrato]           = useState("");
   const [dniError, setDniError]                 = useState("");
   const [enviandoContrato, setEnviandoContrato] = useState(false);
+  const [accionRealizada, setAccionRealizada]   = useState(null); // null | "contratado" | "lista_espera"
   const [planAbierto, setPlanAbierto]           = useState(false);
   const [advertenciaAno, setAdvertenciaAno]     = useState(false);
   const [ibanContrato, setIbanContrato]         = useState("");
@@ -342,6 +343,22 @@ export default function FacturaUpload() {
         setListaCE([]);
       });
   }, []);
+
+  // ── Verificar estado contratación/lista espera via backend ───────────────
+  useEffect(() => {
+    if (status !== "sent") return;
+    const sessionId = localStorage.getItem("cs_session_id") ?? new URLSearchParams(window.location.search).get("session_id");
+    if (!sessionId) return;
+    fetch(`${API_BASE}/sesion/${sessionId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data?.cliente) return;
+        const { planContratado, listaDeEspera } = data.cliente;
+        if (planContratado && listaDeEspera)  setAccionRealizada("lista_espera");
+        else if (planContratado)              setAccionRealizada("contratado");
+      })
+      .catch(() => {});
+  }, [status]);
 
   // ── Cerrar dropdown al click fuera ────────────────────────────────────────
   useEffect(() => {
@@ -1240,11 +1257,13 @@ export default function FacturaUpload() {
           .catch(() => `HTTP ${res.status}`);
         throw new Error(detail);
       }
+      setAccionRealizada("lista_espera");
+      setStatus("lista_espera");
     } catch (err) {
       setError(err.message);
+      setStatus("lista_espera");
     } finally {
       setEnviandoContrato(false);
-      setStatus("lista_espera");
     }
   };
 
@@ -1442,6 +1461,7 @@ export default function FacturaUpload() {
       }
       setModalContratar(false);
       setDniContrato("");
+      setAccionRealizada("contratado");
       setStatus("asesor_solicitado");
 
       // Descomentar para abrir contrato em nova aba quando backend enviar contractUrl via webhook
@@ -1567,6 +1587,7 @@ export default function FacturaUpload() {
             panelesPropuesta={panelesPropuesta}
             tabActiva={tabActiva}
             sesionData={sesionData}
+            accionRealizada={accionRealizada}
             onContratar={() => setModalContratar(true)}
             onListaEspera={handleEntrarListaEspera}
             onVolver={handleReset}
