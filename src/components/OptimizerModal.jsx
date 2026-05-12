@@ -32,7 +32,7 @@ export default function OptimizerModal({
             <table className="cs-table" style={{ marginBottom:20, fontSize:16 }}>
               <tbody>
                 <tr><td>Número de paneles</td><td>{panelesPropuesta}</td></tr>
-                <tr><td>Potencia total</td><td>{parseInt(fmtES(modalOptimizar?.potenciaTotal ?? 0))} kWh</td></tr>
+                <tr><td>Potencia total</td><td>{fmtES(modalOptimizar?.potenciaTotal ?? 0)} kW</td></tr>
                 <tr><td>Producción de energía anual estimada*</td><td>{fmtES(modalOptimizar?.produccionAnual ?? 0)} kWh</td></tr>
                 <tr><td>Ahorro anual medio estimado*</td><td>{fmtES(modalOptimizar?.ahorroAnual ?? 0)} €</td></tr>
                 {modoAlquiler ? (
@@ -40,7 +40,7 @@ export default function OptimizerModal({
                 ) : (
                   <>
                     <tr><td>Ahorro total estimado durante 25 años*</td><td>{fmtES(modalOptimizar?.ahorro25Anos ?? 0)} €</td></tr>
-                    <tr><td>Coeficiente de distribución</td><td>{fmtES(modalOptimizar?.coeficienteDistribucion ?? 0, 0)} %</td></tr>
+                    <tr><td>Coeficiente de distribución</td><td>{fmtES((modalOptimizar?.coeficienteDistribucion ?? 0) * 100)} %</td></tr>
                     <tr><td>Pago al contado</td><td>{fmtES(modalOptimizar?.pagoUnico ?? 0)} €</td></tr>
                     <tr><td>Plazo estimado de recuperación*</td><td>{fmtES(modalOptimizar?.plazoRecuperacion ?? 0, 1)} años</td></tr>
                   </>

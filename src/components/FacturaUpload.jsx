@@ -1244,6 +1244,7 @@ export default function FacturaUpload() {
       setError(err.message);
     } finally {
       setEnviandoContrato(false);
+      setStatus("lista_espera");
     }
   };
 
@@ -1700,6 +1701,20 @@ export default function FacturaUpload() {
           </div>
         )}
 
+        {/* ── LISTA DE ESPERA ── */}
+        {!loading && status === "lista_espera" && (
+          <div className="cs-card fade-in" style={{ textAlign:"center" }}>
+            <div style={{ fontSize:48, marginBottom:16 }}>☀️</div>
+            <h2 style={{ fontSize:20, fontWeight:700, color:"#111", marginBottom:8 }}>
+              ¡Gracias por tu interés!
+            </h2>
+            <p style={{ fontSize:14, color:"#555", marginBottom:28, lineHeight:1.7 }}>
+              Te hemos añadido a la lista de espera. En cuanto haya disponibilidad en tu Comunidad Energética, nos pondremos en contacto contigo.
+            </p>
+            <button className="cs-btn-ghost" onClick={handleReset}>← Volver al inicio</button>
+          </div>
+        )}
+
         {/* ── ASESOR SOLICITADO ── */}
         {!loading && status === "asesor_solicitado" && (
           <div className="cs-card fade-in" style={{ textAlign:"center" }}>
@@ -1715,7 +1730,7 @@ export default function FacturaUpload() {
         )}
 
         {/* ── STEP 1 — Datos del cliente ── */}
-        {!loading && status !== "sent" && status !== "fuera_zona" && status !== "asesor_solicitado" && step === 1 && (
+        {!loading && status !== "sent" && status !== "fuera_zona" && status !== "asesor_solicitado" && status !== "lista_espera" && step === 1 && (
           <div style={{ position: 'relative', width: '100%', maxWidth: 620 }}>
             {(import.meta.env.DEV || window.location.hostname.split(".")[0] === "develop") && (
               <div style={{ position: 'absolute', left: -140, top: 0 }}>
@@ -1825,7 +1840,7 @@ export default function FacturaUpload() {
         )}
 
         {/* ── STEP 2 — Factura ── */}
-        {!loading && status !== "sent" && status !== "asesor_solicitado" && status !== "loading_plan" && step === 2 && (
+        {!loading && status !== "sent" && status !== "asesor_solicitado" && status !== "lista_espera" && status !== "loading_plan" && step === 2 && (
           <>
             {/* Option selector */}
             {mode === null && (
