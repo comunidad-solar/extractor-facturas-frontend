@@ -14,6 +14,7 @@ export default function PlanScreen({
   panelesPropuesta,
   tabActiva,
   sesionData: sesionDataProp,
+  accionRealizada,
   onContratar,
   onListaEspera,
   onVolver,
@@ -28,6 +29,10 @@ export default function PlanScreen({
   const [sesionData, setSesionData] = useState(sesionDataProp ?? null);
   const [sesionFailed, setSesionFailed] = useState(false);
   const [ceFotoUrl, setCeFotoUrl] = useState(null);
+
+  const yaContratado = accionRealizada === "contratado";
+  const yaEnEspera   = accionRealizada === "lista_espera";
+
 
 
   useEffect(() => {
@@ -105,9 +110,12 @@ export default function PlanScreen({
                 </p>
                 <p style={{ fontSize:12, color:"#aaa", marginTop:4, marginBottom:18 }}>IVA incluido</p>
                 <button
-                  style={{ width:"100%", background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em" }}
+                  disabled={ceStatus === "Available" ? yaContratado : yaEnEspera}
+                  style={{ width:"100%", background:(ceStatus === "Available" ? yaContratado : yaEnEspera) ? "#ccc" : "#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:(ceStatus === "Available" ? yaContratado : yaEnEspera) ? "not-allowed" : "pointer", letterSpacing:"0.04em", opacity:(ceStatus === "Available" ? yaContratado : yaEnEspera) ? 0.7 : 1 }}
                   onClick={ceStatus === "Available" ? onContratar : onListaEspera}>
-                  {ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
+                  {ceStatus === "Available"
+                    ? (yaContratado ? "Plan contratado" : "Contratar")
+                    : (yaEnEspera ? "Ya estás en lista de espera" : "Unirse a la lista de espera")}
                 </button>
               </div>
             </div>
@@ -170,9 +178,12 @@ export default function PlanScreen({
                 </p>
                 <p style={{ fontSize:11, color:"#aaa" }}>IVA 21% incluido</p>
                 <button
-                  style={{ marginTop:12, background:"#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"12px 32px", fontSize:14, fontWeight:700, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.04em" }}
+                  disabled={ceStatus === "Available" ? yaContratado : yaEnEspera}
+                  style={{ marginTop:12, background:(ceStatus === "Available" ? yaContratado : yaEnEspera) ? "#ccc" : "#EF931D", color:"#fff", border:"none", borderRadius:28, padding:"12px 32px", fontSize:14, fontWeight:700, fontFamily:"inherit", cursor:(ceStatus === "Available" ? yaContratado : yaEnEspera) ? "not-allowed" : "pointer", letterSpacing:"0.04em", opacity:(ceStatus === "Available" ? yaContratado : yaEnEspera) ? 0.7 : 1 }}
                   onClick={ceStatus === "Available" ? onContratar : onListaEspera}>
-                  {ceStatus === "Available" ? "Contratar" : "Unirse a la lista de espera"}
+                  {ceStatus === "Available"
+                    ? (yaContratado ? "Plan contratado" : "Contratar")
+                    : (yaEnEspera ? "Ya estás en lista de espera" : "Unirse a la lista de espera")}
                 </button>
               </div>
               <div style={{ background:"#fff", borderRadius:14, padding:"28px 24px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, boxShadow:"0 2px 12px rgba(0,0,0,0.06)" }}>
