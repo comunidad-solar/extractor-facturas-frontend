@@ -418,7 +418,7 @@ export default function FacturaPreview({ data = null }) {
             </tr>
             {d.excedentes.map(e => (
               <tr key={e.concepto}>
-                <td style={{ padding: '2px 6px 2px 0', fontSize: 12 }}>{e.concepto}</td>
+                <td style={{ padding: '2px 6px 2px 0', fontSize: 12 }}>{e.concepto.replace(/excedente\s+remoto/gi, 'Excedente').trim()}</td>
                 <TD>{e.kwh        != null ? fmtKwh(e.kwh)       : '—'}</TD>
                 <TD />
                 <TD>{e.precio_kwh != null ? fmtP6(e.precio_kwh) : '—'}</TD>
