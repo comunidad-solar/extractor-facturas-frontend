@@ -1728,12 +1728,14 @@ export default function FacturaUpload() {
         {/* ── ASESOR SOLICITADO ── */}
         {!loading && status === "asesor_solicitado" && (
           <div className="cs-card fade-in" style={{ textAlign:"center" }}>
-            <div style={{ fontSize:48, marginBottom:16 }}>🖊️</div>
+            <div style={{ fontSize:48, marginBottom:16 }}>✅</div>
             <h2 style={{ fontSize:20, fontWeight:700, color:"#111", marginBottom:8 }}>
-              ¡Solicitud recibida!
+              {accionRealizada === "contratado" ? "¡Contrato generado con éxito!" : "¡Solicitud recibida!"}
             </h2>
             <p style={{ fontSize:14, color:"#555", marginBottom:28, lineHeight:1.7 }}>
-              El contrato ha sido enviado a tu email. Tienes 30 minutos para firmarlo.
+              {accionRealizada === "contratado"
+                ? "Tu contrato ha sido generado con éxito y también fue enviado a tu email. Puedes cerrar esta pantalla."
+                : "El contrato ha sido enviado a tu email. Tienes 30 minutos para firmarlo."}
             </p>
             <button className="cs-btn-ghost" onClick={handleReset}>← Volver al inicio</button>
           </div>
