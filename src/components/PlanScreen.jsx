@@ -441,7 +441,7 @@ export default function PlanScreen({
               Nuestra app te permitirá <strong style={{ color:"#000000" }}>optimizar el uso de energía</strong> en tu hogar, proporcionándote toda la información necesaria para ahorrar y mejorar tu eficiencia energética.
             </p>
             <a
-              href="https://play.google.com/store/apps/details?id=comunidadsolar.clever.gy&hl=pt_BR"
+              href="https://comunidadsolar.es/app-asistente-energetico/"
               target="_blank"
               rel="noopener noreferrer"
               style={{ display:"inline-block", background:"#EF931D", color:"#000000", border:"none", borderRadius:28, padding:"14px 40px", fontSize:14, fontWeight:800, fontFamily:"inherit", cursor:"pointer", letterSpacing:"0.06em", textDecoration:"none" }}>
