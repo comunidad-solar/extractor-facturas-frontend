@@ -1449,24 +1449,24 @@ export default function FacturaUpload() {
       setAccionRealizada("contratado");
       setStatus("asesor_solicitado");
 
-      // Descomentar para abrir contrato em nova aba quando backend enviar contractUrl via webhook
-      // setLoading(true);
-      // setLoadingMsg("Preparando tu contrato...");
-      // const MAX_INTENTOS = 15;
-      // for (let i = 0; i < MAX_INTENTOS; i++) {
-      //   await new Promise((r) => setTimeout(r, 2000));
-      //   try {
-      //     const contratoRes = await fetch(`${API_BASE}/contrato/${dealIdFinal}`);
-      //     if (contratoRes.ok) {
-      //       const data = await contratoRes.json();
-      //       if (data.found === true) {
-      //         window.open(data.contractUrl, "_blank");
-      //         break;
-      //       }
-      //     }
-      //   } catch { /* ignorar erros de rede no polling */ }
-      // }
-      // setLoading(false);
+      // Polling para abrir contrato em nova aba quando backend receber contractUrl do Zoho Sign
+      setLoading(true);
+      setLoadingMsg("Preparando tu contrato...");
+      const MAX_INTENTOS = 240; // 8 minutos (240 × 2s)
+      for (let i = 0; i < MAX_INTENTOS; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        try {
+          const contratoRes = await fetch(`${API_BASE}/contrato/${dealIdFinal}`);
+          if (contratoRes.ok) {
+            const contratoData = await contratoRes.json();
+            if (contratoData.found === true) {
+              window.open(contratoData.contractUrl, "_blank");
+              break;
+            }
+          }
+        } catch { /* ignorar erros de rede no polling */ }
+      }
+      setLoading(false);
     } catch (err) {
       setDniError(err.message);
     } finally {
