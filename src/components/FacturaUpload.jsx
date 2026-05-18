@@ -234,12 +234,13 @@ export default function FacturaUpload() {
           }
           if (data?.dealId)   setDealId(prev => prev || data.dealId);
           if (data?.mpklogId) setMpklogId(prev => prev || data.mpklogId);
-          if (data?.plan) {
-            setPlanData(data.plan);
-            const paneles = data.plan.panelesSel ?? 3;
+          const planFields = data?.plan && Object.keys(data.plan).length > 0 ? data.plan : null;
+          if (planFields) {
+            setPlanData(planFields);
+            const paneles = planFields.panelesSel ?? 3;
             setPanelesSel(paneles);
             setPanelesPropuesta(paneles);
-            if (data.plan.cuotaAlquilerMes != null) setCuotaAlquilerMes(data.plan.cuotaAlquilerMes);
+            if (planFields.cuotaAlquilerMes != null) setCuotaAlquilerMes(planFields.cuotaAlquilerMes);
           }
           if (data?.Fsmstate)    setFsmstate(data.Fsmstate);
           if (data?.FsmPrevious) setFsmPrevious(data.FsmPrevious);
@@ -1533,12 +1534,13 @@ export default function FacturaUpload() {
               }
               if (data?.dealId)   setDealId(prev   => prev || data.dealId);
               if (data?.mpklogId) setMpklogId(prev => prev || data.mpklogId);
-              if (data?.plan) {
-                setPlanData(data.plan);
-                const paneles = data.plan.panelesSel ?? 3;
+              const planFromSession = data?.plan && Object.keys(data.plan).length > 0 ? data.plan : null;
+              if (planFromSession) {
+                setPlanData(planFromSession);
+                const paneles = planFromSession.panelesSel ?? 3;
                 setPanelesSel(prev => prev !== 3 ? prev : paneles);
                 setPanelesPropuesta(prev => prev !== 3 ? prev : paneles);
-                if (data.plan.cuotaAlquilerMes != null) setCuotaAlquilerMes(data.plan.cuotaAlquilerMes);
+                if (planFromSession.cuotaAlquilerMes != null) setCuotaAlquilerMes(planFromSession.cuotaAlquilerMes);
               }
               if (data?.Fsmstate)    setFsmstate(prev    => prev || data.Fsmstate);
               if (data?.FsmPrevious) setFsmPrevious(prev => prev || data.FsmPrevious);
