@@ -234,13 +234,35 @@ export default function FacturaUpload() {
           }
           if (data?.dealId)   setDealId(prev => prev || data.dealId);
           if (data?.mpklogId) setMpklogId(prev => prev || data.mpklogId);
-          const planFields = data?.plan && Object.keys(data.plan).length > 0 ? data.plan : null;
+          const parsePlanFromUrl = (urlStr) => {
+            try {
+              const p = new URLSearchParams(new URL(urlStr).search);
+              const n = (k) => { const v = parseFloat(p.get(k)); return isNaN(v) ? null : v; };
+              return {
+                ahorro25Anos:            n("ahorro25Anos"),
+                pagoUnico:               n("pagoUnico"),
+                pagoFinanciado:          n("pagoFinanciado"),
+                ahorroMensual:           n("ahorroMensual"),
+                ahorroAnual:             n("ahorroAnual"),
+                ahorroAnualPercent:      n("ahorroAnualPercent"),
+                produccionAnual:         n("produccionAnual"),
+                potenciaTotal:           n("potenciaTotal"),
+                coeficienteDistribucion: n("coeficienteDistribucion"),
+                plazoRecuperacion:       p.get("plazoRecuperacion") ?? null,
+                panelesSel:              n("panelesSel"),
+                cuotaAlquilerMes:        n("cuotaAlquilerMes"),
+              };
+            } catch { return null; }
+          };
+          const planFields = (data?.plan && Object.keys(data.plan).length > 0 ? data.plan : null)
+            ?? (data?.plan_url ? parsePlanFromUrl(data.plan_url) : null);
           if (planFields) {
             setPlanData(planFields);
             const paneles = planFields.panelesSel ?? 3;
             setPanelesSel(paneles);
             setPanelesPropuesta(paneles);
             if (planFields.cuotaAlquilerMes != null) setCuotaAlquilerMes(planFields.cuotaAlquilerMes);
+            if (planFields.cuotaAlquilerMes != null) setModoAlquiler(true);
           }
           if (data?.Fsmstate)    setFsmstate(data.Fsmstate);
           if (data?.FsmPrevious) setFsmPrevious(data.FsmPrevious);
@@ -1534,13 +1556,35 @@ export default function FacturaUpload() {
               }
               if (data?.dealId)   setDealId(prev   => prev || data.dealId);
               if (data?.mpklogId) setMpklogId(prev => prev || data.mpklogId);
-              const planFromSession = data?.plan && Object.keys(data.plan).length > 0 ? data.plan : null;
+              const parsePlanFromUrlSesion = (urlStr) => {
+                try {
+                  const p = new URLSearchParams(new URL(urlStr).search);
+                  const n = (k) => { const v = parseFloat(p.get(k)); return isNaN(v) ? null : v; };
+                  return {
+                    ahorro25Anos:            n("ahorro25Anos"),
+                    pagoUnico:               n("pagoUnico"),
+                    pagoFinanciado:          n("pagoFinanciado"),
+                    ahorroMensual:           n("ahorroMensual"),
+                    ahorroAnual:             n("ahorroAnual"),
+                    ahorroAnualPercent:      n("ahorroAnualPercent"),
+                    produccionAnual:         n("produccionAnual"),
+                    potenciaTotal:           n("potenciaTotal"),
+                    coeficienteDistribucion: n("coeficienteDistribucion"),
+                    plazoRecuperacion:       p.get("plazoRecuperacion") ?? null,
+                    panelesSel:              n("panelesSel"),
+                    cuotaAlquilerMes:        n("cuotaAlquilerMes"),
+                  };
+                } catch { return null; }
+              };
+              const planFromSession = (data?.plan && Object.keys(data.plan).length > 0 ? data.plan : null)
+                ?? (data?.plan_url ? parsePlanFromUrlSesion(data.plan_url) : null);
               if (planFromSession) {
                 setPlanData(planFromSession);
                 const paneles = planFromSession.panelesSel ?? 3;
                 setPanelesSel(prev => prev !== 3 ? prev : paneles);
                 setPanelesPropuesta(prev => prev !== 3 ? prev : paneles);
                 if (planFromSession.cuotaAlquilerMes != null) setCuotaAlquilerMes(planFromSession.cuotaAlquilerMes);
+                if (planFromSession.cuotaAlquilerMes != null) setModoAlquiler(true);
               }
               if (data?.Fsmstate)    setFsmstate(prev    => prev || data.Fsmstate);
               if (data?.FsmPrevious) setFsmPrevious(prev => prev || data.FsmPrevious);
