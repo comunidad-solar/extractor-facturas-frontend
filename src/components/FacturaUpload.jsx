@@ -1398,6 +1398,9 @@ export default function FacturaUpload() {
             const contratoData = await contratoRes.json();
             if (contratoData.found === true) {
               window.open(contratoData.contractUrl, "_blank");
+              if (contratoData.hojaUrl) {
+                window.open(contratoData.hojaUrl, "_blank");
+              }
               break;
             }
           }
