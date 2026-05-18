@@ -200,120 +200,57 @@ export default function FacturaUpload() {
 
     // ── Demo plan-demo ────────────────────────────────────────────────────────
     if (params.get("demo") === "true" && params.get("fase") === "plan-demo") {
-      const p = (key, fallback = null) => {
-        const v = params.get(key);
-        return v !== null ? parseFloat(v) : fallback;
-      };
-      const s = (key, fallback = "") => params.get(key) ?? fallback;
-
-      setPanelesSel(p("panelesSel", 3));
-      setPanelesPropuesta(p("panelesSel", 3));
-      setPlanData({
-        ahorro25Anos:            parseFloat(params.get("ahorro25Anos"))            || null,
-        pagoUnico:               parseFloat(params.get("pagoUnico"))               || null,
-        pagoFinanciado:          parseFloat(params.get("pagoFinanciado"))          || null,
-        ahorroMensual:           parseFloat(params.get("ahorroMensual"))           || null,
-        ahorroAnual:             parseFloat(params.get("ahorroAnual"))             || null,
-        produccionAnual:         parseFloat(params.get("produccionAnual"))         || null,
-        potenciaTotal:           parseFloat(params.get("potenciaTotal"))           || null,
-        coeficienteDistribucion: parseFloat(params.get("coeficienteDistribucion")) || null,
-        plazoRecuperacion:       params.get("plazoRecuperacion")                   || null,
-        panelesSel:              parseInt(params.get("panelesSel"))                || null,
-        cuotaAlquilerMes:        parseFloat(params.get("cuotaAlquilerMes"))        || null,
-        ahorroAnualPercent:      parseFloat(params.get("ahorroAnualPercent"))      || null,
-      });
-      setLoading(false);
-
-      const cleanUrl = (val) => (!val || val === "—") ? "" : val;
-
-      setCliente(c => ({
-        nombre:    c.nombre    || cleanUrl(s("cliente.nombre"))    || cleanUrl(s("nombre"))    || "",
-        apellidos: c.apellidos || cleanUrl(s("cliente.apellidos")) || cleanUrl(s("apellidos")) || "",
-        correo:    c.correo    || cleanUrl(s("cliente.correo"))    || cleanUrl(s("correo"))    || "",
-        telefono:  c.telefono  || cleanUrl(s("cliente.telefono"))  || cleanUrl(s("telefono"))  || "",
-        direccion: c.direccion || cleanUrl(s("cliente.direccion")) || cleanUrl(s("direccion")) || "",
-      }));
-
-      setCeNombre(prev    => prev || s("ceNombre")    || "");
-      setCeStatus(prev    => prev || s("ceStatus")    || "");
-      setCeEtiqueta(prev  => prev || s("ceEtiqueta")  || "");
-      setCeDireccion(prev => prev || s("ceDireccion") || "");
-
-      const urlDealId   = s("dealId");
-      const urlMpklogId = s("mpklogId");
-      const urlIdGen    = s("id_generacion");
-      if (urlDealId)   setDealId(prev        => prev || urlDealId);
-      if (urlMpklogId) setMpklogId(prev      => prev || urlMpklogId);
-      if (urlIdGen)    setIdGeneracion(prev   => prev || urlIdGen);
-
-      const urlFsmstate    = s("Fsmstate")    || s("fsmstate");
-      const urlFsmPrevious = s("FsmPrevious") || s("fsmPrevious");
-      if (urlFsmstate)    setFsmstate(prev    => prev || urlFsmstate);
-      if (urlFsmPrevious) setFsmPrevious(prev => prev || urlFsmPrevious);
-
-      // Restaurar dados guardados antes do redirect
-      const csCliente  = localStorage.getItem("cs_cliente");
-      const csFactura  = localStorage.getItem("cs_factura");
-      const csCe       = localStorage.getItem("cs_ce");
-      const csDealId   = localStorage.getItem("cs_dealId");
-      const csMpklogId = localStorage.getItem("cs_mpklogId");
-      const csFsmstate = localStorage.getItem("cs_fsmstate");
-      const csMode     = localStorage.getItem("cs_mode");
-
-      if (csCliente) {
-        const c = JSON.parse(csCliente);
-        setCliente(prev => ({
-          nombre:    prev.nombre    || c.nombre    || "",
-          apellidos: prev.apellidos || c.apellidos || "",
-          correo:    prev.correo    || c.correo    || "",
-          telefono:  prev.telefono  || c.telefono  || "",
-          direccion: prev.direccion || c.direccion || "",
-        }));
-        if (c.dealId)   setDealId(c.dealId);
-        if (c.mpklogId) setMpklogId(c.mpklogId);
-      }
-
-      if (csFactura) {
-        const f = JSON.parse(csFactura);
-        if (csMode === "pdf")  setFacturaData(f);
-        if (csMode === "cups") setCupsData(f);
-        if (csMode) setMode(csMode);
-        // Ref síncrono — setState é async, ref é imediato para handleContratar
-        urlParamsRef.current.facturaLS = f;
-        if (csMode) urlParamsRef.current.modeLS = csMode;
-      }
-
-      if (csCe) {
-        const ce = JSON.parse(csCe);
-        setCeNombre(prev    => prev || ce.nombre    || "");
-        setCeDireccion(prev => prev || ce.direccion || "");
-        setCeStatus(prev    => prev || ce.status    || "");
-        setCeEtiqueta(prev  => prev || ce.etiqueta  || "");
-        if (ce.id_generacion) setIdGeneracion(String(ce.id_generacion));
-      }
-
-      if (csDealId)   setDealId(prev   => prev || csDealId);
-      if (csMpklogId) setMpklogId(prev => prev || csMpklogId);
-      if (csFsmstate) setFsmstate(prev => prev || csFsmstate);
-
-      // Se session_id veio na URL (acesso anónimo), persistir para PlanScreen
       const urlSessionId = params.get("session_id");
-      if (urlSessionId) {
-        console.log("[plan-demo] session_id encontrado na URL:", urlSessionId, "→ guardando em cs_session_id");
-        localStorage.setItem("cs_session_id", urlSessionId);
-      }
+      if (!urlSessionId) { setStatus("sent"); return; }
 
-      // Limpar localStorage após restaurar
-      localStorage.removeItem("cs_cliente");
-      localStorage.removeItem("cs_factura");
-      localStorage.removeItem("cs_ce");
-      localStorage.removeItem("cs_dealId");
-      localStorage.removeItem("cs_mpklogId");
-      localStorage.removeItem("cs_fsmstate");
-      localStorage.removeItem("cs_mode");
+      localStorage.setItem("cs_session_id", urlSessionId);
+      setExtractSessionId(urlSessionId);
+      setLoading(true);
+      setLoadingMsg("Cargando tu plan…");
 
-      // Sempre no final — garante que os passos 1 e 2 já correram
-      setStatus("sent");
+      fetch(`${API_BASE}/sesion/${urlSessionId}`)
+        .then(res => { if (!res.ok) throw new Error(); return res.json(); })
+        .then(data => {
+          if (data?.cliente) {
+            setCliente({
+              nombre:    data.cliente.nombre    || "",
+              apellidos: data.cliente.apellidos || "",
+              correo:    data.cliente.correo    || "",
+              telefono:  data.cliente.telefono  || "",
+              direccion: data.cliente.direccion || "",
+            });
+            if (data.cliente.dealId)   setDealId(data.cliente.dealId);
+            if (data.cliente.mpklogId) setMpklogId(data.cliente.mpklogId);
+            if (data.cliente.tipoVenta === "Alquiler") setModoAlquiler(true);
+            if (data.cliente.listaDeEspera)       setAccionRealizada("lista_espera");
+            else if (data.cliente.planContratado) setAccionRealizada("contratado");
+          }
+          if (data?.ce) {
+            if (data.ce.nombre)        setCeNombre(data.ce.nombre);
+            if (data.ce.status)        setCeStatus(data.ce.status);
+            if (data.ce.etiqueta)      setCeEtiqueta(data.ce.etiqueta);
+            if (data.ce.direccion)     setCeDireccion(data.ce.direccion);
+            if (data.ce.id_generacion) setIdGeneracion(String(data.ce.id_generacion));
+          }
+          if (data?.dealId)   setDealId(prev => prev || data.dealId);
+          if (data?.mpklogId) setMpklogId(prev => prev || data.mpklogId);
+          if (data?.plan) {
+            setPlanData(data.plan);
+            const paneles = data.plan.panelesSel ?? 3;
+            setPanelesSel(paneles);
+            setPanelesPropuesta(paneles);
+            if (data.plan.cuotaAlquilerMes != null) setCuotaAlquilerMes(data.plan.cuotaAlquilerMes);
+          }
+          if (data?.Fsmstate)    setFsmstate(data.Fsmstate);
+          if (data?.FsmPrevious) setFsmPrevious(data.FsmPrevious);
+          if (data?.facturaPreview) setFacturaPreviewData(data.facturaPreview);
+          if (data?.factura) {
+            urlParamsRef.current.facturaLS = data.factura;
+            urlParamsRef.current.modeLS = data.factura.cups ? "cups" : "pdf";
+          }
+        })
+        .catch(() => {})
+        .finally(() => { setLoading(false); setStatus("sent"); });
     }
 
     const modoParam = params.get("modo");
@@ -1461,6 +1398,9 @@ export default function FacturaUpload() {
             const contratoData = await contratoRes.json();
             if (contratoData.found === true) {
               window.open(contratoData.contractUrl, "_blank");
+              if (contratoData.hojaUrl) {
+                window.open(contratoData.hojaUrl, "_blank");
+              }
               break;
             }
           }
@@ -1593,6 +1533,20 @@ export default function FacturaUpload() {
               }
               if (data?.dealId)   setDealId(prev   => prev || data.dealId);
               if (data?.mpklogId) setMpklogId(prev => prev || data.mpklogId);
+              if (data?.plan) {
+                setPlanData(data.plan);
+                const paneles = data.plan.panelesSel ?? 3;
+                setPanelesSel(prev => prev !== 3 ? prev : paneles);
+                setPanelesPropuesta(prev => prev !== 3 ? prev : paneles);
+                if (data.plan.cuotaAlquilerMes != null) setCuotaAlquilerMes(data.plan.cuotaAlquilerMes);
+              }
+              if (data?.Fsmstate)    setFsmstate(prev    => prev || data.Fsmstate);
+              if (data?.FsmPrevious) setFsmPrevious(prev => prev || data.FsmPrevious);
+              if (data?.factura) {
+                urlParamsRef.current.facturaLS = data.factura;
+                urlParamsRef.current.modeLS = data.factura.cups ? "cups" : "pdf";
+              }
+              if (data?.cliente?.tipoVenta === "Alquiler") setModoAlquiler(true);
               if (data?.cliente) {
                 setCliente(prev => ({
                   nombre:    prev.nombre    || data.cliente.nombre    || "",
