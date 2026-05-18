@@ -1628,7 +1628,7 @@ export default function FacturaUpload() {
                   FsmPrevious: data?.Fsmstate ?? Fsmstate ?? null,
                   session_id:  sessionIdCotiz,
                   ...(data?.facturaPreview && { facturaPreview: data.facturaPreview }),
-                  plan: {
+                  plan: planFromSession ?? {
                     ahorro25Anos:            planData?.ahorro25Anos,
                     pagoUnico:               planData?.pagoUnico,
                     pagoFinanciado:          planData?.pagoFinanciado,
