@@ -998,7 +998,7 @@ export default function FacturaUpload() {
       }
       setSending(true); setError("");
       try {
-        const facturaAsesor = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
+        const facturaAsesor = facturaBuilt ?? (mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS());
         const cePayload = { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) };
 
         // Enviar ao Zoho Flow via /enviar (igual ao fluxo normal)
