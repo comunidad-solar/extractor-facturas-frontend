@@ -1474,10 +1474,9 @@ export default function FacturaUpload() {
               if (contratoData.paymentUrl) {
                 localStorage.setItem("cs_paymentUrl", contratoData.paymentUrl);
               }
+              // Abre apenas o contrato — a hoja abre automaticamente
+              // pelo redirect do Sign após o contrato ser firmado.
               window.open(contratoData.contractUrl, "_blank");
-              if (contratoData.hojaUrl) {
-                window.open(contratoData.hojaUrl, "_blank");
-              }
               break;
             }
           }
