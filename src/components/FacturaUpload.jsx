@@ -434,13 +434,15 @@ export default function FacturaUpload() {
       const ceDireccionVal = nearest.addressName || "";
       const ceStatusVal    = CE_ESTATUS_MAP[nearest.status] ?? "Waiting list";
       const ceEtiquetaVal  = nearest.etiqueta || "";
+      const ceIdGenVal     = nearest.id_generacion ? String(nearest.id_generacion) : "";
 
       setCeNombre(ceNombreVal);
       setCeDireccion(ceDireccionVal);
       setCeStatus(ceStatusVal);
       setCeEtiqueta(ceEtiquetaVal);
-      console.log("📊 Resultado:", { Fmstate: "01_DENTRO_ZONA", ceNombreVal, ceDireccionVal, ceStatusVal, ceEtiquetaVal, distanciaCEMasCercana });
-      return { fsmstate: "01_DENTRO_ZONA", ceNombre: ceNombreVal, ceDireccion: ceDireccionVal, ceStatus: ceStatusVal, ceEtiqueta: ceEtiquetaVal };
+      if (ceIdGenVal) setIdGeneracion(ceIdGenVal);
+      console.log("📊 Resultado:", { Fmstate: "01_DENTRO_ZONA", ceNombreVal, ceDireccionVal, ceStatusVal, ceEtiquetaVal, ceIdGenVal, distanciaCEMasCercana });
+      return { fsmstate: "01_DENTRO_ZONA", ceNombre: ceNombreVal, ceDireccion: ceDireccionVal, ceStatus: ceStatusVal, ceEtiqueta: ceEtiquetaVal, idGeneracion: ceIdGenVal };
     } else {
       const distanciaCEMasCercana = nearestAll ? Math.round(nearestAllDist) : null;
       updateFsmstate("02_FUERA_ZONA");
@@ -451,13 +453,15 @@ export default function FacturaUpload() {
       const ceDireccionVal = nearestAll ? (nearestAll.addressName || "") : "";
       const ceStatusVal    = nearestAll ? (CE_ESTATUS_MAP[nearestAll.status] ?? "Waiting list") : "";
       const ceEtiquetaVal  = nearestAll ? (nearestAll.etiqueta || "") : "";
+      const ceIdGenVal     = nearestAll?.id_generacion ? String(nearestAll.id_generacion) : "";
 
       setCeNombre(ceNombreVal);
       setCeDireccion(ceDireccionVal);
       setCeStatus(ceStatusVal);
       setCeEtiqueta(ceEtiquetaVal);
-      console.log("📊 Resultado:", { Fmstate: "02_FUERA_ZONA", ceNombreVal, ceDireccionVal, ceStatusVal, ceEtiquetaVal, distanciaCEMasCercana });
-      return { fsmstate: "02_FUERA_ZONA", ceNombre: ceNombreVal, ceDireccion: ceDireccionVal, ceStatus: ceStatusVal, ceEtiqueta: ceEtiquetaVal };
+      if (ceIdGenVal) setIdGeneracion(ceIdGenVal);
+      console.log("📊 Resultado:", { Fmstate: "02_FUERA_ZONA", ceNombreVal, ceDireccionVal, ceStatusVal, ceEtiquetaVal, ceIdGenVal, distanciaCEMasCercana });
+      return { fsmstate: "02_FUERA_ZONA", ceNombre: ceNombreVal, ceDireccion: ceDireccionVal, ceStatus: ceStatusVal, ceEtiqueta: ceEtiquetaVal, idGeneracion: ceIdGenVal };
     }
   };
 
@@ -465,7 +469,7 @@ export default function FacturaUpload() {
     try {
       const payload = {
         cliente: { nombre: cliente.nombre, apellidos: cliente.apellidos, correo: cliente.correo, telefono: cliente.telefono, direccion: cliente.direccion },
-        ce: { nombre: ceResult?.ceNombre ?? ceNombre, direccion: ceResult?.ceDireccion ?? ceDireccion, status: FORCE_WAITING_LIST ? "Waiting list" : (ceResult?.ceStatus ?? ceStatus), etiqueta: ceResult?.ceEtiqueta ?? ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceResult?.ceNombre ?? ceNombre) },
+        ce: { nombre: ceResult?.ceNombre ?? ceNombre, direccion: ceResult?.ceDireccion ?? ceDireccion, status: FORCE_WAITING_LIST ? "Waiting list" : (ceResult?.ceStatus ?? ceStatus), etiqueta: ceResult?.ceEtiqueta ?? ceEtiqueta, id_generacion: ceResult?.idGeneracion || resolverIdGeneracion(idGeneracion, ceResult?.ceNombre ?? ceNombre) },
         Fsmstate: ceResult?.fsmstate ?? "02_FUERA_ZONA",
         FsmPrevious: null,
       };
@@ -564,7 +568,7 @@ export default function FacturaUpload() {
       const cesParaDev = devCESelected ? ces.filter(ce => ce.name === devCESelected || ce.addressName === devCESelected) : null;
       const cesFiltradas = cesParaDev?.length ? cesParaDev : (ceFijada ? ces.filter(ce => ce.name === ceFijada || ce.addressName === ceFijada) : ces);
       const ceResult = await runZonaCheck(userLat, userLon, cesFiltradas.length ? cesFiltradas : ces);
-      enviarLead(LEAD_URL, { cliente, ...ceResult, id_generacion: resolverIdGeneracion(idGeneracion, ceResult?.ceNombre) }, () => setLeadWarn(true)); // fire-and-forget
+      enviarLead(LEAD_URL, { cliente, ...ceResult, id_generacion: ceResult?.idGeneracion || resolverIdGeneracion(idGeneracion, ceResult?.ceNombre) }, () => setLeadWarn(true)); // fire-and-forget
       const ceRestringida = !devCESelected && RESTRICT_TO_CE && ceResult?.fsmstate === "01_DENTRO_ZONA" && ceResult?.ceNombre !== RESTRICT_TO_CE;
       if (ceRestringida) {
         updateFsmstate("02_FUERA_ZONA");
