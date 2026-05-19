@@ -1466,6 +1466,10 @@ export default function FacturaUpload() {
           if (contratoRes.ok) {
             const contratoData = await contratoRes.json();
             if (contratoData.found === true) {
+              // Guarda paymentUrl em localStorage para a página /contrato-firmado usar
+              if (contratoData.paymentUrl) {
+                localStorage.setItem("cs_paymentUrl", contratoData.paymentUrl);
+              }
               window.open(contratoData.contractUrl, "_blank");
               if (contratoData.hojaUrl) {
                 window.open(contratoData.hojaUrl, "_blank");
