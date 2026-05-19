@@ -713,7 +713,15 @@ export default function FacturaUpload() {
           if (!dentroZona) setZonaWarn("El punto de suministro de la factura está fuera de la zona de cobertura.");
         }
       }
-      setStatus("analyzed");
+      const facturaBuiltPDF = {
+        ...buildFactura({ ...flat, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), modo: modoAlquiler ? "alquiler" : "venta" }),
+        nombre_cliente:       data.nombre_cliente       ?? null,
+        direccion_suministro: data.direccion_suministro ?? null,
+        suministro_lat:       data.suministro_lat       ?? null,
+        suministro_lon:       data.suministro_lon       ?? null,
+      };
+      setLoadingMsg("Preparando tu plan...");
+      handleEnviar({ facturaBuilt: facturaBuiltPDF });
       if (TARIFAS_MULTI_FACTURA.includes(data.tarifa_acceso)) {
         const mes = parseInt(data.periodo_fin?.split("/")?.[1]);
         if (mes >= 1 && mes <= 12) {
@@ -731,7 +739,6 @@ export default function FacturaUpload() {
       }
     } catch (err) {
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };
@@ -824,17 +831,16 @@ export default function FacturaUpload() {
       }
       const data = await res.json();
       setCupsData(data);
-      setManualFields((prev) => ({
-        ...prev,
-        periodo_inicio: data.periodo_inicio || prev.periodo_inicio,
-        periodo_fin:    data.periodo_fin    || prev.periodo_fin,
-      }));
-      setStatus("analyzed");
+      const mergedManual = { ...manualFields, periodo_inicio: data.periodo_inicio || manualFields.periodo_inicio, periodo_fin: data.periodo_fin || manualFields.periodo_fin };
+      setManualFields(mergedManual);
+      const facturaBuiltCUPS = buildFactura({ cups, ...data, ...mergedManual, modo: modoAlquiler ? "alquiler" : "venta" });
+      setLoadingMsg("Preparando tu plan...");
+      handleEnviar({ facturaBuilt: facturaBuiltCUPS });
     } catch (err) {
       setError(err.message);
-    } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line no-useless-return
   };
 
   // ── Final send ───────────────────────────────────────────────────────────
@@ -977,7 +983,7 @@ export default function FacturaUpload() {
     }
   };
 
-  const handleEnviar = async () => {
+  const handleEnviar = async ({ facturaBuilt } = {}) => {
     if (sending) return;
 
     // ── Modo asesor ───────────────────────────────────────────────────────
@@ -1043,7 +1049,7 @@ export default function FacturaUpload() {
     }
 
     setSending(true); setError(""); setStatus("loading_plan");
-    const factura = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
+    const factura = facturaBuilt ?? (mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS());
     const cePayload = { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) };
     try {
       console.log("[handleEnviar] cliente.lat:", userCoords?.lat, "cliente.lon:", userCoords?.lon);
@@ -1088,14 +1094,16 @@ export default function FacturaUpload() {
       const idGenResolvido = resolverIdGeneracion(idGeneracion, ceNombre);
       const redirectUrl = `${PLAN_REDIRECT_URL}?coming-from-extractor=true&id_generacion=${encodeURIComponent(idGenResolvido ?? "")}&session_id=${encodeURIComponent(sessionIdRecebido ?? "")}`;
       console.log("[handleEnviar] redirect URL:", redirectUrl);
+      setLoading(false);
       window.open(redirectUrl, "_blank");
       setPlanAbierto(true);
 
       // O plano é calculado e mostrado no Cotizador (nova aba) — não chamar QUOTING_URL aqui
       setStatus("loading_plan");
     } catch (err) {
+      setLoading(false);
       setError(err.message);
-      setStatus("analyzed");
+      setStatus("idle");
     } finally {
       setSending(false);
     }
@@ -1458,6 +1466,10 @@ export default function FacturaUpload() {
           if (contratoRes.ok) {
             const contratoData = await contratoRes.json();
             if (contratoData.found === true) {
+              // Guarda paymentUrl em localStorage para a página /contrato-firmado usar
+              if (contratoData.paymentUrl) {
+                localStorage.setItem("cs_paymentUrl", contratoData.paymentUrl);
+              }
               window.open(contratoData.contractUrl, "_blank");
               if (contratoData.hojaUrl) {
                 window.open(contratoData.hojaUrl, "_blank");
@@ -2286,26 +2298,6 @@ export default function FacturaUpload() {
                   </div>
                 )}
 
-                <div style={{ position:"relative", display:"inline-block", width:"100%" }}
-                  title={advertenciaAno ? "Envía una factura más reciente para continuar" : undefined}>
-                  <button
-                    className="cs-btn-primary"
-                    style={{ marginTop:0, ...(advertenciaAno ? { opacity:0.45, cursor:"not-allowed" } : {}) }}
-                    onClick={() => {
-                      if (advertenciaAno) return;
-                      const esMultiFactura = TARIFAS_MULTI_FACTURA.includes(facturaData?.tarifa_acceso);
-                      const todasSubidas   = factura1Data && factura2Data;
-                      if (esMultiFactura && !todasSubidas) {
-                        setModalConfirmarEnvio(true);
-                      } else {
-                        handleEnviar();
-                      }
-                    }}
-                    disabled={sending || advertenciaAno}
-                  >
-                    {sending ? "Enviando..." : "Enviar datos →"}
-                  </button>
-                </div>
               </div>
             )}
 
@@ -2393,17 +2385,6 @@ export default function FacturaUpload() {
                   ))}
                 </div>
 
-                <div style={{ position:"relative", display:"inline-block", width:"100%" }}
-                  title={advertenciaAno ? "Envía una factura más reciente para continuar" : undefined}>
-                  <button
-                    className="cs-btn-primary"
-                    style={{ marginTop:8, ...(advertenciaAno ? { opacity:0.45, cursor:"not-allowed" } : {}) }}
-                    onClick={advertenciaAno ? undefined : handleEnviar}
-                    disabled={sending || advertenciaAno}
-                  >
-                    {sending ? "Enviando..." : "Enviar datos →"}
-                  </button>
-                </div>
               </div>
             )}
           </>
