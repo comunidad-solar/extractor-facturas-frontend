@@ -13,7 +13,10 @@
       "PowerShell(if \\(-not \\(Test-Path \".claude\"\\)\\) { New-Item -ItemType Directory -Path \".claude\" })",
       "Bash(grep -r \"zoho\\\\|ZOHO\\\\|client_id\\\\|access_token\" --include=\"*.js\" --include=\"*.jsx\" --include=\"*.py\" --include=\"*.env*\" -l)",
       "Bash(ls *.py)",
-      "Bash(ls .env*)"
+      "Bash(ls .env*)",
+      "Bash(git ls-tree *)",
+      "Bash(git show *)",
+      "Read(//tmp/**)"
     ]
   }
 }
