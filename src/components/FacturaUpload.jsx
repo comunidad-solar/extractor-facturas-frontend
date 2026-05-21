@@ -503,8 +503,21 @@ export default function FacturaUpload() {
                 const pd = await pr.json();
                 if (pd.dealId && pd.mpklogId) {
                   console.log("[/continuar] polling IDs recebidos:", { dealId: pd.dealId, mpklogId: pd.mpklogId });
-                  setDealId(prev  => prev || pd.dealId);
-                  setMpklogId(prev => prev || pd.mpklogId);
+                  // El polling/sesión es la fuente de verdad (callback del Zoho Flow ya escribió en la sesión).
+                  // Si el state actual tiene un ID diferente (pegajoso de sesión anterior o del fallback por email),
+                  // lo sobrescribimos y dejamos aviso en consola.
+                  setDealId(prev => {
+                    if (prev && prev !== pd.dealId) {
+                      console.warn("[/continuar] dealId sobrescrito:", { antes: prev, depois: pd.dealId });
+                    }
+                    return pd.dealId;
+                  });
+                  setMpklogId(prev => {
+                    if (prev && prev !== pd.mpklogId) {
+                      console.warn("[/continuar] mpklogId sobrescrito:", { antes: prev, depois: pd.mpklogId });
+                    }
+                    return pd.mpklogId;
+                  });
                   return;
                 }
               } catch (_) {}
@@ -1682,8 +1695,25 @@ export default function FacturaUpload() {
                   setCePanelesDisponibles(prev => prev != null ? prev : Number(data.ce.paneles_disponibles));
                 }
               }
-              if (data?.dealId)   setDealId(prev   => prev || data.dealId);
-              if (data?.mpklogId) setMpklogId(prev => prev || data.mpklogId);
+              // El polling/sesión es la fuente de verdad (callback del Zoho Flow). Si el state local
+              // tiene IDs distintos (cs_dealId del localStorage de una sesión anterior, o fallback por
+              // email del backend), sobrescribimos y avisamos en consola.
+              if (data?.dealId) {
+                setDealId(prev => {
+                  if (prev && prev !== data.dealId) {
+                    console.warn("[PlanScreen/sesion] dealId sobrescrito:", { antes: prev, depois: data.dealId });
+                  }
+                  return data.dealId;
+                });
+              }
+              if (data?.mpklogId) {
+                setMpklogId(prev => {
+                  if (prev && prev !== data.mpklogId) {
+                    console.warn("[PlanScreen/sesion] mpklogId sobrescrito:", { antes: prev, depois: data.mpklogId });
+                  }
+                  return data.mpklogId;
+                });
+              }
               if (data?.cliente) {
                 setCliente(prev => ({
                   nombre:    prev.nombre    || data.cliente.nombre    || "",
