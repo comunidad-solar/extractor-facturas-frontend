@@ -57,6 +57,7 @@ export default function FacturaUpload() {
   const [ceDireccion, setCeDireccion] = useState("");
   const [ceStatus, setCeStatus]       = useState("");
   const [ceEtiqueta, setCeEtiqueta]   = useState("");
+  const [cePanelesDisponibles, setCePanelesDisponibles] = useState(null); // Paneles_disponibles del CRM
   const [ceDistancia, setCeDistancia] = useState(null); // metros — para banner
   const [ceRadio, setCeRadio]         = useState(null); // radioMetros — para banner
   const [zonaWarn, setZonaWarn]       = useState("");   // aviso no bloqueante
@@ -288,6 +289,9 @@ export default function FacturaUpload() {
         setCeDireccion(prev => prev || ce.direccion || "");
         setCeStatus(prev    => prev || ce.status    || "");
         setCeEtiqueta(prev  => prev || ce.etiqueta  || "");
+        if (ce.paneles_disponibles != null) {
+          setCePanelesDisponibles(prev => prev != null ? prev : ce.paneles_disponibles);
+        }
         if (ce.id_generacion) setIdGeneracion(String(ce.id_generacion));
       }
 
@@ -435,14 +439,17 @@ export default function FacturaUpload() {
       const ceStatusVal    = CE_ESTATUS_MAP[nearest.status] ?? "Waiting list";
       const ceEtiquetaVal  = nearest.etiqueta || "";
       const ceIdGenVal     = nearest.id_generacion ? String(nearest.id_generacion) : "";
+      const cePanelesVal   = (nearest.paneles_disponibles != null) ? Number(nearest.paneles_disponibles) : null;
 
       setCeNombre(ceNombreVal);
       setCeDireccion(ceDireccionVal);
       setCeStatus(ceStatusVal);
       setCeEtiqueta(ceEtiquetaVal);
+      setCePanelesDisponibles(cePanelesVal);
       if (ceIdGenVal) setIdGeneracion(ceIdGenVal);
-      console.log("📊 Resultado:", { Fmstate: "01_DENTRO_ZONA", ceNombreVal, ceDireccionVal, ceStatusVal, ceEtiquetaVal, ceIdGenVal, distanciaCEMasCercana });
-      return { fsmstate: "01_DENTRO_ZONA", ceNombre: ceNombreVal, ceDireccion: ceDireccionVal, ceStatus: ceStatusVal, ceEtiqueta: ceEtiquetaVal, idGeneracion: ceIdGenVal };
+      console.log("📊 Resultado:", { Fmstate: "01_DENTRO_ZONA", ceNombreVal, ceDireccionVal, ceStatusVal, ceEtiquetaVal, ceIdGenVal, cePanelesVal, distanciaCEMasCercana });
+      console.log("[runZonaCheck] paneles_disponibles capturado (DENTRO_ZONA):", { cePanelesVal, rawZoho: nearest.paneles_disponibles, ce: ceNombreVal });
+      return { fsmstate: "01_DENTRO_ZONA", ceNombre: ceNombreVal, ceDireccion: ceDireccionVal, ceStatus: ceStatusVal, ceEtiqueta: ceEtiquetaVal, idGeneracion: ceIdGenVal, panelesDisponibles: cePanelesVal };
     } else {
       const distanciaCEMasCercana = nearestAll ? Math.round(nearestAllDist) : null;
       updateFsmstate("02_FUERA_ZONA");
@@ -454,14 +461,17 @@ export default function FacturaUpload() {
       const ceStatusVal    = nearestAll ? (CE_ESTATUS_MAP[nearestAll.status] ?? "Waiting list") : "";
       const ceEtiquetaVal  = nearestAll ? (nearestAll.etiqueta || "") : "";
       const ceIdGenVal     = nearestAll?.id_generacion ? String(nearestAll.id_generacion) : "";
+      const cePanelesVal   = (nearestAll && nearestAll.paneles_disponibles != null) ? Number(nearestAll.paneles_disponibles) : null;
 
       setCeNombre(ceNombreVal);
       setCeDireccion(ceDireccionVal);
       setCeStatus(ceStatusVal);
       setCeEtiqueta(ceEtiquetaVal);
+      setCePanelesDisponibles(cePanelesVal);
       if (ceIdGenVal) setIdGeneracion(ceIdGenVal);
-      console.log("📊 Resultado:", { Fmstate: "02_FUERA_ZONA", ceNombreVal, ceDireccionVal, ceStatusVal, ceEtiquetaVal, ceIdGenVal, distanciaCEMasCercana });
-      return { fsmstate: "02_FUERA_ZONA", ceNombre: ceNombreVal, ceDireccion: ceDireccionVal, ceStatus: ceStatusVal, ceEtiqueta: ceEtiquetaVal, idGeneracion: ceIdGenVal };
+      console.log("📊 Resultado:", { Fmstate: "02_FUERA_ZONA", ceNombreVal, ceDireccionVal, ceStatusVal, ceEtiquetaVal, ceIdGenVal, cePanelesVal, distanciaCEMasCercana });
+      console.log("[runZonaCheck] paneles_disponibles capturado (FUERA_ZONA):", { cePanelesVal, rawZoho: nearestAll?.paneles_disponibles, ce: ceNombreVal });
+      return { fsmstate: "02_FUERA_ZONA", ceNombre: ceNombreVal, ceDireccion: ceDireccionVal, ceStatus: ceStatusVal, ceEtiqueta: ceEtiquetaVal, idGeneracion: ceIdGenVal, panelesDisponibles: cePanelesVal };
     }
   };
 
@@ -469,7 +479,7 @@ export default function FacturaUpload() {
     try {
       const payload = {
         cliente: { nombre: cliente.nombre, apellidos: cliente.apellidos, correo: cliente.correo, telefono: cliente.telefono, direccion: cliente.direccion },
-        ce: { nombre: ceResult?.ceNombre ?? ceNombre, direccion: ceResult?.ceDireccion ?? ceDireccion, status: FORCE_WAITING_LIST ? "Waiting list" : (ceResult?.ceStatus ?? ceStatus), etiqueta: ceResult?.ceEtiqueta ?? ceEtiqueta, id_generacion: ceResult?.idGeneracion || resolverIdGeneracion(idGeneracion, ceResult?.ceNombre ?? ceNombre) },
+        ce: { nombre: ceResult?.ceNombre ?? ceNombre, direccion: ceResult?.ceDireccion ?? ceDireccion, status: FORCE_WAITING_LIST ? "Waiting list" : (ceResult?.ceStatus ?? ceStatus), etiqueta: ceResult?.ceEtiqueta ?? ceEtiqueta, id_generacion: ceResult?.idGeneracion || resolverIdGeneracion(idGeneracion, ceResult?.ceNombre ?? ceNombre), paneles_disponibles: ceResult?.panelesDisponibles ?? cePanelesDisponibles ?? null },
         Fsmstate: ceResult?.fsmstate ?? "02_FUERA_ZONA",
         FsmPrevious: null,
       };
@@ -967,7 +977,7 @@ export default function FacturaUpload() {
       fd.append("data", JSON.stringify({
         cliente,
         Fsmstate, FsmPrevious: fsmPrevious,
-        ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) },
+        ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null },
       }));
       const res = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
       const dataAsesor = await res.json().catch(() => ({}));
@@ -1003,7 +1013,7 @@ export default function FacturaUpload() {
       setSending(true); setError("");
       try {
         const facturaAsesor = facturaBuilt ?? (mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS());
-        const cePayload = { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) };
+        const cePayload = { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null };
 
         // Enviar ao Zoho Flow via /enviar (igual ao fluxo normal)
         const fd = new FormData();
@@ -1054,7 +1064,7 @@ export default function FacturaUpload() {
 
     setSending(true); setError(""); setStatus("loading_plan");
     const factura = facturaBuilt ?? (mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS());
-    const cePayload = { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) };
+    const cePayload = { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null };
     try {
       console.log("[handleEnviar] cliente.lat:", userCoords?.lat, "cliente.lon:", userCoords?.lon);
       const fd = new FormData();
@@ -1087,7 +1097,7 @@ export default function FacturaUpload() {
         : { cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null };
       localStorage.setItem("cs_cliente",    JSON.stringify({ ...buildClientePayload(dealIdRecebido, mpklogIdRecebido) }));
       localStorage.setItem("cs_factura",    JSON.stringify(facturaFlat));
-      localStorage.setItem("cs_ce",         JSON.stringify({ nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) }));
+      localStorage.setItem("cs_ce",         JSON.stringify({ nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null }));
       localStorage.setItem("cs_dealId",     dealIdRecebido    ?? "");
       localStorage.setItem("cs_mpklogId",   mpklogIdRecebido  ?? "");
       localStorage.setItem("cs_fsmstate",   Fsmstate          ?? "");
@@ -1118,7 +1128,7 @@ export default function FacturaUpload() {
     const factura = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
     const payload = {
       cliente, factura, Fsmstate, FsmPrevious: fsmPrevious,
-      ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre) },
+      ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null },
       numeroPaneles: panelesPropuesta,
     };
     console.log("[optimizar] payload enviado:", payload);
@@ -1182,6 +1192,34 @@ export default function FacturaUpload() {
     let dealIdFinal   = dealId   ?? sd?.dealId   ?? urlRef.dealId   ?? null;
     let mpklogIdFinal = mpklogId ?? sd?.mpklogId ?? urlRef.mpklogId ?? null;
     const cleanUrl = (val) => (!val || val === "—") ? "" : val;
+
+    // motivoDeEspera — clasifica el motivo por el cual el cliente entra en lista de espera.
+    //   "Sin plazas" → Paneles_disponibles (CRM) < panelesSel
+    //   "Quoting"    → dentro de zona pero la CE no está Available
+    //   null         → resto (p.ej. fuera de zona — el Flow ya lo trata por Fsmstate)
+    const ceStatusEff = ceStatus || sdCe.status || urlRef.ce?.status || "";
+    const fsmEff      = Fsmstate || sd?.Fsmstate || urlRef.fsmstate || "";
+    const panelesDispEff = cePanelesDisponibles ?? sdCe.paneles_disponibles ?? null;
+    let motivoDeEspera = null;
+    if (panelesDispEff != null && panelesSel != null && panelesDispEff < panelesSel) {
+      motivoDeEspera = "Sin plazas";
+    } else if (fsmEff === "01_DENTRO_ZONA" && ceStatusEff !== "Available") {
+      motivoDeEspera = "Quoting";
+    }
+    console.log("[handleEntrarListaEspera] motivoDeEspera calculado:", {
+      motivoDeEspera,
+      panelesDisp_state: cePanelesDisponibles,
+      panelesDisp_sesion: sdCe.paneles_disponibles,
+      panelesDispEff,
+      panelesSel,
+      ceStatusEff,
+      fsmEff,
+      reglaAplicada:
+        motivoDeEspera === "Sin plazas" ? "panelesDispEff < panelesSel" :
+        motivoDeEspera === "Quoting"    ? "01_DENTRO_ZONA y ceStatus != Available" :
+        "ninguna (null)",
+    });
+
     const payload = {
       cliente: {
         nombre:         cliente.nombre    || sdCliente.nombre    || cleanUrl(urlCli.nombre)    || "",
@@ -1214,6 +1252,7 @@ export default function FacturaUpload() {
       },
       Fsmstate:    "08_PROPUESTA_ALQ",
       FsmPrevious: Fsmstate || sd?.Fsmstate || urlRef.fsmstate || null,
+      motivoDeEspera,
       plan_url:    window.location.href,
       session_id:  extractSessionId ?? localStorage.getItem("cs_session_id") ?? null,
       ...(sd?.facturaPreview && { facturaPreview: sd.facturaPreview }),
@@ -1237,6 +1276,7 @@ export default function FacturaUpload() {
         status:        ceStatus    || sdCe.status    || urlRef.ce?.status    || "",
         etiqueta:      ceEtiqueta  || sdCe.etiqueta  || urlRef.ce?.etiqueta  || "",
         id_generacion: resolverIdGeneracion(idGeneracion || sdCe.id_generacion || urlRef.idGen, ceNombre || sdCe.nombre || urlRef.ce?.nombre),
+        paneles_disponibles: cePanelesDisponibles ?? sdCe.paneles_disponibles ?? null,
       },
       ...((sesionData?.factura_1 || factura1Data) && { factura_1: sesionData?.factura_1 ?? buildFactura1() }),
       ...((sesionData?.factura_2 || factura2Data) && { factura_2: sesionData?.factura_2 ?? buildFactura2() }),
@@ -1339,6 +1379,7 @@ export default function FacturaUpload() {
           status:        ceStatus    || urlRef.ce?.status    || "",
           etiqueta:      ceEtiqueta  || urlRef.ce?.etiqueta  || "",
           id_generacion: resolverIdGeneracion(idGeneracion || urlRef.idGen, ceNombre || urlRef.ce?.nombre),
+          paneles_disponibles: cePanelesDisponibles ?? null,
         };
         const clientePre = {
           nombre:    cliente.nombre    || urlCli.nombre    || "",
@@ -1371,6 +1412,33 @@ export default function FacturaUpload() {
     }
 
     const cleanUrl = (val) => (!val || val === "—") ? "" : val;
+
+    // motivoDeEspera — habitualmente null en este flujo (el cliente sólo llega aquí si
+    // puedeContratar=true en PlanScreen, es decir CE Available y hay plazas). Recalculamos
+    // por defensa para que el backend reciba el motivo si alguna condición cambió en
+    // medio (race con refresh de sesión, etc.).
+    const ceStatusEffH = ceStatus || sdCe.status || urlRef.ce?.status || "";
+    const fsmEffH      = Fsmstate || sd?.Fsmstate || urlRef.fsmstate || "";
+    const panelesDispEffH = cePanelesDisponibles ?? sdCe.paneles_disponibles ?? null;
+    let motivoDeEspera = null;
+    if (panelesDispEffH != null && panelesSel != null && panelesDispEffH < panelesSel) {
+      motivoDeEspera = "Sin plazas";
+    } else if (fsmEffH === "01_DENTRO_ZONA" && ceStatusEffH !== "Available") {
+      motivoDeEspera = "Quoting";
+    }
+    console.log("[handleContratar] motivoDeEspera calculado:", {
+      motivoDeEspera,
+      panelesDisp_state: cePanelesDisponibles,
+      panelesDisp_sesion: sdCe.paneles_disponibles,
+      panelesDispEffH,
+      panelesSel,
+      ceStatusEffH,
+      fsmEffH,
+      reglaAplicada:
+        motivoDeEspera === "Sin plazas" ? "panelesDispEffH < panelesSel" :
+        motivoDeEspera === "Quoting"    ? "01_DENTRO_ZONA y ceStatus != Available" :
+        "ninguna (null, esperado en flujo Contratar normal)",
+    });
 
     const payload = {
       cliente: {
@@ -1406,6 +1474,7 @@ export default function FacturaUpload() {
       },
       Fsmstate:    "08_PROPUESTA_ALQ",
       FsmPrevious: Fsmstate || sd?.Fsmstate || urlRef.fsmstate || null,
+      motivoDeEspera,
       plan_url:    window.location.href,
       session_id:  extractSessionId ?? localStorage.getItem("cs_session_id") ?? null,
       ...(sd?.facturaPreview && { facturaPreview: sd.facturaPreview }),
@@ -1432,6 +1501,7 @@ export default function FacturaUpload() {
           idGeneracion || sdCe.id_generacion || urlRef.idGen,
           ceNombre     || sdCe.nombre        || urlRef.ce?.nombre
         ),
+        paneles_disponibles: cePanelesDisponibles ?? sdCe.paneles_disponibles ?? null,
       },
       ...((sesionData?.factura_1 || factura1Data) && {
         factura_1: sesionData?.factura_1 ?? buildFactura1(),
@@ -1581,6 +1651,7 @@ export default function FacturaUpload() {
             cliente={cliente}
             ceNombre={ceNombre}
             ceStatus={ceStatus}
+            cePanelesDisponibles={cePanelesDisponibles}
             modoAlquiler={modoAlquiler}
             cuotaAlquilerMes={cuotaAlquilerMes}
             planData={planData}
@@ -1606,6 +1677,9 @@ export default function FacturaUpload() {
                 if (data.ce.etiqueta)      setCeEtiqueta(data.ce.etiqueta);
                 if (data.ce.direccion)     setCeDireccion(data.ce.direccion);
                 if (data.ce.id_generacion) setIdGeneracion(String(data.ce.id_generacion));
+                if (data.ce.paneles_disponibles != null) {
+                  setCePanelesDisponibles(prev => prev != null ? prev : Number(data.ce.paneles_disponibles));
+                }
               }
               if (data?.dealId)   setDealId(prev   => prev || data.dealId);
               if (data?.mpklogId) setMpklogId(prev => prev || data.mpklogId);
@@ -1664,6 +1738,7 @@ export default function FacturaUpload() {
                     status:        data?.ce?.status        ?? ceStatus    ?? "",
                     etiqueta:      data?.ce?.etiqueta      ?? ceEtiqueta  ?? "",
                     id_generacion: data?.ce?.id_generacion ?? idGeneracion ?? null,
+                    paneles_disponibles: data?.ce?.paneles_disponibles ?? cePanelesDisponibles ?? null,
                   },
                 };
                 const fdCotiz = new FormData();
