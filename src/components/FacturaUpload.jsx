@@ -209,7 +209,7 @@ export default function FacturaUpload() {
 
       setPanelesSel(p("panelesSel", 3));
       setPanelesPropuesta(p("panelesSel", 3));
-      setPlanData({
+      const planFromUrl = {
         ahorro25Anos:            parseFloat(params.get("ahorro25Anos"))            || null,
         pagoUnico:               parseFloat(params.get("pagoUnico"))               || null,
         pagoFinanciado:          parseFloat(params.get("pagoFinanciado"))          || null,
@@ -222,8 +222,32 @@ export default function FacturaUpload() {
         panelesSel:              parseInt(params.get("panelesSel"))                || null,
         cuotaAlquilerMes:        parseFloat(params.get("cuotaAlquilerMes"))        || null,
         ahorroAnualPercent:      parseFloat(params.get("ahorroAnualPercent"))      || null,
-      });
+      };
+      setPlanData(planFromUrl);
       setLoading(false);
+
+      // ── PATCH /sesion con plan (fire-and-forget) ────────────────────────────
+      // Persistir el plan en el DB del backend (campo `plan` del payload de
+      // sesión). Permite que un segundo navegador o un acceso 10 días después
+      // recupere el plan vía GET /sesion (en vez de depender de los params URL,
+      // que vamos a limpiar a seguir).
+      const sidForPatch = params.get("session_id");
+      const hasAnyPlanValue = Object.values(planFromUrl).some(v => v != null);
+      if (sidForPatch && hasAnyPlanValue) {
+        const modoFromUrl = params.get("modo") || null;
+        const payloadPatch = { plan: planFromUrl, ...(modoFromUrl && { modo: modoFromUrl }) };
+        console.log("[plan-demo] PATCH /sesion fire-and-forget:", payloadPatch);
+        fetch(`${SESION_URL}/${encodeURIComponent(sidForPatch)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payloadPatch),
+        })
+          .then(r => {
+            if (!r.ok) console.warn("[plan-demo] PATCH /sesion respondeu", r.status);
+            else console.log("[plan-demo] PATCH /sesion OK — plan persistido no DB");
+          })
+          .catch(e => console.warn("[plan-demo] PATCH /sesion falhou (utilizando localStorage como fallback):", e?.message));
+      }
 
       const cleanUrl = (val) => (!val || val === "—") ? "" : val;
 
@@ -323,6 +347,99 @@ export default function FacturaUpload() {
 
     const cuotaRaw = parseFloat(params.get("cuotaAlquilerMes"));
     if (!isNaN(cuotaRaw)) setCuotaAlquilerMes(cuotaRaw);
+
+    // ── Sessão recuperada — session_id solitário (sem demo=true&fase=plan-demo) ──
+    // Cenário: utilizador chega via URL limpa (outro navegador, link partilhado,
+    // dias depois). Buscamos a sessão no backend e, se tiver `plan`, montamos
+    // a PlanScreen como se fosse plan-demo.
+    const isPlanDemo = params.get("demo") === "true" && params.get("fase") === "plan-demo";
+    const sidSolo    = params.get("session_id");
+    if (sidSolo && !isPlanDemo) {
+      console.log("[useEffect] session_id solitário detetado:", sidSolo, "→ GET /sesion para recuperar plan");
+      setLoading(true);
+      setLoadingMsg("Recuperando tu plan...");
+      (async () => {
+        try {
+          const r = await fetch(`${SESION_URL}/${encodeURIComponent(sidSolo)}`);
+          if (!r.ok) {
+            console.warn("[useEffect] GET /sesion respondeu", r.status, "— sessão não recuperada");
+            setLoading(false);
+            return;
+          }
+          const data = await r.json();
+          console.log("[useEffect] sessão recuperada:", data);
+          // Popular state a partir do payload da sessão.
+          if (data?.cliente) {
+            setCliente(prev => ({
+              nombre:    prev.nombre    || data.cliente.nombre    || "",
+              apellidos: prev.apellidos || data.cliente.apellidos || "",
+              correo:    prev.correo    || data.cliente.correo    || "",
+              telefono:  prev.telefono  || data.cliente.telefono  || "",
+              direccion: prev.direccion || data.cliente.direccion || "",
+            }));
+            if (data.cliente.dealId)   setDealId(data.cliente.dealId);
+            if (data.cliente.mpklogId) setMpklogId(data.cliente.mpklogId);
+          }
+          if (data?.dealId)   setDealId(prev   => prev || data.dealId);
+          if (data?.mpklogId) setMpklogId(prev => prev || data.mpklogId);
+          if (data?.ce) {
+            if (data.ce.nombre)        setCeNombre(data.ce.nombre);
+            if (data.ce.status)        setCeStatus(data.ce.status);
+            if (data.ce.etiqueta)      setCeEtiqueta(data.ce.etiqueta);
+            if (data.ce.direccion)     setCeDireccion(data.ce.direccion);
+            if (data.ce.id_generacion) setIdGeneracion(String(data.ce.id_generacion));
+            if (data.ce.paneles_disponibles != null) setCePanelesDisponibles(Number(data.ce.paneles_disponibles));
+          }
+          if (data?.Fsmstate)    setFsmstate(data.Fsmstate);
+          if (data?.FsmPrevious) setFsmPrevious(data.FsmPrevious);
+          if (data?.modo)        setModoAlquiler(data.modo === "alquiler");
+          if (data?.facturaPreview) setFacturaPreviewData(data.facturaPreview);
+          if (data?.factura) {
+            // factura está em formato Claude (estruturado) — guardar como facturaData direto.
+            setFacturaData(data.factura);
+            setMode("pdf");
+          }
+          if (data?.plan) {
+            setPlanData(data.plan);
+            if (data.plan.panelesSel != null) {
+              setPanelesSel(Number(data.plan.panelesSel));
+              setPanelesPropuesta(Number(data.plan.panelesSel));
+            }
+            if (data.plan.cuotaAlquilerMes != null) setCuotaAlquilerMes(Number(data.plan.cuotaAlquilerMes));
+          } else {
+            console.warn("[useEffect] sessão não contém plan — PlanScreen pode ficar com dados em falta");
+          }
+          // urlParamsRef.facturaLS para handleContratar fallback
+          if (data?.factura) urlParamsRef.current.facturaLS = data.factura;
+          urlParamsRef.current.modeLS = "pdf";
+          setStatus("sent");
+          setLoading(false);
+        } catch (e) {
+          console.warn("[useEffect] erro a recuperar sessão:", e?.message);
+          setLoading(false);
+        }
+      })();
+    }
+
+    // ── Limpiar URL — mantener sólo session_id ─────────────────────────────
+    // Llegados aquí, todos los params relevantes ya están leídos y populados
+    // en state/refs/localStorage. Para no exponer datos del cliente (nombre,
+    // dirección, ahorros, IDs Zoho...) en la barra del navegador, sustituimos
+    // la URL por una versión limpia con apenas session_id (para permitir
+    // refresh y debugging). Si no hay session_id, dejamos sólo "/".
+    try {
+      const sidUrl = params.get("session_id");
+      const cleanUrl = sidUrl
+        ? `${window.location.pathname}?session_id=${encodeURIComponent(sidUrl)}`
+        : window.location.pathname;
+      // Sólo aplica si la URL actual tiene más params que session_id
+      if (window.location.search && window.location.search !== `?session_id=${encodeURIComponent(sidUrl || "")}`) {
+        window.history.replaceState({}, "", cleanUrl);
+        console.log("[URL] limpa — só session_id mantido na barra:", cleanUrl);
+      }
+    } catch (e) {
+      console.warn("[URL] erro a limpar URL:", e);
+    }
   }, []);
 
   // ── Pre-fetch lista CE al montar ──────────────────────────────────────────
@@ -1685,6 +1802,19 @@ export default function FacturaUpload() {
             onSesionLoaded={(data) => {
               setSesionData(data);
               if (data?.facturaPreview) setFacturaPreviewData(data.facturaPreview);
+              // Hidratar planData / panelesSel / cuotaAlquilerMes / modoAlquiler a partir do
+              // `plan` da sessão DB. Cobre cenário "outro navegador / 10 dias depois" onde a
+              // URL chega só com session_id e o state local ainda não tem o plan.
+              if (data?.plan && (!planData || Object.values(planData).every(v => v == null))) {
+                console.log("[onSesionLoaded] hidratando planData a partir de data.plan");
+                setPlanData(data.plan);
+                if (data.plan.panelesSel != null) {
+                  setPanelesSel(Number(data.plan.panelesSel));
+                  setPanelesPropuesta(Number(data.plan.panelesSel));
+                }
+                if (data.plan.cuotaAlquilerMes != null) setCuotaAlquilerMes(Number(data.plan.cuotaAlquilerMes));
+              }
+              if (data?.modo) setModoAlquiler(data.modo === "alquiler");
               if (data?.ce) {
                 if (data.ce.nombre)        setCeNombre(data.ce.nombre);
                 if (data.ce.status)        setCeStatus(data.ce.status);
