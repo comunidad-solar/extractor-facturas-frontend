@@ -1680,6 +1680,11 @@ export default function FacturaUpload() {
           .catch(() => `HTTP ${res.status}`);
         throw new Error(detail);
       }
+      // IMPORTANTE: setLoading(true) ANTES de fechar o modal — assim quando o modal
+      // fechar, o loading já está activo e sobrepõe o PlanScreen. Caso contrário
+      // o PlanScreen apareceria brevemente entre o modal fechar e o loading iniciar.
+      setLoadingMsg("Preparando tu contrato...");
+      setLoading(true);
       setModalContratar(false);
       setDniContrato("");
       setAccionRealizada("contratado");
@@ -1688,8 +1693,6 @@ export default function FacturaUpload() {
       // momentaneamente antes do replace para o contrato.
 
       // Polling para abrir contrato na mesma aba quando backend receber contractUrl do Zoho Sign
-      setLoading(true);
-      setLoadingMsg("Preparando tu contrato...");
       const MAX_INTENTOS = 240; // 8 minutos (240 × 2s)
       let contratoEncontrado = false;
       for (let i = 0; i < MAX_INTENTOS; i++) {
@@ -1718,12 +1721,17 @@ export default function FacturaUpload() {
       // Só mostrar a tela "¡Contrato generado!" se o polling falhou (não fizemos
       // replace) — significa que o backend demorou mais de 8 minutos e o
       // utilizador vai receber o link por email.
+      // IMPORTANTE: se contratoEncontrado === true, NÃO chamar setLoading(false)
+      // porque o window.location.replace é assíncrono — entre o JS terminar e o
+      // browser navegar, qualquer re-render mostraria o PlanScreen brevemente.
+      // Mantemos loading=true até a navegação completar (browser unmount a SPA).
       if (!contratoEncontrado) {
         setStatus("asesor_solicitado");
+        setLoading(false);
       }
-      setLoading(false);
     } catch (err) {
       setDniError(err.message);
+      setLoading(false);
     } finally {
       setEnviandoContrato(false);
     }
