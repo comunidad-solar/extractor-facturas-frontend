@@ -1683,12 +1683,15 @@ export default function FacturaUpload() {
       setModalContratar(false);
       setDniContrato("");
       setAccionRealizada("contratado");
-      setStatus("asesor_solicitado");
+      // NÃO mudar status para "asesor_solicitado" aqui — só no fim do polling se
+      // este falhar. Caso contrário a tela "¡Contrato generado!" aparece
+      // momentaneamente antes do replace para o contrato.
 
-      // Polling para abrir contrato em nova aba quando backend receber contractUrl do Zoho Sign
+      // Polling para abrir contrato na mesma aba quando backend receber contractUrl do Zoho Sign
       setLoading(true);
       setLoadingMsg("Preparando tu contrato...");
       const MAX_INTENTOS = 240; // 8 minutos (240 × 2s)
+      let contratoEncontrado = false;
       for (let i = 0; i < MAX_INTENTOS; i++) {
         await new Promise((r) => setTimeout(r, 2000));
         try {
@@ -1705,11 +1708,18 @@ export default function FacturaUpload() {
               // Navega na MESMA aba (replace = sem entrada no histórico,
               // utilizador não pode "voltar atrás" ao extractor depois de iniciar
               // o contrato).
+              contratoEncontrado = true;
               window.location.replace(contratoData.contractUrl);
               break;
             }
           }
         } catch { /* ignorar erros de rede no polling */ }
+      }
+      // Só mostrar a tela "¡Contrato generado!" se o polling falhou (não fizemos
+      // replace) — significa que o backend demorou mais de 8 minutos e o
+      // utilizador vai receber o link por email.
+      if (!contratoEncontrado) {
+        setStatus("asesor_solicitado");
       }
       setLoading(false);
     } catch (err) {
