@@ -897,7 +897,10 @@ export default function FacturaUpload() {
         setLoading(false);
       } else {
         setLoadingMsg("Preparando tu plan...");
-        handleEnviar({ facturaBuilt: facturaBuiltPDF });
+        // Passa session_id directamente — setExtractSessionId acima é async e
+        // o estado React pode ainda não ter sido atualizado quando handleEnviar
+        // ler extractSessionId no closure.
+        handleEnviar({ facturaBuilt: facturaBuiltPDF, sessionIdOverride: data.session_id ?? null });
       }
     } catch (err) {
       setError(err.message);
@@ -1145,8 +1148,12 @@ export default function FacturaUpload() {
     }
   };
 
-  const handleEnviar = async ({ facturaBuilt } = {}) => {
+  const handleEnviar = async ({ facturaBuilt, sessionIdOverride } = {}) => {
     if (sending) return;
+    // Race React: extractSessionId pode ainda ser null se handleEnviar for chamado
+    // imediatamente após setExtractSessionId. Usar override (passado pelo caller que
+    // acabou de receber session_id de /facturas/extraer) tem prioridade.
+    const effectiveExtractSessionId = sessionIdOverride ?? extractSessionId;
 
     // ── Modo asesor ───────────────────────────────────────────────────────
     if (modoAsesor) {
@@ -1165,7 +1172,7 @@ export default function FacturaUpload() {
 
         // Enviar ao Zoho Flow via /enviar (igual ao fluxo normal)
         const fd = new FormData();
-        fd.append("data", JSON.stringify({ cliente: buildClientePayload(), factura: facturaAsesor, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload, session_id: extractSessionId, continuar_session_id: continuarSessionId }));
+        fd.append("data", JSON.stringify({ cliente: buildClientePayload(), factura: facturaAsesor, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload, session_id: effectiveExtractSessionId, continuar_session_id: continuarSessionId }));
         if (mode === "pdf" && file) fd.append("file", file, file.name);
 
         // Enviar em paralelo: /enviar (Zoho Flow) + ASESOR_ENVIO_URL
@@ -1218,11 +1225,12 @@ export default function FacturaUpload() {
       const fd = new FormData();
       const dataPayload = {
         cliente: buildClientePayload(), factura, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload,
-        session_id: extractSessionId,
+        session_id: effectiveExtractSessionId,
         continuar_session_id: continuarSessionId,
         ...(factura1Data && { factura_1: buildFactura1(), session_id_1: extract1SessionId }),
         ...(factura2Data && { factura_2: buildFactura2(), session_id_2: extract2SessionId }),
       };
+      console.log("[handleEnviar] session_id no payload:", effectiveExtractSessionId, "(override:", sessionIdOverride, ", state:", extractSessionId, ")");
       fd.append("data", JSON.stringify(dataPayload));
       if (mode === "pdf" && file) fd.append("file", file, file.name);
       const resEnviar  = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
