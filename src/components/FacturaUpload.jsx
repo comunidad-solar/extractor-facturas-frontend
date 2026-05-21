@@ -1702,7 +1702,10 @@ export default function FacturaUpload() {
               }
               // Abre apenas o contrato — a hoja abre automaticamente
               // pelo redirect do Sign após o contrato ser firmado.
-              window.open(contratoData.contractUrl, "_blank");
+              // Navega na MESMA aba (replace = sem entrada no histórico,
+              // utilizador não pode "voltar atrás" ao extractor depois de iniciar
+              // o contrato).
+              window.location.replace(contratoData.contractUrl);
               break;
             }
           }
