@@ -234,8 +234,14 @@ export default function FacturaUpload() {
       const sidForPatch = params.get("session_id");
       const hasAnyPlanValue = Object.values(planFromUrl).some(v => v != null);
       if (sidForPatch && hasAnyPlanValue) {
-        const modoFromUrl = params.get("modo") || null;
-        const payloadPatch = { plan: planFromUrl, ...(modoFromUrl && { modo: modoFromUrl }) };
+        // Resolver `modo` a partir de múltiplas fontes para garantir que é sempre
+        // gravado no DB. Ordem: URL param > localStorage cs_mode (ex.: "pdf"
+        // não interessa, mas se houver `cs_modoAlquiler` ou similar...) > null.
+        // Em última análise, se o cliente tiver feito o passo 1/2 sem usar param URL
+        // `modo`, ainda assim podemos derivar de localStorage que o frontend grava.
+        const modoFromUrl = params.get("modo");
+        const modoForPatch = modoFromUrl || null;
+        const payloadPatch = { plan: planFromUrl, ...(modoForPatch && { modo: modoForPatch }) };
         console.log("[plan-demo] PATCH /sesion fire-and-forget:", payloadPatch);
         fetch(`${SESION_URL}/${encodeURIComponent(sidForPatch)}`, {
           method: "PATCH",
@@ -392,7 +398,16 @@ export default function FacturaUpload() {
           }
           if (data?.Fsmstate)    setFsmstate(data.Fsmstate);
           if (data?.FsmPrevious) setFsmPrevious(data.FsmPrevious);
-          if (data?.modo)        setModoAlquiler(data.modo === "alquiler");
+          // Hidratar modoAlquiler a partir de múltiplas fontes:
+          //   1ª prioridade: data.modo (se algum dia gravado no PATCH)
+          //   2ª prioridade: data.cliente.tipoVenta — sempre presente após /enviar
+          if (data?.modo) {
+            setModoAlquiler(data.modo === "alquiler");
+          } else if (data?.cliente?.tipoVenta) {
+            const isAlquiler = String(data.cliente.tipoVenta).toLowerCase() === "alquiler";
+            console.log("[useEffect] modoAlquiler derivado de cliente.tipoVenta:", data.cliente.tipoVenta, "→", isAlquiler);
+            setModoAlquiler(isAlquiler);
+          }
           if (data?.facturaPreview) setFacturaPreviewData(data.facturaPreview);
           if (data?.factura) {
             // factura está em formato Claude (estruturado) — guardar como facturaData direto.
@@ -422,20 +437,22 @@ export default function FacturaUpload() {
     }
 
     // ── Limpiar URL — mantener sólo session_id ─────────────────────────────
-    // Llegados aquí, todos los params relevantes ya están leídos y populados
-    // en state/refs/localStorage. Para no exponer datos del cliente (nombre,
-    // dirección, ahorros, IDs Zoho...) en la barra del navegador, sustituimos
-    // la URL por una versión limpia con apenas session_id (para permitir
-    // refresh y debugging). Si no hay session_id, dejamos sólo "/".
+    // SÓLO limpiamos cuando hay session_id en la URL (cenário PlanScreen /
+    // vuelta del cotizador, donde queremos esconder los dados sensíveis
+    // recebidos). En la página inicial (passo 1, sin session_id), la URL
+    // permanece como el utilizador la abrió — por ex., ?interno-asesores=true
+    // tiene de permanecer visible para asesores.
     try {
       const sidUrl = params.get("session_id");
-      const cleanUrl = sidUrl
-        ? `${window.location.pathname}?session_id=${encodeURIComponent(sidUrl)}`
-        : window.location.pathname;
-      // Sólo aplica si la URL actual tiene más params que session_id
-      if (window.location.search && window.location.search !== `?session_id=${encodeURIComponent(sidUrl || "")}`) {
-        window.history.replaceState({}, "", cleanUrl);
-        console.log("[URL] limpa — só session_id mantido na barra:", cleanUrl);
+      if (sidUrl) {
+        const cleanUrl = `${window.location.pathname}?session_id=${encodeURIComponent(sidUrl)}`;
+        // Sólo aplica si la URL actual tiene más params que session_id
+        if (window.location.search && window.location.search !== `?session_id=${encodeURIComponent(sidUrl)}`) {
+          window.history.replaceState({}, "", cleanUrl);
+          console.log("[URL] limpa — só session_id mantido na barra:", cleanUrl);
+        }
+      } else {
+        console.log("[URL] sem session_id na URL — não limpamos (preservamos params iniciais como interno-asesores)");
       }
     } catch (e) {
       console.warn("[URL] erro a limpar URL:", e);
@@ -1814,7 +1831,16 @@ export default function FacturaUpload() {
                 }
                 if (data.plan.cuotaAlquilerMes != null) setCuotaAlquilerMes(Number(data.plan.cuotaAlquilerMes));
               }
-              if (data?.modo) setModoAlquiler(data.modo === "alquiler");
+              // Hidratar modoAlquiler:
+              //   1ª prioridade: data.modo
+              //   2ª prioridade: data.cliente.tipoVenta (sempre presente após /enviar)
+              if (data?.modo) {
+                setModoAlquiler(data.modo === "alquiler");
+              } else if (data?.cliente?.tipoVenta) {
+                const isAlquiler = String(data.cliente.tipoVenta).toLowerCase() === "alquiler";
+                console.log("[onSesionLoaded] modoAlquiler derivado de cliente.tipoVenta:", data.cliente.tipoVenta, "→", isAlquiler);
+                setModoAlquiler(isAlquiler);
+              }
               if (data?.ce) {
                 if (data.ce.nombre)        setCeNombre(data.ce.nombre);
                 if (data.ce.status)        setCeStatus(data.ce.status);
