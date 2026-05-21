@@ -734,22 +734,23 @@ export default function FacturaUpload() {
         suministro_lat:       data.suministro_lat       ?? null,
         suministro_lon:       data.suministro_lon       ?? null,
       };
-      setLoadingMsg("Preparando tu plan...");
-      handleEnviar({ facturaBuilt: facturaBuiltPDF });
       if (TARIFAS_MULTI_FACTURA.includes(data.tarifa_acceso)) {
         const mes = parseInt(data.periodo_fin?.split("/")?.[1]);
         if (mes >= 1 && mes <= 12) {
           const periodosDoMes1 = PERIODOS_POR_MES_3TD[mes] ?? [];
-          // Sugestões para 2ª fatura (sem períodos adicionais ainda)
           const mesesPrinc1 = sugerirMeses3TD(mes);
           setMesesSugeridos1(mesesPrinc1);
-          // Sugestões para 3ª fatura — excluir períodos cobertos pelos meses principais da 2ª
           const periodosCobertos1 = mesesPrinc1
             .filter(({ cobertura }) => cobertura === mesesPrinc1[0]?.cobertura)
             .flatMap(({ mes: m }) => PERIODOS_POR_MES_3TD[m] ?? []);
           const periodosJaCobertos2 = [...new Set([...periodosDoMes1, ...periodosCobertos1])];
           setMesesSugeridos2(sugerirMeses3TD(mes, periodosJaCobertos2));
         }
+        setStatus("analyzed");
+        setLoading(false);
+      } else {
+        setLoadingMsg("Preparando tu plan...");
+        handleEnviar({ facturaBuilt: facturaBuiltPDF });
       }
     } catch (err) {
       setError(err.message);
@@ -2360,6 +2361,23 @@ export default function FacturaUpload() {
                       )}
                     </div>
                   </div>
+                )}
+
+                {TARIFAS_MULTI_FACTURA.includes(facturaData?.tarifa_acceso) && (
+                  <button
+                    className="cs-btn-primary"
+                    style={{ marginTop:8 }}
+                    disabled={sending}
+                    onClick={() => {
+                      if (factura1Data && factura2Data) {
+                        handleEnviar();
+                      } else {
+                        setModalConfirmarEnvio(true);
+                      }
+                    }}
+                  >
+                    {sending ? "Enviando..." : "Obtener mi plan →"}
+                  </button>
                 )}
 
                 {advertenciaAno && (
