@@ -127,6 +127,7 @@ export default function FacturaUpload() {
   const [dniError, setDniError]                 = useState("");
   const [enviandoContrato, setEnviandoContrato] = useState(false);
   const [accionRealizada, setAccionRealizada]   = useState(null); // null | "contratado" | "lista_espera"
+  const [motivoListaEspera, setMotivoListaEspera] = useState(null); // null | "Sin plazas" | "Quoting"
   const [planAbierto, setPlanAbierto]           = useState(false);
   const [advertenciaAno, setAdvertenciaAno]     = useState(false);
   const [ibanContrato, setIbanContrato]         = useState("");
@@ -1387,6 +1388,7 @@ export default function FacturaUpload() {
     } else if (fsmEff === "01_DENTRO_ZONA" && ceStatusEff !== "Available") {
       motivoDeEspera = "Quoting";
     }
+    setMotivoListaEspera(motivoDeEspera);
     console.log("[handleEntrarListaEspera] motivoDeEspera calculado:", {
       motivoDeEspera,
       panelesDisp_state: cePanelesDisponibles,
@@ -1810,22 +1812,24 @@ export default function FacturaUpload() {
 
       <div className="cs-page">
 
-        {/* Header */}
-        <div className="cs-header">
-          <a href="https://comunidad.solar" target="_blank" rel="noreferrer" className="cs-header-logo">
-            <img src="/logo.png" alt="Comunidad Solar" style={{ height:38 }} />
-          </a>
-          <nav className="cs-header-nav">
-            <span>🏘️ 3072 comuneros</span>
-            <span>🚩 Misión</span>
-            <span>📊 Soluciones ∨</span>
-            <span>👥 Nosotros</span>
-            <span>🎧 Contacto</span>
-          </nav>
-        </div>
+        {/* Header — escondido durante loading do contrato */}
+        {!(loading && loadingMsg === "Preparando tu contrato...") && (
+          <div className="cs-header">
+            <a href="https://comunidad.solar" target="_blank" rel="noreferrer" className="cs-header-logo">
+              <img src="/logo.png" alt="Comunidad Solar" style={{ height:38 }} />
+            </a>
+            <nav className="cs-header-nav">
+              <span>🏘️ 3072 comuneros</span>
+              <span>🚩 Misión</span>
+              <span>📊 Soluciones ∨</span>
+              <span>👥 Nosotros</span>
+              <span>🎧 Contacto</span>
+            </nav>
+          </div>
+        )}
 
         {/* Indicador modo asesor */}
-        {modoAsesor && (
+        {modoAsesor && !(loading && loadingMsg === "Preparando tu contrato...") && (
           <div style={{
             textAlign: "center",
             fontSize: 11,
@@ -1839,8 +1843,68 @@ export default function FacturaUpload() {
           </div>
         )}
 
-        {/* ── LOADING ── */}
-        {loading && (
+        {/* ── LOADING CONTRATO — header próprio com logo grande + fones ── */}
+        {loading && loadingMsg === "Preparando tu contrato..." && (
+          <div style={{
+            position:"fixed", inset:0,
+            display:"flex", justifyContent:"center", alignItems:"flex-start",
+            padding:"40px 24px", background:"#EEECE8", overflowY:"auto",
+          }}>
+          <div style={{ width:"100%", maxWidth:620 }}>
+            {/* Header próprio */}
+            <div style={{
+              display:"flex", alignItems:"center", justifyContent:"space-between",
+              padding:"0 0 20px 0", borderBottom:"1px solid #e8e8e4", marginBottom:32,
+            }}>
+              <img src="/logo.png" alt="Comunidad Solar" style={{ height:56, display:"block" }} />
+              <a
+                href="https://comunidadsolar.es/contacto/"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  width:48, height:48, borderRadius:"50%",
+                  background:"#fff", border:"1px solid #e8e8e4",
+                  textDecoration:"none", flexShrink:0,
+                  transition:"border-color 0.2s, transform 0.2s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = "#000"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "#e8e8e4"; }}
+                aria-label="Contacto"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+                  <path d="M21 19a2 2 0 0 1-2 2h-1v-7h3v5z"/>
+                  <path d="M3 19a2 2 0 0 0 2 2h1v-7H3v5z"/>
+                </svg>
+              </a>
+            </div>
+
+            {/* Card */}
+            <div className="cs-card fade-in" style={{ padding:"32px 36px" }}>
+              <h2 style={{ fontSize:26, fontWeight:800, color:"#111", marginBottom:8, letterSpacing:"-0.01em" }}>
+                Estamos preparando tu contrato.
+              </h2>
+              <p style={{ fontSize:15, color:"#444", marginBottom:24 }}>
+                Esto solo tomará unos segundos.
+              </p>
+              <div style={{
+                width:"100%", height:8, borderRadius:999,
+                background:"#E8E6E2", overflow:"hidden", position:"relative",
+              }}>
+                <div style={{
+                  position:"absolute", top:0, left:0, height:"100%", width:"40%",
+                  borderRadius:999, background:"#FFAD2A",
+                  animation:"cs-progress-slide 1.6s ease-in-out infinite",
+                }} />
+              </div>
+            </div>
+          </div>
+          </div>
+        )}
+
+        {/* ── LOADING genérico ── */}
+        {loading && loadingMsg !== "Preparando tu contrato..." && (
           <div className="cs-card fade-in" style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:16, padding:"48px 40px" }}>
             <div className="cs-spinner" />
             <span style={{ fontSize:14, color:"#555" }}>{loadingMsg}</span>
@@ -2094,7 +2158,7 @@ export default function FacturaUpload() {
                 }}>
                   <div style={{
                     position:"absolute", top:0, left:0, height:"100%", width:"40%",
-                    borderRadius:999, background:"#BFBFBF",
+                    borderRadius:999, background:"#FFAD2A",
                     animation:"cs-progress-slide 1.6s ease-in-out infinite",
                   }} />
                 </div>
@@ -2117,15 +2181,37 @@ export default function FacturaUpload() {
 
         {/* ── LISTA DE ESPERA ── */}
         {!loading && status === "lista_espera" && (
-          <div className="cs-card fade-in" style={{ textAlign:"center" }}>
-            <div style={{ fontSize:48, marginBottom:16 }}>☀️</div>
-            <h2 style={{ fontSize:20, fontWeight:700, color:"#111", marginBottom:8 }}>
-              ¡Gracias por tu interés!
+          <div className="cs-card fade-in">
+            {/* Logo */}
+            <div style={{ display:"flex", justifyContent:"center", marginBottom:28 }}>
+              <img src="/logo.png" alt="Comunidad Solar" style={{ height:48, display:"block" }} />
+            </div>
+
+            <h2 style={{ fontSize:22, fontWeight:800, color:"#111", marginBottom:10, letterSpacing:"-0.01em" }}>
+              Te hemos incluido en la lista de espera
             </h2>
-            <p style={{ fontSize:14, color:"#555", marginBottom:28, lineHeight:1.7 }}>
-              Te hemos añadido a la lista de espera. En cuanto haya disponibilidad en tu Comunidad Energética, nos pondremos en contacto contigo.
+            <p style={{ fontSize:15, color:"#333", lineHeight:1.55, marginBottom:28 }}>
+              {motivoListaEspera === "Sin plazas"
+                ? "Actualmente no hay disponibilidad de plazas en esta Comunidad Energética. En cuanto tengamos un hueco libre, te informaremos vía email."
+                : "La contratación no está disponible actualmente. Te informaremos vía email en cuanto se abra el proceso de contratación."}
             </p>
-            <button className="cs-btn-ghost" onClick={handleReset}>← Volver al inicio</button>
+
+            <button
+              style={{
+                background:"#FFAD2A", color:"#000",
+                border:"2px solid transparent", borderRadius:999,
+                padding:"14px 28px", fontSize:15, fontWeight:700,
+                fontFamily:"inherit", cursor:"pointer",
+                display:"inline-flex", alignItems:"center", gap:10,
+                transition:"background 0.2s, border-color 0.2s",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background="#fff"; e.currentTarget.style.borderColor="#000"; }}
+              onMouseLeave={e => { e.currentTarget.style.background="#FFAD2A"; e.currentTarget.style.borderColor="transparent"; }}
+              onClick={() => { setStatus("idle"); setStep(1); }}
+            >
+              <img src="/leftArrow.png" alt="" style={{ height:18, display:"block" }} />
+              Ir a la página de inicio
+            </button>
           </div>
         )}
 
@@ -3151,7 +3237,7 @@ export default function FacturaUpload() {
                 {/* Columna logo */}
                 <div style={{ minWidth:160 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:20 }}>
-                    <img src="/logo.png" alt="Comunidad Solar" style={{ height:32 }} />
+                    <img src="/logo_1.png" alt="Comunidad Solar" style={{ height:32 }} />
                   </div>
                   <div style={{ display:"flex", gap:12, marginBottom:16 }}>
                     {["f", "▶", "in", "ig"].map((icon, i) => (
