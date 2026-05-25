@@ -58,6 +58,8 @@ export default function FacturaUpload() {
   const [ceStatus, setCeStatus]       = useState("");
   const [ceEtiqueta, setCeEtiqueta]   = useState("");
   const [cePanelesDisponibles, setCePanelesDisponibles] = useState(null); // Paneles_disponibles del CRM
+  const [cePanelesALaVenta, setCePanelesALaVenta]       = useState(null); // N_mero_de_paneles_a_la_venta del CRM
+  const [cePanelesTotales, setCePanelesTotales]         = useState(null); // N_mero_de_paneles_totales del CRM
   const [ceDistancia, setCeDistancia] = useState(null); // metros — para banner
   const [ceRadio, setCeRadio]         = useState(null); // radioMetros — para banner
   const [zonaWarn, setZonaWarn]       = useState("");   // aviso no bloqueante
@@ -326,6 +328,12 @@ export default function FacturaUpload() {
         if (ce.paneles_disponibles != null) {
           setCePanelesDisponibles(prev => prev != null ? prev : ce.paneles_disponibles);
         }
+        if (ce.paneles_a_la_venta != null) {
+          setCePanelesALaVenta(prev => prev != null ? prev : ce.paneles_a_la_venta);
+        }
+        if (ce.paneles_totales != null) {
+          setCePanelesTotales(prev => prev != null ? prev : ce.paneles_totales);
+        }
         if (ce.id_generacion) setIdGeneracion(String(ce.id_generacion));
       }
 
@@ -399,6 +407,8 @@ export default function FacturaUpload() {
             if (data.ce.direccion)     setCeDireccion(data.ce.direccion);
             if (data.ce.id_generacion) setIdGeneracion(String(data.ce.id_generacion));
             if (data.ce.paneles_disponibles != null) setCePanelesDisponibles(Number(data.ce.paneles_disponibles));
+            if (data.ce.paneles_a_la_venta  != null) setCePanelesALaVenta(Number(data.ce.paneles_a_la_venta));
+            if (data.ce.paneles_totales     != null) setCePanelesTotales(Number(data.ce.paneles_totales));
           }
           if (data?.Fsmstate)    setFsmstate(data.Fsmstate);
           if (data?.FsmPrevious) setFsmPrevious(data.FsmPrevious);
@@ -577,17 +587,21 @@ export default function FacturaUpload() {
       const ceStatusVal    = CE_ESTATUS_MAP[nearest.status] ?? "Waiting list";
       const ceEtiquetaVal  = nearest.etiqueta || "";
       const ceIdGenVal     = nearest.id_generacion ? String(nearest.id_generacion) : "";
-      const cePanelesVal   = (nearest.paneles_disponibles != null) ? Number(nearest.paneles_disponibles) : null;
+      const cePanelesVal       = (nearest.paneles_disponibles != null) ? Number(nearest.paneles_disponibles) : null;
+      const cePanelesVentaVal  = (nearest.paneles_a_la_venta != null) ? Number(nearest.paneles_a_la_venta) : null;
+      const cePanelesTotVal    = (nearest.paneles_totales != null) ? Number(nearest.paneles_totales) : null;
 
       setCeNombre(ceNombreVal);
       setCeDireccion(ceDireccionVal);
       setCeStatus(ceStatusVal);
       setCeEtiqueta(ceEtiquetaVal);
       setCePanelesDisponibles(cePanelesVal);
+      setCePanelesALaVenta(cePanelesVentaVal);
+      setCePanelesTotales(cePanelesTotVal);
       if (ceIdGenVal) setIdGeneracion(ceIdGenVal);
-      console.log("📊 Resultado:", { Fmstate: "01_DENTRO_ZONA", ceNombreVal, ceDireccionVal, ceStatusVal, ceEtiquetaVal, ceIdGenVal, cePanelesVal, distanciaCEMasCercana });
-      console.log("[runZonaCheck] paneles_disponibles capturado (DENTRO_ZONA):", { cePanelesVal, rawZoho: nearest.paneles_disponibles, ce: ceNombreVal });
-      return { fsmstate: "01_DENTRO_ZONA", ceNombre: ceNombreVal, ceDireccion: ceDireccionVal, ceStatus: ceStatusVal, ceEtiqueta: ceEtiquetaVal, idGeneracion: ceIdGenVal, panelesDisponibles: cePanelesVal };
+      console.log("📊 Resultado:", { Fmstate: "01_DENTRO_ZONA", ceNombreVal, ceDireccionVal, ceStatusVal, ceEtiquetaVal, ceIdGenVal, cePanelesVal, cePanelesVentaVal, cePanelesTotVal, distanciaCEMasCercana });
+      console.log("[runZonaCheck] paneles capturados (DENTRO_ZONA):", { cePanelesVal, cePanelesVentaVal, cePanelesTotVal, ce: ceNombreVal });
+      return { fsmstate: "01_DENTRO_ZONA", ceNombre: ceNombreVal, ceDireccion: ceDireccionVal, ceStatus: ceStatusVal, ceEtiqueta: ceEtiquetaVal, idGeneracion: ceIdGenVal, panelesDisponibles: cePanelesVal, panelesALaVenta: cePanelesVentaVal, panelesTotales: cePanelesTotVal };
     } else {
       const distanciaCEMasCercana = nearestAll ? Math.round(nearestAllDist) : null;
       updateFsmstate("02_FUERA_ZONA");
@@ -599,17 +613,21 @@ export default function FacturaUpload() {
       const ceStatusVal    = nearestAll ? (CE_ESTATUS_MAP[nearestAll.status] ?? "Waiting list") : "";
       const ceEtiquetaVal  = nearestAll ? (nearestAll.etiqueta || "") : "";
       const ceIdGenVal     = nearestAll?.id_generacion ? String(nearestAll.id_generacion) : "";
-      const cePanelesVal   = (nearestAll && nearestAll.paneles_disponibles != null) ? Number(nearestAll.paneles_disponibles) : null;
+      const cePanelesVal       = (nearestAll && nearestAll.paneles_disponibles != null) ? Number(nearestAll.paneles_disponibles) : null;
+      const cePanelesVentaVal  = (nearestAll && nearestAll.paneles_a_la_venta != null) ? Number(nearestAll.paneles_a_la_venta) : null;
+      const cePanelesTotVal    = (nearestAll && nearestAll.paneles_totales != null) ? Number(nearestAll.paneles_totales) : null;
 
       setCeNombre(ceNombreVal);
       setCeDireccion(ceDireccionVal);
       setCeStatus(ceStatusVal);
       setCeEtiqueta(ceEtiquetaVal);
       setCePanelesDisponibles(cePanelesVal);
+      setCePanelesALaVenta(cePanelesVentaVal);
+      setCePanelesTotales(cePanelesTotVal);
       if (ceIdGenVal) setIdGeneracion(ceIdGenVal);
-      console.log("📊 Resultado:", { Fmstate: "02_FUERA_ZONA", ceNombreVal, ceDireccionVal, ceStatusVal, ceEtiquetaVal, ceIdGenVal, cePanelesVal, distanciaCEMasCercana });
-      console.log("[runZonaCheck] paneles_disponibles capturado (FUERA_ZONA):", { cePanelesVal, rawZoho: nearestAll?.paneles_disponibles, ce: ceNombreVal });
-      return { fsmstate: "02_FUERA_ZONA", ceNombre: ceNombreVal, ceDireccion: ceDireccionVal, ceStatus: ceStatusVal, ceEtiqueta: ceEtiquetaVal, idGeneracion: ceIdGenVal, panelesDisponibles: cePanelesVal };
+      console.log("📊 Resultado:", { Fmstate: "02_FUERA_ZONA", ceNombreVal, ceDireccionVal, ceStatusVal, ceEtiquetaVal, ceIdGenVal, cePanelesVal, cePanelesVentaVal, cePanelesTotVal, distanciaCEMasCercana });
+      console.log("[runZonaCheck] paneles capturados (FUERA_ZONA):", { cePanelesVal, cePanelesVentaVal, cePanelesTotVal, ce: ceNombreVal });
+      return { fsmstate: "02_FUERA_ZONA", ceNombre: ceNombreVal, ceDireccion: ceDireccionVal, ceStatus: ceStatusVal, ceEtiqueta: ceEtiquetaVal, idGeneracion: ceIdGenVal, panelesDisponibles: cePanelesVal, panelesALaVenta: cePanelesVentaVal, panelesTotales: cePanelesTotVal };
     }
   };
 
@@ -617,7 +635,7 @@ export default function FacturaUpload() {
     try {
       const payload = {
         cliente: { nombre: cliente.nombre, apellidos: cliente.apellidos, correo: cliente.correo, telefono: cliente.telefono, direccion: cliente.direccion },
-        ce: { nombre: ceResult?.ceNombre ?? ceNombre, direccion: ceResult?.ceDireccion ?? ceDireccion, status: FORCE_WAITING_LIST ? "Waiting list" : (ceResult?.ceStatus ?? ceStatus), etiqueta: ceResult?.ceEtiqueta ?? ceEtiqueta, id_generacion: ceResult?.idGeneracion || resolverIdGeneracion(idGeneracion, ceResult?.ceNombre ?? ceNombre), paneles_disponibles: ceResult?.panelesDisponibles ?? cePanelesDisponibles ?? null },
+        ce: { nombre: ceResult?.ceNombre ?? ceNombre, direccion: ceResult?.ceDireccion ?? ceDireccion, status: FORCE_WAITING_LIST ? "Waiting list" : (ceResult?.ceStatus ?? ceStatus), etiqueta: ceResult?.ceEtiqueta ?? ceEtiqueta, id_generacion: ceResult?.idGeneracion || resolverIdGeneracion(idGeneracion, ceResult?.ceNombre ?? ceNombre), paneles_disponibles: ceResult?.panelesDisponibles ?? cePanelesDisponibles ?? null, paneles_a_la_venta: ceResult?.panelesALaVenta ?? cePanelesALaVenta ?? null, paneles_totales: ceResult?.panelesTotales ?? cePanelesTotales ?? null },
         Fsmstate: ceResult?.fsmstate ?? "02_FUERA_ZONA",
         FsmPrevious: null,
       };
@@ -1154,7 +1172,7 @@ export default function FacturaUpload() {
       fd.append("data", JSON.stringify({
         cliente,
         Fsmstate, FsmPrevious: fsmPrevious,
-        ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null },
+        ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null, paneles_a_la_venta: cePanelesALaVenta ?? null, paneles_totales: cePanelesTotales ?? null },
       }));
       const res = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
       const dataAsesor = await res.json().catch(() => ({}));
@@ -1194,7 +1212,7 @@ export default function FacturaUpload() {
       setSending(true); setError("");
       try {
         const facturaAsesor = facturaBuilt ?? (mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS());
-        const cePayload = { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null };
+        const cePayload = { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null, paneles_a_la_venta: cePanelesALaVenta ?? null, paneles_totales: cePanelesTotales ?? null };
 
         // Enviar ao Zoho Flow via /enviar (igual ao fluxo normal)
         const fd = new FormData();
@@ -1245,7 +1263,7 @@ export default function FacturaUpload() {
 
     setSending(true); setError(""); setStatus("loading_plan");
     const factura = facturaBuilt ?? (mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS());
-    const cePayload = { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null };
+    const cePayload = { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null, paneles_a_la_venta: cePanelesALaVenta ?? null, paneles_totales: cePanelesTotales ?? null };
     try {
       console.log("[handleEnviar] cliente.lat:", userCoords?.lat, "cliente.lon:", userCoords?.lon);
       const fd = new FormData();
@@ -1279,7 +1297,7 @@ export default function FacturaUpload() {
         : { cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null };
       localStorage.setItem("cs_cliente",    JSON.stringify({ ...buildClientePayload(dealIdRecebido, mpklogIdRecebido) }));
       localStorage.setItem("cs_factura",    JSON.stringify(facturaFlat));
-      localStorage.setItem("cs_ce",         JSON.stringify({ nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null }));
+      localStorage.setItem("cs_ce",         JSON.stringify({ nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null, paneles_a_la_venta: cePanelesALaVenta ?? null, paneles_totales: cePanelesTotales ?? null }));
       localStorage.setItem("cs_dealId",     dealIdRecebido    ?? "");
       localStorage.setItem("cs_mpklogId",   mpklogIdRecebido  ?? "");
       localStorage.setItem("cs_fsmstate",   Fsmstate          ?? "");
@@ -1310,7 +1328,7 @@ export default function FacturaUpload() {
     const factura = mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS();
     const payload = {
       cliente, factura, Fsmstate, FsmPrevious: fsmPrevious,
-      ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null },
+      ce: { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null, paneles_a_la_venta: cePanelesALaVenta ?? null, paneles_totales: cePanelesTotales ?? null },
       numeroPaneles: panelesPropuesta,
     };
     console.log("[optimizar] payload enviado:", payload);
@@ -1460,6 +1478,8 @@ export default function FacturaUpload() {
         etiqueta:      ceEtiqueta  || sdCe.etiqueta  || urlRef.ce?.etiqueta  || "",
         id_generacion: resolverIdGeneracion(idGeneracion || sdCe.id_generacion || urlRef.idGen, ceNombre || sdCe.nombre || urlRef.ce?.nombre),
         paneles_disponibles: cePanelesDisponibles ?? sdCe.paneles_disponibles ?? null,
+        paneles_a_la_venta:  cePanelesALaVenta  ?? sdCe.paneles_a_la_venta  ?? null,
+        paneles_totales:     cePanelesTotales   ?? sdCe.paneles_totales     ?? null,
       },
       ...((sesionData?.factura_1 || factura1Data) && { factura_1: sesionData?.factura_1 ?? buildFactura1() }),
       ...((sesionData?.factura_2 || factura2Data) && { factura_2: sesionData?.factura_2 ?? buildFactura2() }),
@@ -1563,6 +1583,8 @@ export default function FacturaUpload() {
           etiqueta:      ceEtiqueta  || urlRef.ce?.etiqueta  || "",
           id_generacion: resolverIdGeneracion(idGeneracion || urlRef.idGen, ceNombre || urlRef.ce?.nombre),
           paneles_disponibles: cePanelesDisponibles ?? null,
+          paneles_a_la_venta:  cePanelesALaVenta  ?? null,
+          paneles_totales:     cePanelesTotales   ?? null,
         };
         const clientePre = {
           nombre:    cliente.nombre    || urlCli.nombre    || "",
@@ -1685,6 +1707,8 @@ export default function FacturaUpload() {
           ceNombre     || sdCe.nombre        || urlRef.ce?.nombre
         ),
         paneles_disponibles: cePanelesDisponibles ?? sdCe.paneles_disponibles ?? null,
+        paneles_a_la_venta:  cePanelesALaVenta  ?? sdCe.paneles_a_la_venta  ?? null,
+        paneles_totales:     cePanelesTotales   ?? sdCe.paneles_totales     ?? null,
       },
       ...((sesionData?.factura_1 || factura1Data) && {
         factura_1: sesionData?.factura_1 ?? buildFactura1(),
@@ -1969,6 +1993,12 @@ export default function FacturaUpload() {
                 if (data.ce.paneles_disponibles != null) {
                   setCePanelesDisponibles(prev => prev != null ? prev : Number(data.ce.paneles_disponibles));
                 }
+                if (data.ce.paneles_a_la_venta != null) {
+                  setCePanelesALaVenta(prev => prev != null ? prev : Number(data.ce.paneles_a_la_venta));
+                }
+                if (data.ce.paneles_totales != null) {
+                  setCePanelesTotales(prev => prev != null ? prev : Number(data.ce.paneles_totales));
+                }
               }
               // El polling/sesión es la fuente de verdad (callback del Zoho Flow). Si el state local
               // tiene IDs distintos (cs_dealId del localStorage de una sesión anterior, o fallback por
@@ -2045,6 +2075,8 @@ export default function FacturaUpload() {
                     etiqueta:      data?.ce?.etiqueta      ?? ceEtiqueta  ?? "",
                     id_generacion: data?.ce?.id_generacion ?? idGeneracion ?? null,
                     paneles_disponibles: data?.ce?.paneles_disponibles ?? cePanelesDisponibles ?? null,
+                    paneles_a_la_venta:  data?.ce?.paneles_a_la_venta  ?? cePanelesALaVenta  ?? null,
+                    paneles_totales:     data?.ce?.paneles_totales     ?? cePanelesTotales   ?? null,
                   },
                 };
                 const fdCotiz = new FormData();
