@@ -134,6 +134,17 @@ export default function FacturaUpload() {
   const [advertenciaAno, setAdvertenciaAno]     = useState(false);
   const [ibanContrato, setIbanContrato]         = useState("");
   const [ibanError, setIbanError]               = useState("");
+  // Verificação por código
+  const [modalCodigo, setModalCodigo]           = useState(false);
+  const [codigoVerificacion, setCodigoVerificacion] = useState("");
+  const [codigoError, setCodigoError]           = useState("");
+  const [enviandoCodigo, setEnviandoCodigo]     = useState(false); // loading reenviar
+  const [verificandoCodigo, setVerificandoCodigo] = useState(false); // loading confirmar
+  // Ref para Promise pendente — handleContratar aguarda confirmação do código
+  const codigoResolveRef                        = useRef(null);
+  // Guarda o último mpklogId usado para gerar/verificar — útil para "Reenviar"
+  const codigoMpklogIdRef                       = useRef(null);
+  const codigoSessionIdRef                      = useRef(null);
 
   // ── Leitura inicial da URL ────────────────────────────────────────────────
   useEffect(() => {
@@ -1505,6 +1516,100 @@ export default function FacturaUpload() {
     }
   };
 
+  // ── Verificação de código (chamado pela modal de código) ─────────────────
+  // Recebe o input do utilizador, valida via backend e resolve a Promise pendente.
+  const confirmarCodigoYContratar = async () => {
+    const code = (codigoVerificacion || "").trim();
+    if (!code || code.length !== 6 || !/^\d{6}$/.test(code)) {
+      setCodigoError("Introduce un código de 6 dígitos.");
+      return;
+    }
+    const sid = codigoSessionIdRef.current;
+    if (!sid) {
+      setCodigoError("Sesión inválida. Cancela y vuelve a intentarlo.");
+      return;
+    }
+    setVerificandoCodigo(true);
+    setCodigoError("");
+    try {
+      console.log("[confirmarCodigo] POST /codigo/verificar { session_id, code:" + code + " }");
+      const res = await fetch(`${API_BASE}/codigo/verificar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sid, code }),
+      });
+      const data = await res.json().catch(() => ({}));
+      console.log("[confirmarCodigo] /codigo/verificar respondeu:", data);
+      if (res.ok && data.ok === true) {
+        // Resolver Promise pendente em handleContratar → continua para o POST 08
+        if (codigoResolveRef.current) {
+          codigoResolveRef.current(true);
+          codigoResolveRef.current = null;
+        }
+        return;
+      }
+      // Erro de validação
+      const reason = data.reason || "codigo_incorrecto";
+      const msg = reason === "formato_invalido"
+        ? "El código debe tener 6 dígitos numéricos."
+        : reason === "sin_codigo"
+          ? "No se encontró código activo. Reenvía un nuevo código."
+          : "Código incorrecto. Verifica el código recibido por email.";
+      setCodigoError(msg);
+    } catch (e) {
+      console.warn("[confirmarCodigo] erro de red:", e);
+      setCodigoError("Error de red al verificar el código. Inténtalo de nuevo.");
+    } finally {
+      setVerificandoCodigo(false);
+    }
+  };
+
+  // Reenviar código — chama /codigo/generar de novo (backend gera novo código,
+  // sobrescreve sessão + MPK_Log, workflow Zoho dispara novo email).
+  const handleReenviarCodigo = async () => {
+    const sid    = codigoSessionIdRef.current;
+    const mpkId  = codigoMpklogIdRef.current;
+    if (!sid || !mpkId) {
+      setCodigoError("No se puede reenviar — sesión inválida.");
+      return;
+    }
+    setEnviandoCodigo(true);
+    setCodigoError("");
+    try {
+      console.log("[reenviarCodigo] POST /codigo/generar (re-emisión)");
+      const res = await fetch(`${API_BASE}/codigo/generar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sid, mpklogId: mpkId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      console.log("[reenviarCodigo] /codigo/generar respondeu:", data);
+      if (res.ok && data.ok === true) {
+        setCodigoVerificacion("");
+        setCodigoError("Hemos reenviado un nuevo código. Revisa tu email.");
+      } else {
+        setCodigoError("No se pudo reenviar el código. Inténtalo en unos segundos.");
+      }
+    } catch (e) {
+      console.warn("[reenviarCodigo] erro de red:", e);
+      setCodigoError("Error de red al reenviar el código.");
+    } finally {
+      setEnviandoCodigo(false);
+    }
+  };
+
+  // Cancelar verificação — fecha modal código e resolve Promise como falso
+  const cancelarCodigo = () => {
+    console.log("[cancelarCodigo] utilizador cancelou verificação");
+    if (codigoResolveRef.current) {
+      codigoResolveRef.current(false);
+      codigoResolveRef.current = null;
+    }
+    setModalCodigo(false);
+    setCodigoVerificacion("");
+    setCodigoError("");
+  };
+
   const handleContratar = async () => {
     if (!dniContrato.trim()) {
       setDniError("El DNI es obligatorio"); return;
@@ -1615,6 +1720,79 @@ export default function FacturaUpload() {
         console.warn("[handleContratar] Erro ao obter dealId:", e);
       }
     }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Verificação por código (entre o pre-call e o POST 08_PROPUESTA_ALQ)
+    // ─────────────────────────────────────────────────────────────────────────
+    const sidParaCodigo = extractSessionId
+      ?? localStorage.getItem("cs_session_id")
+      ?? sd?.session_id
+      ?? urlRef.sessionId
+      ?? null;
+    console.log("[handleContratar] verificação código: session_id=", sidParaCodigo, " mpklogId=", mpklogIdFinal);
+    if (!sidParaCodigo) {
+      console.warn("[handleContratar] sem session_id — não consigo gerar código de verificação");
+      setDniError("Sesión inválida. Recarga la página y vuelve a intentarlo.");
+      setEnviandoContrato(false);
+      return;
+    }
+    if (!mpklogIdFinal) {
+      console.warn("[handleContratar] sem mpklogId — não consigo gerar código de verificação");
+      setDniError("Aún preparando tu sesión. Espera unos segundos e inténtalo de nuevo.");
+      setEnviandoContrato(false);
+      return;
+    }
+
+    // Guardar refs para reenviar / verificar mais tarde
+    codigoMpklogIdRef.current  = mpklogIdFinal;
+    codigoSessionIdRef.current = sidParaCodigo;
+
+    try {
+      console.log("[handleContratar] POST /codigo/generar { session_id, mpklogId }");
+      const resGen = await fetch(`${API_BASE}/codigo/generar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sidParaCodigo, mpklogId: mpklogIdFinal }),
+      });
+      const dataGen = await resGen.json().catch(() => ({}));
+      console.log("[handleContratar] /codigo/generar respondeu:", dataGen);
+      if (!resGen.ok || dataGen.ok !== true) {
+        const motivo = dataGen.reason === "mpklog_pending"
+          ? "Aún preparando tu sesión. Espera unos segundos y reintenta."
+          : "No se pudo generar el código de verificación. Inténtalo de nuevo.";
+        setDniError(motivo);
+        setEnviandoContrato(false);
+        return;
+      }
+    } catch (e) {
+      console.warn("[handleContratar] Erro ao gerar código:", e);
+      setDniError("Error de red al solicitar el código. Inténtalo de nuevo.");
+      setEnviandoContrato(false);
+      return;
+    }
+
+    // Abrir modal de código — esconder modal DNI/IBAN
+    setCodigoVerificacion("");
+    setCodigoError("");
+    setModalContratar(false);
+    setModalCodigo(true);
+    console.log("[handleContratar] modal código aberto — a aguardar confirmação");
+
+    // Aguarda confirmação do código (Promise resolve em confirmarCodigoYContratar
+    // ou rejeita em cancelar)
+    const verificado = await new Promise((resolve) => {
+      codigoResolveRef.current = resolve;
+    });
+    console.log("[handleContratar] resultado da verificação:", verificado);
+    if (!verificado) {
+      // Utilizador cancelou ou erro — limpar estado
+      setModalCodigo(false);
+      setEnviandoContrato(false);
+      return;
+    }
+
+    // Verificação OK — fechar modal código e prosseguir
+    setModalCodigo(false);
 
     const cleanUrl = (val) => (!val || val === "—") ? "" : val;
 
@@ -3255,6 +3433,93 @@ export default function FacturaUpload() {
                 disabled={enviandoContrato}
               >
                 {enviandoContrato ? "Enviando..." : (ceStatus !== "Available" ? "Entrar en lista de espera →" : "Contratar ahora →")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL CÓDIGO DE VERIFICACIÓN ── */}
+      {modalCodigo && (
+        <div style={{
+          position:"fixed", inset:0, background:"rgba(0,0,0,0.55)",
+          zIndex:1100, display:"flex", alignItems:"center",
+          justifyContent:"center", padding:16,
+        }}>
+          <div style={{
+            background:"#fff", borderRadius:16, padding:"32px 28px",
+            maxWidth:400, width:"100%",
+            boxShadow:"0 8px 40px rgba(0,0,0,0.18)",
+          }}>
+            <h3 style={{ fontSize:18, fontWeight:700, color:"#111", marginBottom:8 }}>
+              Verifica tu correo electrónico
+            </h3>
+            <p style={{ fontSize:13, color:"#777", marginBottom:24, lineHeight:1.5 }}>
+              Hemos enviado un código de 6 dígitos a tu email. Introdúcelo abajo para confirmar la contratación.
+            </p>
+
+            <div className="cs-field-group" style={{ marginBottom:16 }}>
+              <label className="cs-label">Código de verificación</label>
+              <input
+                className={`cs-input${codigoError && !codigoError.startsWith("Hemos reenviado") ? " error" : ""}`}
+                placeholder="000000"
+                maxLength={6}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={codigoVerificacion}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, "").slice(0, 6);
+                  setCodigoVerificacion(digits);
+                  setCodigoError("");
+                }}
+                onKeyDown={(e) => e.key === "Enter" && confirmarCodigoYContratar()}
+                autoFocus
+                style={{ fontSize:18, letterSpacing:4, textAlign:"center" }}
+              />
+              {codigoError && (
+                <span
+                  className="cs-field-error"
+                  style={{
+                    color: codigoError.startsWith("Hemos reenviado") ? "#1FA84E" : undefined,
+                  }}
+                >
+                  {codigoError}
+                </span>
+              )}
+            </div>
+
+            <div style={{ marginBottom:20, textAlign:"center" }}>
+              <button
+                type="button"
+                onClick={handleReenviarCodigo}
+                disabled={enviandoCodigo || verificandoCodigo}
+                style={{
+                  background:"none", border:"none",
+                  color:"#5A8DEE", fontSize:13, cursor:"pointer",
+                  textDecoration:"underline",
+                  padding:0,
+                }}
+              >
+                {enviandoCodigo ? "Reenviando..." : "Reenviar código"}
+              </button>
+            </div>
+
+            <div style={{ display:"flex", gap:12 }}>
+              <button
+                className="cs-btn-ghost"
+                style={{ flex:1, marginTop:0 }}
+                onClick={cancelarCodigo}
+                disabled={verificandoCodigo}
+              >
+                ← Cancelar
+              </button>
+              <button
+                className="cs-btn-primary"
+                style={{ flex:1, marginTop:0 }}
+                onClick={confirmarCodigoYContratar}
+                disabled={verificandoCodigo || codigoVerificacion.length !== 6}
+              >
+                {verificandoCodigo ? "Verificando..." : "Confirmar →"}
               </button>
             </div>
           </div>
