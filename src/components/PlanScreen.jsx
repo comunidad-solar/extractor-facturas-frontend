@@ -401,16 +401,16 @@ export default function PlanScreen({
 
             {tabActiva === "como" && (
               <div>
-                <p style={{ fontWeight:700, color:"#EF931D", marginBottom:14 }}>Abierta la fase de Contratación:</p>
-                <p style={{ marginBottom:10 }}>Al pulsar "Contratar", comenzaremos a generar tres documentos:</p>
-                <ul style={{ paddingLeft:20, marginBottom:10 }}>
-                  <li>La orden de compra de tus paneles.</li>
-                  <li>La participación en la asociación Light for Humanity.</li>
-                  <li>Tu alta en la comercializadora de Comunidad Solar, para recibir electricidad a coste cero.</li>
+                <p style={{ marginBottom:10 }}>Al pulsar <strong>"Contratar"</strong>, comenzaremos a generar tres documentos:</p>
+                <ul style={{ paddingLeft:20, marginBottom:10, lineHeight:1.7 }}>
+                  <li>Tu contrato de alquiler de paneles asociado a la comunidad energética.</li>
+                  <li>Tu alta en la comercializadora de Comunidad Solar, para recibir electricidad a coste acordado.</li>
+                  <li>Firma de documento de Autorización de Gestor de Autoconsumo.</li>
                 </ul>
-                <p style={{ marginBottom:10 }}>Es muy importante que tengas a mano una factura actual de la luz.</p>
-                <p style={{ marginBottom:10 }}>Tus paneles quedarán reservados durante 48 horas; si no firmas la documentación en ese plazo, la reserva quedará sin efecto y volverás a lista de espera. Tras la firma de la documentación, dispondrás de 5 días para realizar el primer pago.</p>
-                <p>Si estás interesado en financiación, podrás solicitarla después de firmar el contrato. En caso de que la entidad bancaria no apruebe la financiación, el contrato no entrará en vigor.</p>
+                <p style={{ marginBottom:10 }}>Para hacer efectiva la reserva, deberás realizar en ese momento el pago de un depósito de garantía <strong>equivalente a 2 meses de tu cuota mensual.</strong></p>
+                <p style={{ marginBottom:10 }}>Tu plaza quedará bloqueada durante X <strong>días</strong>. Si no firmas la documentación en ese plazo, la reserva quedará sin efecto.</p>
+                <p style={{ marginBottom:10 }}>Una vez firmada la documentación, tendrás 48 horas para realizar el pago del depósito de garantía.</p>
+                <p>Una vez la planta esté en funcionamiento, comenzarás a abonar tu cuota mensual y se aplicará un <strong>compromiso de permanencia de 1 año.</strong></p>
               </div>
             )}
 
