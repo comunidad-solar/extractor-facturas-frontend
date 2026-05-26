@@ -304,7 +304,7 @@ export default function PlanScreen({
                 <tr><td>Número de paneles</td><td>{panelesSel}</td></tr>
                 <tr><td>Potencia total</td><td>{fmtES(planData?.potenciaTotal ?? 3)} kW</td></tr>
                 <tr><td>Producción de energía anual estimada*</td><td>{fmtES(planData?.produccionAnual ?? 4101.25)} kWh</td></tr>
-                <tr><td>Ahorro anual medio estimado*</td><td>{fmtES(planData?.ahorroAnual ?? 522.48)} €</td></tr>
+                <tr><td>Ahorro anual medio estimado**</td><td>{fmtES(planData?.ahorroAnual ?? 522.48)} €</td></tr>
                 {modoAlquiler ? (
                   <tr><td>Precio mensual</td><td>{fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)} €</td></tr>
                 ) : (
@@ -348,6 +348,10 @@ export default function PlanScreen({
             </button>
           </div>
         </div>
+        <p style={{ fontSize:11, color:"#121212", lineHeight:1.6, marginTop:-20, marginBottom:80 }}>
+          *Producción anual estimada: Estimación de la energía generada por tus paneles solares, calculada por un software especializado (PVSOL).<br />
+          **Ahorro anual medio estimado: Ahorro obtenido en base a la producción estimada y considerando los precios OMIE de los últimos años.
+        </p>
 
         {/* ── FACTURA PLAN ── */}
         <div style={{ marginBottom:56 }}>
