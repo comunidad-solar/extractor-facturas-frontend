@@ -115,7 +115,7 @@ export default function FacturaUpload() {
   const [tabActiva, setTabActiva]     = useState("como"); // "como" | "plan" | "condiciones"
   const [modoAlquiler, setModoAlquiler]         = useState(false);
   const [cuotaAlquilerMes, setCuotaAlquilerMes] = useState(null);
-  const importeDeposito = cuotaAlquilerMes != null ? cuotaAlquilerMes * 2 : null;
+  const importeDeposito = cuotaAlquilerMes != null ? String(cuotaAlquilerMes * 2) : null;
   const [extractSessionId,  setExtractSessionId]  = useState(null);
   const [extract1SessionId, setExtract1SessionId] = useState(null);
   const [extract2SessionId, setExtract2SessionId] = useState(null);
@@ -1114,7 +1114,7 @@ export default function FacturaUpload() {
       alq_eq_dia:       d.alq_eq_dia       || null,
       bono_social:      d.bono_social      ?? null,
       cuotaAlquilerMes: d.cuotaAlquilerMes ?? null,
-      importeDeposito:  d.cuotaAlquilerMes != null ? d.cuotaAlquilerMes * 2 : null,
+      importeDeposito:  d.cuotaAlquilerMes != null ? String(d.cuotaAlquilerMes * 2) : null,
       consumo_periodo1_kwh:        d.consumo_periodo1_kwh        ?? null,
       precio_periodo1_eur_kwh:     d.precio_periodo1_eur_kwh     ?? null,
       importe_periodo1_eur:        d.importe_periodo1_eur        ?? null,
