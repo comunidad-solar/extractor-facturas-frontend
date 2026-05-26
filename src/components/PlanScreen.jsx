@@ -354,12 +354,14 @@ export default function PlanScreen({
               style={{ background:"#FFAD2A", color:"#121212", border:"none", borderRadius:24, padding:"12px 24px", fontSize:14, fontWeight:700, fontFamily:"inherit", cursor:"not-allowed", width:"100%", opacity:0.5 }}>
               Optimizar
             </button>
+            
           </div>
-        </div>
-        <p style={{ fontSize:11, color:"#121212", lineHeight:1.6, marginTop:-20, marginBottom:80 }}>
+          <p style={{ fontSize:11, color:"#121212", lineHeight:1.6, marginTop:-20, marginBottom:20 }}>
           *Producción anual estimada: Estimación de la energía generada por tus paneles solares, calculada por un software especializado (PVSOL).<br />
           **Ahorro anual medio estimado: Ahorro obtenido en base a la producción estimada y considerando los precios OMIE de los últimos años.
         </p>
+        </div>
+        
 
         {/* ── FACTURA PLAN ── */}
         <div style={{ marginBottom:56 }}>

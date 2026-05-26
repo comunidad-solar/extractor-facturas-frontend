@@ -122,9 +122,9 @@ const SectionRow = ({ label }) => (
 // ─── Bar chart data builder ───────────────────────────────────────────────────
 const buildBarData = (gb, produto) => [
   ...(produto === 'AR' ? [{ name: 'Autoconsumo remoto', value: gb.autoconsumo_remoto_kwh, fill: '#A5D6A7' }] : []),
-  { name: 'Energía del mercado', value: gb.energia_mercado_kwh, fill: '#FFDF3C' },
-  { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,      fill: '#ADE272' },
-  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#ADF4E5' },
+  { name: 'Energía del mercado', value: gb.energia_mercado_kwh, fill: '#fcd823' },
+  { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,      fill: '#9ee151' },
+  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#85f4dc' },
 ];
 
 // ─── Main component ───────────────────────────────────────────────────────────
