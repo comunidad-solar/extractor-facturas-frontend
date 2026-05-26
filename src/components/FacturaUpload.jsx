@@ -2215,6 +2215,11 @@ export default function FacturaUpload() {
                 if (planContratado || listaDeEspera) cotizacionEnviadaRef.current = true;
               }
 
+              // Si la sesión ya tiene Fsmstate 09 o 08, no reenviar
+              if (data?.Fsmstate && ["09_COTIZACION_ALQ", "08_PROPUESTA_ALQ"].includes(data.Fsmstate)) {
+                cotizacionEnviadaRef.current = true;
+              }
+
               // Notificar Zoho que el usuario llegó a la pantalla del plan (só uma vez)
               if (cotizacionEnviadaRef.current) return;
               cotizacionEnviadaRef.current = true;
