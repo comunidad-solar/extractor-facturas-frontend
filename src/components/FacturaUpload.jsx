@@ -115,6 +115,7 @@ export default function FacturaUpload() {
   const [tabActiva, setTabActiva]     = useState("como"); // "como" | "plan" | "condiciones"
   const [modoAlquiler, setModoAlquiler]         = useState(false);
   const [cuotaAlquilerMes, setCuotaAlquilerMes] = useState(null);
+  const importeDeposito = cuotaAlquilerMes != null ? cuotaAlquilerMes * 2 : null;
   const [extractSessionId,  setExtractSessionId]  = useState(null);
   const [extract1SessionId, setExtract1SessionId] = useState(null);
   const [extract2SessionId, setExtract2SessionId] = useState(null);
@@ -470,7 +471,7 @@ export default function FacturaUpload() {
     try {
       const sidUrl = params.get("session_id");
       if (sidUrl) {
-        const cleanUrl = `${window.location.pathname}?session_id=${encodeURIComponent(sidUrl)}`;
+        const cleanUrl = `${window.location.origin}/?session_id=${encodeURIComponent(sidUrl)}`;
         // Sólo aplica si la URL actual tiene más params que session_id
         if (window.location.search && window.location.search !== `?session_id=${encodeURIComponent(sidUrl)}`) {
           window.history.replaceState({}, "", cleanUrl);
@@ -1113,6 +1114,7 @@ export default function FacturaUpload() {
       alq_eq_dia:       d.alq_eq_dia       || null,
       bono_social:      d.bono_social      ?? null,
       cuotaAlquilerMes: d.cuotaAlquilerMes ?? null,
+      importeDeposito:  d.cuotaAlquilerMes != null ? d.cuotaAlquilerMes * 2 : null,
       consumo_periodo1_kwh:        d.consumo_periodo1_kwh        ?? null,
       precio_periodo1_eur_kwh:     d.precio_periodo1_eur_kwh     ?? null,
       importe_periodo1_eur:        d.importe_periodo1_eur        ?? null,
@@ -1249,8 +1251,8 @@ export default function FacturaUpload() {
 
         // Guardar dados flat para restaurar após redirect do Cotizador (modo asesor)
         const facturaFlatAsesor = mode === "pdf"
-          ? { ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null }
-          : { cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null };
+          ? { ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null, importeDeposito: importeDeposito ?? null }
+          : { cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null, importeDeposito: importeDeposito ?? null };
         localStorage.setItem("cs_cliente",    JSON.stringify({ ...buildClientePayload(dealIdRecebido, mpklogIdRecebido) }));
         localStorage.setItem("cs_factura",    JSON.stringify(facturaFlatAsesor));
         localStorage.setItem("cs_ce",         JSON.stringify(cePayload));
@@ -1304,8 +1306,8 @@ export default function FacturaUpload() {
       // Guardar dados para restaurar após redirect do Cotizador
       // cs_factura em formato flat (não estruturado) — buildFactura() espera pot_p1_kw, pe_p1, etc.
       const facturaFlat = mode === "pdf"
-        ? { ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null }
-        : { cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null };
+        ? { ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null, importeDeposito: importeDeposito ?? null }
+        : { cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null, importeDeposito: importeDeposito ?? null };
       localStorage.setItem("cs_cliente",    JSON.stringify({ ...buildClientePayload(dealIdRecebido, mpklogIdRecebido) }));
       localStorage.setItem("cs_factura",    JSON.stringify(facturaFlat));
       localStorage.setItem("cs_ce",         JSON.stringify({ nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null, paneles_a_la_venta: cePanelesALaVenta ?? null, paneles_totales: cePanelesTotales ?? null }));
@@ -1391,11 +1393,11 @@ export default function FacturaUpload() {
     let factura;
     if (modeEff === "pdf") {
       factura = facturaData
-        ? ensureStructured({ ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null })
+        ? ensureStructured({ ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null, importeDeposito: importeDeposito ?? null })
         : ensureStructured(sdFactura ?? facturaLS);
     } else if (modeEff === "cups") {
       factura = cupsData
-        ? ensureStructured({ cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null })
+        ? ensureStructured({ cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null, importeDeposito: importeDeposito ?? null })
         : ensureStructured(sdFactura ?? facturaLS);
     } else {
       factura = ensureStructured(sdFactura ?? facturaLS ?? rawData);
@@ -1481,6 +1483,7 @@ export default function FacturaUpload() {
         plazoRecuperacion:       planData?.plazoRecuperacion,
         panelesSel:              planData?.panelesSel,
         cuotaAlquilerMes:        planData?.cuotaAlquilerMes,
+        importeDeposito:         importeDeposito ?? null,
       },
       ce: {
         nombre:        ceNombre    || sdCe.nombre    || urlRef.ce?.nombre    || "",
@@ -1664,11 +1667,11 @@ export default function FacturaUpload() {
     let factura;
     if (modeEff === "pdf") {
       factura = facturaData
-        ? ensureStructured({ ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null })
+        ? ensureStructured({ ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null, importeDeposito: importeDeposito ?? null })
         : ensureStructured(sdFactura ?? facturaLS);
     } else if (modeEff === "cups") {
       factura = cupsData
-        ? ensureStructured({ cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null })
+        ? ensureStructured({ cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null, importeDeposito: importeDeposito ?? null })
         : ensureStructured(sdFactura ?? facturaLS);
     } else {
       factura = ensureStructured(sdFactura ?? facturaLS ?? rawData);
@@ -1873,6 +1876,7 @@ export default function FacturaUpload() {
         plazoRecuperacion:       planData?.plazoRecuperacion,
         panelesSel:              planData?.panelesSel,
         cuotaAlquilerMes:        planData?.cuotaAlquilerMes,
+        importeDeposito:         importeDeposito ?? null,
         ahorroAnualPercent:      planData?.ahorroAnualPercent,
       },
       ce: {
@@ -2245,6 +2249,7 @@ export default function FacturaUpload() {
                     plazoRecuperacion:       planData?.plazoRecuperacion,
                     panelesSel:              planData?.panelesSel,
                     cuotaAlquilerMes:        planData?.cuotaAlquilerMes,
+                    importeDeposito:         importeDeposito ?? null,
                   },
                   ce: {
                     nombre:        data?.ce?.nombre        ?? ceNombre    ?? "",
