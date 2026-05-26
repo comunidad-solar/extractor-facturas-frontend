@@ -125,12 +125,26 @@ export function buildRedirectURL(baseUrl, cliente, factura, idGen, manualFields,
 // ── Validación ──────────────────────────────────────────────────────────────────────
 
 export function validarDNI(dni) {
-  const dniRegex = /^[0-9]{8}[A-Za-z]$/;
-  if (!dniRegex.test(dni)) return false;
   const letras = "TRWAGMYFPDXBNJZSQVHLCKE";
-  const numero = parseInt(dni.substring(0, 8), 10);
-  const letraEsperada = letras[numero % 23];
-  return dni.charAt(8).toUpperCase() === letraEsperada;
+  const dniUpper = dni.toUpperCase().trim();
+
+  // DNI: 8 dígitos + letra
+  const dniRegex = /^[0-9]{8}[A-Z]$/;
+  if (dniRegex.test(dniUpper)) {
+    const numero = parseInt(dniUpper.substring(0, 8), 10);
+    return dniUpper.charAt(8) === letras[numero % 23];
+  }
+
+  // NIE: X/Y/Z + 7 dígitos + letra
+  const nieRegex = /^[XYZ][0-9]{7}[A-Z]$/;
+  if (nieRegex.test(dniUpper)) {
+    const nieMap = { X: "0", Y: "1", Z: "2" };
+    const nieNumerico = nieMap[dniUpper.charAt(0)] + dniUpper.substring(1, 8);
+    const numero = parseInt(nieNumerico, 10);
+    return dniUpper.charAt(8) === letras[numero % 23];
+  }
+
+  return false;
 }
 
 export function validarIBAN(iban) {
