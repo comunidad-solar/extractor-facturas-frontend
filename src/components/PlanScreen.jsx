@@ -328,29 +328,30 @@ export default function PlanScreen({
 
           {/* Optimizador */}
           <div style={{ background:"#F3D5A9", borderRadius:14, padding:"24px 20px", textAlign:"center", minWidth:170, maxWidth:190, display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
-            <p style={{ fontSize:13, fontWeight:800, color:"#121212", textTransform:"uppercase", letterSpacing:"0.06em" }}>Optimiza tu plan</p>
-            <p style={{ fontSize:12, color:"#555", lineHeight:1.5 }}>Añade o quita paneles solares</p>
-            <div style={{ display:"flex", alignItems:"center", background:"#fff", borderRadius:10, border:"1.5px solid #121212", overflow:"hidden" }}>
+            <p style={{ fontSize:18, fontWeight:800, color:"#121212", lineHeight:1.2 }}>Optimiza<br />tu plan</p>
+            <div style={{ width:"100%", borderTop:"2px solid rgba(255, 255, 255)" }} />
+            <p style={{ fontSize:12, fontWeight:600, color:"#121212", lineHeight:1.5 }}>Añade o quita<br />paneles solares</p>
+            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
               <button
                 onClick={() => onSetPanelesPropuesta(p => Math.max(1, p - 1))}
-                style={{ background:"none", border:"none", padding:"8px 14px", fontSize:18, fontWeight:700, cursor:"pointer", color:"#EF931D", fontFamily:"inherit" }}>
+                style={{ background:"#fff", border:"1.5px solid #ccc", borderRadius:8, width:36, height:36, fontSize:18, fontWeight:700, cursor:"pointer", color:"#121212", fontFamily:"inherit", display:"flex", alignItems:"center", justifyContent:"center" }}>
                 −
               </button>
-              <span style={{ fontSize:20, fontWeight:700, color:"#121212", minWidth:32, textAlign:"center" }}>
-                {panelesPropuesta}
-              </span>
+              <div style={{ background:"#fff", border:"1.5px solid #121212", borderRadius:8, width:40, height:36, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <span style={{ fontSize:20, fontWeight:700, color:"#121212" }}>{panelesPropuesta}</span>
+              </div>
               <button
                 onClick={() => onSetPanelesPropuesta(p => p + 1)}
-                style={{ background:"none", border:"none", padding:"8px 14px", fontSize:18, fontWeight:700, cursor:"pointer", color:"#EF931D", fontFamily:"inherit" }}>
+                style={{ background:"#fff", border:"1.5px solid #ccc", borderRadius:8, width:36, height:36, fontSize:18, fontWeight:700, cursor:"pointer", color:"#121212", fontFamily:"inherit", display:"flex", alignItems:"center", justifyContent:"center" }}>
                 +
               </button>
             </div>
-            <p style={{ fontSize:11, color:"#555", lineHeight:1.55 }}>
-              Te recomendamos {panelesPropuesta === 1 ? "1 panel solar" : `${panelesPropuesta} paneles solares`}, pero puedes solicitar una cantidad diferente optimizando tu plan de participación con un asesor energético.
+            <p style={{ fontSize:11, color:"#000000", lineHeight:1.55 }}>
+              Te recomendamos {panelesPropuesta === 1 ? "1 panel solar" : `${panelesPropuesta} paneles solares`}, pero puedes solicitar una cantidad diferente optimizando tu plan.
             </p>
             <button
-              disabled
-              style={{ background:"#fff", color:"#ccc", border:"2px solid #ccc", borderRadius:24, padding:"10px 24px", fontSize:13, fontWeight:700, fontFamily:"inherit", cursor:"not-allowed", letterSpacing:"0.04em", width:"100%", opacity:0.6 }}>
+              onClick={onOptimizar}
+              style={{ background:"#FFAD2A", color:"#121212", border:"none", borderRadius:24, padding:"12px 24px", fontSize:14, fontWeight:700, fontFamily:"inherit", cursor:"pointer", width:"100%" }}>
               Optimizar
             </button>
           </div>
