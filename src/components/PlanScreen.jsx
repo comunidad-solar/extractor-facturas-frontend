@@ -416,27 +416,25 @@ export default function PlanScreen({
 
             {tabActiva === "plan" && (
               <div>
-                <p style={{ marginBottom:10 }}>A continuación detallamos tu plan recomendado de participación de autoconsumo en la Comunidad Energética <strong>{ceNombre || "—"}</strong>. Este plan está basado en el consumo eléctrico que nos has facilitado y que te permitirá ahorrar hasta un {planData?.ahorroAnualPercent ?? 70}% en tu factura de la luz.</p>
-                <p style={{ marginBottom:10 }}>El plan incluye la compra de <strong>{panelesSel === 1 ? "1 panel solar" : `${panelesSel} paneles solares`}</strong> que generarán un total aproximado de <strong>{fmtES(planData?.produccionAnual)} kWh</strong> de electricidad, con un depósito inicial de <strong>{fmtES((cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0) * 2)}€</strong>. (El precio podría ser mayor en función del coste final de la instalación para verter a la red eléctrica, de lo que se informaría claramente por anticipado antes de cualquier contratación)</p>
-                <p style={{ marginBottom:10 }}>Al unirte a la Comunidad Energética de <strong>{ceNombre || "—"}</strong>, podrás disfrutar de la electricidad a <strong>0€ por kWh</strong> en tu factura de la luz.</p>
-                <p style={{ marginBottom:8 }}>Basándonos en los precios de energía de los últimos años, obtendrás los siguientes beneficios:</p>
-                <ul style={{ paddingLeft:20, marginBottom:10 }}>
-                  <li>Ahorro promedio de <strong>{fmtES(planData?.ahorroAnual)}€</strong> al año.</li>
-                  <li>Ahorro total estimado de <strong>{fmtES(planData?.ahorro25Anos)}€</strong> en 25 años (considerando una subida del precio de la energía del 0% anual).</li>
+                <p style={{ marginBottom:10 }}>A continuación, te mostramos tu plan recomendado de participación en la Comunidad Energética <strong>{ceNombre || "—"}</strong>. Este plan está basado en el consumo eléctrico que nos has facilitado y está diseñado para que puedas ahorrar <strong>un {planData?.ahorroAnualPercent ?? 30}% en tu factura de la luz.</strong></p>
+                <p style={{ marginBottom:10 }}>Tu participación incluye la asignación de <strong>{panelesSel === 1 ? "1 panel solar" : `${panelesSel} paneles solares`},</strong> con una potencia nominal total de <strong>{fmtES(planData?.potenciaTotal)} kW,</strong> que generarán aproximadamente <strong>{fmtES(planData?.produccionAnual)} kWh</strong> de electricidad durante un periodo estimado de <strong>25 años.</strong></p>
+                <p style={{ marginBottom:10 }}>Al formar parte de la Comunidad Energética, pagarás 0€ por la energía autoconsumida, sin peajes ni márgenes comerciales.</p>
+                <p style={{ marginBottom:8 }}>Basándonos en la evolución de los precios de la energía (considerando un incremento del {planData?.ahorroAnualPercent ?? 0}% anual) se estiman los siguientes beneficios:</p>
+                <ul style={{ paddingLeft:20, marginBottom:10, lineHeight:1.7 }}>
+                  <li>Ahorro medio mensual de <strong>{fmtES(planData?.ahorroMensual)}€</strong></li>
+                  <li>Ahorro estimado anual <strong>{fmtES(planData?.ahorroAnual)}€</strong></li>
                 </ul>
-                <p>{panelesSel === 1 ? "El panel" : `Los ${panelesSel} paneles`} contiene{panelesSel === 1 ? "" : "n"} una potencia nominal total de <strong>{fmtES(planData?.potenciaTotal)} kW</strong>. Lo que quiere decir que el coeficiente de reparto que te pertenece es del <strong>{planData?.coeficienteDistribucion != null ? fmtES(planData.coeficienteDistribucion * 100) : "—"}%</strong> de toda la Comunidad Energética.</p>
               </div>
             )}
 
             {tabActiva === "condiciones" && (
               <div>
-                <p style={{ marginBottom:10 }}>Al adquirir tu participación en la comunidad energética <strong>{ceNombre || "—"}</strong>, verás reflejada la electricidad generada por {panelesSel === 1 ? "tu panel" : "tus paneles"} en tu hogar a través de tu comercializadora. Durante los próximos 25 años, verás reflejada en tu factura de la luz la energía producida por {panelesSel === 1 ? "tu panel solar" : "tus paneles solares"}, con un coste de <strong>0€/kWh</strong>.</p>
-                <p style={{ marginBottom:10 }}>Para el mantenimiento y seguro de {panelesSel === 1 ? "tu panel solar" : "tus paneles solares"}, pagarás una cuota mensual de <strong>{fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes)}€</strong> <span style={{ fontSize:"0.85em", color:"#888", fontWeight:400 }}>(IVA incluido)</span>. {panelesSel === 1 ? "Este panel está diseñado" : "Estos paneles están diseñados"} para tener una vida útil de 25 años, y esta cuota es necesaria para asegurar su buen funcionamiento.</p>
-                <p style={{ marginBottom:10 }}>Una vez firmada la documentación, el pago se realizará en 3 fases: 50% del total se abonará tras la firma de los documentos, un 25% al finalizar la instalación y el 25% restante al comenzar la producción de la planta.</p>
-                <p style={{ marginBottom:10 }}>Podrás cambiarte a otra comercializadora en cualquier momento, ya que no hay permanencia con la comercializadora de Comunidad Solar. La distribuidora de electricidad ya conoce el porcentaje de producción solar que te corresponde, y la nueva comercializadora deberá descontarte esa producción en tu factura de la luz. Debes tener en cuenta que aunque te cambies de comercializadora, tendrás que seguir abonando la cuota del club.</p>
-                <p style={{ marginBottom:10 }}>Toda la electricidad que no consumas será vendida a la red pública a precio de mercado, y ese valor se descontará de tu factura. Para cualquier energía adicional que necesites, pagarás el precio de coste junto con los cargos regulados, sin ningún margen adicional.</p>
+                <p style={{ marginBottom:10 }}>Al formar parte de la Comunidad Energética <strong>{ceNombre || "—"}</strong>, verás reflejada en tu factura de la luz la energía generada por la planta, que se asignará a tu suministro a través de tu comercializadora.</p>
+                <p style={{ marginBottom:10 }}>Desde el momento en que la planta entre en funcionamiento, comenzarás a beneficiarte de un menor coste energético, reduciendo el importe de tu factura eléctrica.</p>
+                <p style={{ marginBottom:10 }}>Podrás cambiar de comercializadora en cualquier momento, ya que no existe permanencia con la comercializadora de Comunidad Solar. La distribuidora seguirá asignando tu porcentaje de energía, y la nueva comercializadora deberá reflejarlo en tu factura.</p>
+                <p style={{ marginBottom:10 }}>Toda la energía que no consumas será vendida a la red pública a precio de mercado, y ese valor se descontará de tu factura. Para cualquier energía adicional que necesites, pagarás el precio de coste junto con los cargos regulados, sin ningún margen adicional.</p>
                 <p style={{ marginBottom:10 }}>Comunidad Solar no busca obtener beneficios a través de la comercializadora; este es simplemente el mecanismo necesario para llevar la energía a tu hogar.</p>
-                <p>Este es un resumen de las condiciones. Te recomendamos leer toda la documentación para conocer todos los términos y detalles antes de proceder con la contratación.</p>
+                <p>Este es un resumen de las condiciones. Te recomendamos leer toda la documentación para conocer todos los términos y detalles.</p>
               </div>
             )}
           </div>
