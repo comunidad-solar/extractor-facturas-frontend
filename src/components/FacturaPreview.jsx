@@ -174,7 +174,7 @@ export default function FacturaPreview({ data = null }) {
   const otherRows = [
     { label: 'Potencia',            val: r.potencia },
     { label: 'Otros peajes',     sublabel: 'peajes regulados + IE',  val: r.otros_peajes },
-    { label: 'Cuotas reguladas', sublabel: 'bono social + alquiler', val: r.cuotas_reguladas },
+    { label: 'Otros costes', sublabel: 'bono social + alquiler', val: r.cuotas_reguladas },
     { label: 'Cuota club',       val: r.cuota_mantenimiento },
     { label: "IVA's",               val: r.ivas },
   ];
