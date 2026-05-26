@@ -407,11 +407,13 @@ export default function FacturaUpload() {
               telefono:  prev.telefono  || data.cliente.telefono  || "",
               direccion: prev.direccion || data.cliente.direccion || "",
             }));
-            if (data.cliente.dealId)   setDealId(data.cliente.dealId);
-            if (data.cliente.mpklogId) setMpklogId(data.cliente.mpklogId);
+            if (data.cliente.dealId)   { setDealId(data.cliente.dealId);     urlParamsRef.current.dealId   = data.cliente.dealId;   }
+            if (data.cliente.mpklogId) { setMpklogId(data.cliente.mpklogId); urlParamsRef.current.mpklogId = data.cliente.mpklogId; }
           }
-          if (data?.dealId)   setDealId(prev   => prev || data.dealId);
-          if (data?.mpklogId) setMpklogId(prev => prev || data.mpklogId);
+          if (data?.dealId)   { setDealId(prev   => prev || data.dealId);   if (data.dealId)   urlParamsRef.current.dealId   = data.dealId;   }
+          const mpklogFromVerification = data?.verification?.mpklog_id ?? null;
+          const mpklogResolved = data?.mpklogId ?? mpklogFromVerification;
+          if (mpklogResolved) { setMpklogId(prev => prev || mpklogResolved); urlParamsRef.current.mpklogId = mpklogResolved; }
           if (data?.ce) {
             if (data.ce.nombre)        setCeNombre(data.ce.nombre);
             if (data.ce.status)        setCeStatus(data.ce.status);
@@ -2192,15 +2194,22 @@ export default function FacturaUpload() {
                   }
                   return data.dealId;
                 });
+                urlParamsRef.current.dealId = data.dealId;
               }
-              if (data?.mpklogId) {
+              const mpklogFromVerif = data?.verification?.mpklog_id ?? null;
+              const mpklogResolvedPS = data?.mpklogId ?? data?.cliente?.mpklogId ?? mpklogFromVerif ?? null;
+              if (mpklogResolvedPS) {
                 setMpklogId(prev => {
-                  if (prev && prev !== data.mpklogId) {
-                    console.warn("[PlanScreen/sesion] mpklogId sobrescrito:", { antes: prev, depois: data.mpklogId });
+                  if (prev && prev !== mpklogResolvedPS) {
+                    console.warn("[PlanScreen/sesion] mpklogId sobrescrito:", { antes: prev, depois: mpklogResolvedPS });
                   }
-                  return data.mpklogId;
+                  return mpklogResolvedPS;
                 });
+                urlParamsRef.current.mpklogId = mpklogResolvedPS;
               }
+              if (data?.dealId)            { urlParamsRef.current.dealId   = data.dealId;            }
+              if (data?.cliente?.dealId)   { urlParamsRef.current.dealId   = data.cliente.dealId;    }
+              if (data?.cliente?.mpklogId) { urlParamsRef.current.mpklogId = data.cliente.mpklogId;  }
               if (data?.cliente) {
                 setCliente(prev => ({
                   nombre:    prev.nombre    || data.cliente.nombre    || "",
