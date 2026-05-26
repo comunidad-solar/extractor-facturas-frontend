@@ -103,41 +103,45 @@ export default function PlanScreen({
         <div className="cs-plan-hero">
           {modoAlquiler ? (
             /* HERO ALQUILER */
-            <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column" }}>
-              <p style={{ fontSize:20, fontWeight:500, marginBottom:6, color:"#121212" }}>
-                Hola <strong>{cliente.nombre}</strong>, estás a un paso de
+            <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column", fontFamily:"'Montserrat', sans-serif" }}>
+              <p style={{ fontSize:22, fontWeight:500, marginBottom:8, color:"#121212", fontFamily:"'Montserrat', sans-serif" }}>
+                <strong style={{ fontWeight:800 }}>Hola {cliente.nombre}</strong>, estás a un paso de
               </p>
-              <p className="cs-plan-hero-title" style={{ fontSize:46, fontWeight:800, lineHeight:1.1, marginBottom:20, color:"#EF931D" }}>
-                ahorrar un {planData?.ahorroAnualPercent ?? 30}% en tu<br />factura de la luz
+              <p className="cs-plan-hero-title" style={{ fontSize:48, fontWeight:700, lineHeight:1.05, marginBottom:0, color:"#121212", fontFamily:"'Montserrat', sans-serif" }}>
+                <span style={{ color:"#EF931D" }}>ahorrar un {planData?.ahorroAnualPercent ?? 30}%</span>
+                <br />
+                
               </p>
-              <p style={{ fontSize:16, fontWeight:400, marginBottom:2, color:"#121212" }}>
-                Este es tu fantástico plan en la Comunidad Energética de
+               <p style={{ fontSize:42, fontWeight:700, marginBottom:8, color:"#121212", fontFamily:"'Montserrat', sans-serif" }}>en tu factura de la luz</p>
+              <p style={{ fontSize:16, fontWeight:400, color:"#121212", marginTop:20, marginBottom:28, fontFamily:"'Montserrat', sans-serif" }}>
+                Este es tu fantástico plan en la Comunidad Energética de <strong style={{ fontWeight:700 }}>{ceNombre || "—"}</strong>.
               </p>
-              <p style={{ fontSize:16, fontWeight:700, color:"#121212", marginBottom:28 }}>
-                {ceNombre || "—"}.
-              </p>
-              <div style={{ background:"#fff", borderRadius:16, padding:"22px 26px", display:"inline-block", maxWidth:300, boxShadow:"0 6px 28px rgba(0,0,0,0.11)" }}>
-                <p style={{ fontSize:13, color:"#888", marginBottom:10, display:"flex", alignItems:"center", gap:6 }}>
-                  <span style={{ color:"#EF931D" }}>⊙</span>
+              <div style={{ background:"#fff", borderRadius:16, padding:"22px 26px", display:"inline-block", maxWidth:400, boxShadow:"0 6px 28px rgba(0,0,0,0.11)" }}>
+                <p style={{ fontSize:21, color:"#121212", marginBottom:2, display:"flex", alignItems:"center", gap:6 }}>
+                  <img src="/moneda.svg" alt="" style={{ width:32, height:32 }} />
                   <span>Cuota mensual</span>
-                  <strong style={{ color:"#EF931D" }}>{panelesSel} paneles</strong>
                 </p>
-                <p style={{ fontSize:54, fontWeight:800, lineHeight:1, color:"#121212" }}>
+                <p style={{ fontSize:23, fontWeight:700, color:"#EF931D", marginBottom:8, paddingLeft:40 }}>
+                  {panelesSel} paneles
+                </p>
+                <p style={{ fontSize:60, fontWeight:800, lineHeight:1, color:"#121212", display:"flex", alignItems:"baseline", gap:8, paddingLeft:40  }}>
                   {fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)}€
+                  <span style={{ fontSize:13, fontWeight:400, color:"#888" }}>(IVA incluido)</span>
                 </p>
-                <p style={{ fontSize:12, color:"#aaa", marginTop:4, marginBottom:18 }}>IVA incluido</p>
-                <button
-                  disabled={puedeContratar ? yaContratado : yaEnEspera}
-                  style={{ width:"100%", background:(puedeContratar ? yaContratado : yaEnEspera) ? "#ccc" : "#FFAD2A", color:"#000", border:"2px solid transparent", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:(puedeContratar ? yaContratado : yaEnEspera) ? "not-allowed" : "pointer", letterSpacing:"0.04em", opacity:(puedeContratar ? yaContratado : yaEnEspera) ? 0.7 : 1, transition:"background 0.2s,border-color 0.2s" }}
-                  onMouseEnter={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#fff"; e.currentTarget.style.borderColor="#000"; } }}
-                  onMouseLeave={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#FFAD2A"; } }}
-                  onMouseDown={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.borderColor="#000"; e.currentTarget.style.background="#FFAD2A"; } }}
-                  onMouseUp={e => { e.currentTarget.style.borderColor="transparent"; }}
-                  onClick={puedeContratar ? onContratar : onListaEspera}>
-                  {puedeContratar
-                    ? (yaContratado ? "Plan contratado" : "Contratar")
-                    : (yaEnEspera ? "Ya estás en lista de espera" : "Unirse a la lista de espera")}
-                </button>
+                <div style={{ marginTop:20 }}>
+                  <button
+                    disabled={puedeContratar ? yaContratado : yaEnEspera}
+                    style={{ width:"100%", background:(puedeContratar ? yaContratado : yaEnEspera) ? "#ccc" : "#FFAD2A", color:"#000", border:"2px solid transparent", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:(puedeContratar ? yaContratado : yaEnEspera) ? "not-allowed" : "pointer", letterSpacing:"0.04em", opacity:(puedeContratar ? yaContratado : yaEnEspera) ? 0.7 : 1, transition:"background 0.2s,border-color 0.2s" }}
+                    onMouseEnter={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#fff"; e.currentTarget.style.borderColor="#000"; } }}
+                    onMouseLeave={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#FFAD2A"; } }}
+                    onMouseDown={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.borderColor="#000"; e.currentTarget.style.background="#FFAD2A"; } }}
+                    onMouseUp={e => { e.currentTarget.style.borderColor="transparent"; }}
+                    onClick={puedeContratar ? onContratar : onListaEspera}>
+                    {puedeContratar
+                      ? (yaContratado ? "Plan contratado" : "Contratar")
+                      : (yaEnEspera ? "Ya estás en lista de espera" : "Unirse a la lista de espera")}
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
@@ -166,22 +170,20 @@ export default function PlanScreen({
             </div>
           )}
 
-          {/* Columna derecha: imagen */}
-          <div className="cs-plan-hero-img" style={{ flex:"0 0 auto", display:"flex", alignItems:"flex-start" }}>
+          {/* Columna derecha: imagen + ¿Tienes dudas? */}
+          <div className="cs-plan-hero-img" style={{ flex:"0 0 auto", display:"flex", flexDirection:"column", alignItems:"flex-end", gap:40, marginBottom: 40 }}>
             <img
               src={ceFotoUrl || "/Intersect.png"}
               alt="Instalación solar"
-              style={{ width:300, height:340, objectFit:"cover", borderRadius:20, display:"block" }}
+              style={{ width:460, height:500, objectFit:"cover", borderRadius:20, display:"block" }}
             />
+            <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+              <span style={{ fontSize:13, color:"#777", fontWeight:500 }}>¿Tienes dudas?</span>
+              <button className="cs-btn-asesor" onClick={() => {}}>
+                Contacta con tu asesor
+              </button>
+            </div>
           </div>
-        </div>
-
-        {/* ¿Tienes dudas? — dentro del hero, fondo beige, alineado a la derecha */}
-        <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:18, marginTop:28, paddingTop:20, borderTop:"1px solid rgba(0,0,0,0.10)" }}>
-          <span style={{ fontSize:13, color:"#777", fontWeight:500 }}>¿Tienes dudas?</span>
-          <button className="cs-btn-asesor" onClick={() => {}}>
-            Contacta con tu asesor
-          </button>
         </div>
       </div>
 
@@ -254,7 +256,7 @@ export default function PlanScreen({
 
           {/* Conector → */}
           <div className="cs-plan-connector">
-            <span style={{ fontSize:26, color:"#EF931D", fontWeight:700, lineHeight:1 }}>→</span>
+            <img src="/Arrow.svg" alt="→" style={{ width:52, height:52 }} />
           </div>
 
           {/* Tarjeta Destino — domicilio */}
@@ -304,7 +306,7 @@ export default function PlanScreen({
                 <tr><td>Número de paneles</td><td>{panelesSel}</td></tr>
                 <tr><td>Potencia total</td><td>{fmtES(planData?.potenciaTotal ?? 3)} kW</td></tr>
                 <tr><td>Producción de energía anual estimada*</td><td>{fmtES(planData?.produccionAnual ?? 4101.25)} kWh</td></tr>
-                <tr><td>Ahorro anual medio estimado*</td><td>{fmtES(planData?.ahorroAnual ?? 522.48)} €</td></tr>
+                <tr><td>Ahorro anual medio estimado**</td><td>{fmtES(planData?.ahorroAnual ?? 522.48)} €</td></tr>
                 {modoAlquiler ? (
                   <tr><td>Precio mensual</td><td>{fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)} €</td></tr>
                 ) : (
@@ -348,6 +350,10 @@ export default function PlanScreen({
             </button>
           </div>
         </div>
+        <p style={{ fontSize:11, color:"#121212", lineHeight:1.6, marginTop:-20, marginBottom:80 }}>
+          *Producción anual estimada: Estimación de la energía generada por tus paneles solares, calculada por un software especializado (PVSOL).<br />
+          **Ahorro anual medio estimado: Ahorro obtenido en base a la producción estimada y considerando los precios OMIE de los últimos años.
+        </p>
 
         {/* ── FACTURA PLAN ── */}
         <div style={{ marginBottom:56 }}>
