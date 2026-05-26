@@ -116,28 +116,32 @@ export default function PlanScreen({
               <p style={{ fontSize:16, fontWeight:700, color:"#121212", marginBottom:28 }}>
                 {ceNombre || "—"}.
               </p>
-              <div style={{ background:"#fff", borderRadius:16, padding:"22px 26px", display:"inline-block", maxWidth:300, boxShadow:"0 6px 28px rgba(0,0,0,0.11)" }}>
-                <p style={{ fontSize:13, color:"#888", marginBottom:10, display:"flex", alignItems:"center", gap:6 }}>
-                  <span style={{ color:"#EF931D" }}>⊙</span>
+              <div style={{ background:"#fff", borderRadius:16, padding:"22px 26px", display:"inline-block", maxWidth:400, boxShadow:"0 6px 28px rgba(0,0,0,0.11)" }}>
+                <p style={{ fontSize:21, color:"#121212", marginBottom:2, display:"flex", alignItems:"center", gap:6 }}>
+                  <img src="/moneda.svg" alt="" style={{ width:32, height:32 }} />
                   <span>Cuota mensual</span>
-                  <strong style={{ color:"#EF931D" }}>{panelesSel} paneles</strong>
                 </p>
-                <p style={{ fontSize:54, fontWeight:800, lineHeight:1, color:"#121212" }}>
+                <p style={{ fontSize:23, fontWeight:700, color:"#EF931D", marginBottom:8, paddingLeft:40 }}>
+                  {panelesSel} paneles
+                </p>
+                <p style={{ fontSize:60, fontWeight:800, lineHeight:1, color:"#121212", display:"flex", alignItems:"baseline", gap:8, paddingLeft:40  }}>
                   {fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)}€
+                  <span style={{ fontSize:13, fontWeight:400, color:"#888" }}>(IVA incluido)</span>
                 </p>
-                <p style={{ fontSize:12, color:"#aaa", marginTop:4, marginBottom:18 }}>IVA incluido</p>
-                <button
-                  disabled={puedeContratar ? yaContratado : yaEnEspera}
-                  style={{ width:"100%", background:(puedeContratar ? yaContratado : yaEnEspera) ? "#ccc" : "#FFAD2A", color:"#000", border:"2px solid transparent", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:(puedeContratar ? yaContratado : yaEnEspera) ? "not-allowed" : "pointer", letterSpacing:"0.04em", opacity:(puedeContratar ? yaContratado : yaEnEspera) ? 0.7 : 1, transition:"background 0.2s,border-color 0.2s" }}
-                  onMouseEnter={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#fff"; e.currentTarget.style.borderColor="#000"; } }}
-                  onMouseLeave={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#FFAD2A"; } }}
-                  onMouseDown={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.borderColor="#000"; e.currentTarget.style.background="#FFAD2A"; } }}
-                  onMouseUp={e => { e.currentTarget.style.borderColor="transparent"; }}
-                  onClick={puedeContratar ? onContratar : onListaEspera}>
-                  {puedeContratar
-                    ? (yaContratado ? "Plan contratado" : "Contratar")
-                    : (yaEnEspera ? "Ya estás en lista de espera" : "Unirse a la lista de espera")}
-                </button>
+                <div style={{ marginTop:20 }}>
+                  <button
+                    disabled={puedeContratar ? yaContratado : yaEnEspera}
+                    style={{ width:"100%", background:(puedeContratar ? yaContratado : yaEnEspera) ? "#ccc" : "#FFAD2A", color:"#000", border:"2px solid transparent", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:(puedeContratar ? yaContratado : yaEnEspera) ? "not-allowed" : "pointer", letterSpacing:"0.04em", opacity:(puedeContratar ? yaContratado : yaEnEspera) ? 0.7 : 1, transition:"background 0.2s,border-color 0.2s" }}
+                    onMouseEnter={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#fff"; e.currentTarget.style.borderColor="#000"; } }}
+                    onMouseLeave={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#FFAD2A"; } }}
+                    onMouseDown={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.borderColor="#000"; e.currentTarget.style.background="#FFAD2A"; } }}
+                    onMouseUp={e => { e.currentTarget.style.borderColor="transparent"; }}
+                    onClick={puedeContratar ? onContratar : onListaEspera}>
+                    {puedeContratar
+                      ? (yaContratado ? "Plan contratado" : "Contratar")
+                      : (yaEnEspera ? "Ya estás en lista de espera" : "Unirse a la lista de espera")}
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
