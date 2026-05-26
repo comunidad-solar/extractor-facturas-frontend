@@ -149,7 +149,7 @@ body { background: #EEECE8; font-family: 'Montserrat','Helvetica Neue',sans-seri
 .cs-plan-origen { display:flex; gap:0; align-items:stretch; margin-bottom:85px; }
 .cs-plan-connector { display:flex; align-items:center; justify-content:center; padding:0 10px; flex-shrink:0; }
 .cs-plan-tabla { display:grid; grid-template-columns:1fr auto; gap:24px; align-items:start; margin-bottom:55px; padding:24px; }
-.cs-plan-regalo { display:flex; align-items:center; gap:40px; background:#ffffff; border-radius:14px; padding:48px 48px; margin-bottom:50px; overflow:hidden; }
+.cs-plan-regalo { display:flex; align-items:center; gap:40px; background:#ff151500; border-radius:14px; padding:48px 48px; margin-bottom:50px; overflow:hidden; }
 
 @media (max-width:640px) {
   .cs-page { padding:0 12px 60px; }

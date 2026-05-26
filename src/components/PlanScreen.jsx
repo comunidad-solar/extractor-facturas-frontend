@@ -438,7 +438,24 @@ export default function PlanScreen({
               </div>
             )}
           </div>
+
+          
         </div>
+        {/* Botão Contratar — sempre visível abaixo das tabs */}
+          {modoAlquiler && (
+            <div style={{ display:"flex", justifyContent:"center", padding:"0px 32px 88px" }}>
+              <button
+                disabled={puedeContratar ? yaContratado : yaEnEspera}
+                style={{ background:(puedeContratar ? yaContratado : yaEnEspera) ? "#ccc" : "#FFAD2A", color:"#000", border:"2px solid transparent", borderRadius:28, padding:"13px 48px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:(puedeContratar ? yaContratado : yaEnEspera) ? "not-allowed" : "pointer", letterSpacing:"0.04em", opacity:(puedeContratar ? yaContratado : yaEnEspera) ? 0.7 : 1, transition:"background 0.2s,border-color 0.2s" }}
+                onMouseEnter={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#fff"; e.currentTarget.style.borderColor="#000"; } }}
+                onMouseLeave={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#FFAD2A"; e.currentTarget.style.borderColor="transparent"; } }}
+                onClick={puedeContratar ? onContratar : onListaEspera}>
+                {puedeContratar
+                  ? (yaContratado ? "Plan contratado" : "Contratar")
+                  : (yaEnEspera ? "Ya estás en lista de espera" : "Unirse a la lista de espera")}
+              </button>
+            </div>
+          )}
 
         {/* ── MÉTRICAS DE AHORRO (solo venta) ── */}
         {!modoAlquiler && (
