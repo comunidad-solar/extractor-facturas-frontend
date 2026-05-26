@@ -396,7 +396,7 @@ export default function FacturaPreview({ data = null }) {
       </div>
 
       {/* ── Tabla detallada ────────────────────────────────────────────────── */}
-      <div style={{ padding: '0 32px 28px', borderTop: '1px solid #eee', overflowX: 'auto' }}>
+      <div style={{ padding: '0 32px 28px', overflowX: 'auto' }}>
         <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', marginBottom: 12, paddingTop: 16, borderBottom: '2px solid #7CB342', paddingBottom: 4 }}>
           MÁS INFORMACIÓN SOBRE TU FACTURA
         </p>
