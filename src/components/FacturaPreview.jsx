@@ -122,9 +122,9 @@ const SectionRow = ({ label }) => (
 // ─── Bar chart data builder ───────────────────────────────────────────────────
 const buildBarData = (gb, produto) => [
   ...(produto === 'AR' ? [{ name: 'Autoconsumo remoto', value: gb.autoconsumo_remoto_kwh, fill: '#A5D6A7' }] : []),
-  { name: 'Energía del mercado', value: gb.energia_mercado_kwh, fill: '#F5A623' },
-  { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,      fill: '#79AEC4' },
-  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#9fd1f9' },
+  { name: 'Energía del mercado', value: gb.energia_mercado_kwh, fill: '#FFDF3C' },
+  { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,      fill: '#ADE272' },
+  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#ADF4E5' },
 ];
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -167,14 +167,14 @@ export default function FacturaPreview({ data = null }) {
 
   const energyRows = [
     ...(d.produto === 'AR' ? [{ label: 'Autoconsumo remoto', val: r.autoconsumo_remoto, color: '#7CB342' }] : []),
-    { label: 'Energía del mercado', val: r.energia_mercado,  color: '#F5A623' },
-    { label: 'Autoconsumo',         val: 0,                   color: '#79AEC4' },
-    { label: 'Excedente',           val: r.excedente_remoto, color: r.excedente_remoto < 0 ? '#9fd1f9' : '#111' },
+    { label: 'Energía del mercado', val: r.energia_mercado,  color: '#FFDF3C' },
+    { label: 'Autoconsumo',         val: 0,                   color: '#ADE272' },
+    { label: 'Excedente',           val: r.excedente_remoto, color: r.excedente_remoto < 0 ? '#ADF4E5' : '#111' },
   ];
   const otherRows = [
     { label: 'Potencia',            val: r.potencia },
     { label: 'Otros peajes',     sublabel: 'peajes regulados + IE',  val: r.otros_peajes },
-    { label: 'Cuotas reguladas', sublabel: 'bono social + alquiler', val: r.cuotas_reguladas },
+    { label: 'Otros costes', sublabel: 'bono social + alquiler', val: r.cuotas_reguladas },
     { label: 'Cuota club',       val: r.cuota_mantenimiento },
     { label: "IVA's",               val: r.ivas },
   ];
@@ -183,9 +183,9 @@ export default function FacturaPreview({ data = null }) {
 
   // stroke = cor da linha de contorno | legendColor = cor do quadrado na legenda | fill = preenchimento da área
   const AREA_CFG = [
-    { key: 'generada',    name: 'Energía generada',  stroke: 'rgb(80, 151, 4)', legendColor: '#7CB342', fill: '#7CB342', fillOpacity: 0.35 },
-    { key: 'consumida',   name: 'Energía consumida', stroke: '#c87b00',         legendColor: '#F5A623', fill: '#F5A623', fillOpacity: 0.35 },
-    { key: 'autoconsumo', name: 'Autoconsumo',        stroke: '#057adb',         legendColor: '#46939a', fill: '#42A5F5', fillOpacity: 0.50 },
+    { key: 'consumida',   name: 'Energía del mercado', stroke: '#E0B800', legendColor: '#FFDF3C', fill: '#FFDF3C', fillOpacity: 0.85 },
+    { key: 'autoconsumo', name: 'Autoconsumo',          stroke: '#7CB342', legendColor: '#ADE272', fill: '#ADE272', fillOpacity: 0.85 },
+    { key: 'generada',    name: 'Excedentes',           stroke: '#5BC9B0', legendColor: '#ADF4E5', fill: '#ADF4E5', fillOpacity: 0.85 },
   ];
   const LEGEND_ORDER = ['autoconsumo', 'consumida', 'generada'];
   const areaChartLegend = () => (
@@ -194,7 +194,7 @@ export default function FacturaPreview({ data = null }) {
         const cfg = AREA_CFG.find(c => c.key === key);
         return (
           <span key={key} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 12, height: 12, background: cfg.legendColor, opacity: 0.5, display: 'inline-block', borderRadius: 2 }} />
+            <span style={{ width: 12, height: 12, background: cfg.legendColor, display: 'inline-block', borderRadius: 2 }} />
             {cfg.name}
           </span>
         );
@@ -262,15 +262,57 @@ export default function FacturaPreview({ data = null }) {
         {/* ── Area chart + overlay de ícones solares ──────────────────────── */}
         <div style={{ position: 'relative' }}>
           <ResponsiveContainer width="100%" height={220} style={{ outline: 'none' }}>
-            <AreaChart data={d.grafico_horario} margin={{ top: 36, right: 16, left: 0, bottom: 0 }}>
+            <AreaChart
+              data={(() => {
+                // Enriquecer dataset com pontos de cruzamento (consumida == generada)
+                // entre amostras consecutivas, para que Math.min(consumida, generada)
+                // coincida visualmente com a interseção real das duas curvas.
+                const src = d.grafico_horario.map(p => ({
+                  ...p,
+                  consumida: p.consumida ?? 0,
+                  generada:  p.generada  ?? 0,
+                }));
+                const out = [];
+                for (let i = 0; i < src.length; i++) {
+                  const a = src[i];
+                  out.push({ ...a, interseccion: Math.min(a.consumida, a.generada) });
+                  const b = src[i + 1];
+                  if (!b) continue;
+                  // Diferença muda de sinal => há cruzamento entre a e b
+                  const dA = a.consumida - a.generada;
+                  const dB = b.consumida - b.generada;
+                  if (dA === 0 || dB === 0) continue;
+                  if (Math.sign(dA) === Math.sign(dB)) continue;
+                  const t = dA / (dA - dB); // fração entre a e b (0..1)
+                  const horaCruz = a.hora + (b.hora - a.hora) * t;
+                  const valCruz  = a.consumida + (b.consumida - a.consumida) * t;
+                  out.push({
+                    hora: horaCruz,
+                    consumida: valCruz,
+                    generada: valCruz,
+                    interseccion: valCruz,
+                  });
+                }
+                return out;
+              })()}
+              margin={{ top: 36, right: 16, left: 0, bottom: 0 }}
+            >
               <XAxis dataKey="hora" tick={{ fontSize: 10 }} ticks={[0, 4, 8, 12, 16, 20]} tickFormatter={v => `${v}h`} />
               <YAxis tickFormatter={v => `${v} kWh`} tick={{ fontSize: 10 }} width={68} />
-              <Tooltip formatter={(v, name) => [`${Number(v).toFixed(2)} kWh`, name]} labelFormatter={v => `${v}h`} contentStyle={{ fontSize: 11, padding: '4px 8px' }} itemStyle={{ margin: 0, padding: '1px 0' }} />
+              <Tooltip formatter={(v, name) => [`${Number(v).toFixed(2)} kWh`, name]} labelFormatter={v => {
+                const n = Number(v);
+                return Number.isInteger(n) ? `${n}h` : `${Math.floor(n)}h ~ ${Math.ceil(n)}h`;
+              }} contentStyle={{ fontSize: 11, padding: '4px 8px' }} itemStyle={{ margin: 0, padding: '1px 0' }} />
               <Legend content={areaChartLegend} />
-              {AREA_CFG.map(cfg => (
-                <Area key={cfg.key} type="monotone" dataKey={cfg.key} name={cfg.name}
-                  stroke={cfg.stroke} fill={cfg.fill} fillOpacity={cfg.fillOpacity} />
-              ))}
+              {/* Curva Energía del mercado (consumida) */}
+              <Area type="monotone" dataKey="consumida" name="Energía del mercado"
+                stroke="#E0B800" fill="#FFDF3C" fillOpacity={0.85} />
+              {/* Curva Excedentes (generada) */}
+              <Area type="monotone" dataKey="generada" name="Excedentes"
+                stroke="#5BC9B0" fill="#ADF4E5" fillOpacity={0.85} />
+              {/* Interseção visual = Autoconsumo (verde) — pintada por cima */}
+              <Area type="monotone" dataKey="interseccion" name="Autoconsumo"
+                stroke="#7DC54A" strokeWidth={1.5} fill="#7DC54A" fillOpacity={0.35} legendType="none" />
             </AreaChart>
           </ResponsiveContainer>
 
@@ -314,11 +356,15 @@ export default function FacturaPreview({ data = null }) {
           {/* Col 2: labels coloridas alinhadas com barras + descriptions otros */}
           <div style={{ flexShrink: 0, fontSize: 12, textAlign: 'center' }}>
             {/* Labels das barras — cor da barra correspondente */}
-            {energyRows.map(({ label }, i) => (
-              <div key={label} style={{ height: 45, display: 'flex', alignItems: 'center', justifyContent: 'center', color: barData[i]?.fill || '#111', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                {label}
-              </div>
-            ))}
+            {energyRows.map(({ label }) => {
+              const labelKey = label.startsWith('Excedente') ? 'Excedentes' : label;
+              const cor = barData.find(b => b.name === labelKey)?.fill || '#111';
+              return (
+                <div key={label} style={{ height: 45, display: 'flex', alignItems: 'center', justifyContent: 'center', color: cor, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  {label}
+                </div>
+              );
+            })}
             {/* Gap = XAxis height */}
             <div style={{ height: 30 }} />
             {/* Descriptions otros */}
