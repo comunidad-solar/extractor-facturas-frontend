@@ -206,7 +206,7 @@ export default function FacturaUpload() {
     if (params.get("interno-asesores") !== "false") {
       if (!params.has("interno-asesores")) {
         params.set("interno-asesores", "true");
-        window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
+        window.history.replaceState({}, "", `${window.location.origin}/?${params.toString()}`);
       }
       setModoAsesor(true);
     }
