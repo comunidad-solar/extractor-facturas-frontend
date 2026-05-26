@@ -122,9 +122,9 @@ const SectionRow = ({ label }) => (
 // ─── Bar chart data builder ───────────────────────────────────────────────────
 const buildBarData = (gb, produto) => [
   ...(produto === 'AR' ? [{ name: 'Autoconsumo remoto', value: gb.autoconsumo_remoto_kwh, fill: '#A5D6A7' }] : []),
-  { name: 'Energía del mercado', value: gb.energia_mercado_kwh, fill: '#FFDF3C' },
-  { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,      fill: '#ADE272' },
-  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#ADF4E5' },
+  { name: 'Energía del mercado', value: gb.energia_mercado_kwh, fill: '#fcd823' },
+  { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,      fill: '#9ee151' },
+  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#85f4dc' },
 ];
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -395,8 +395,13 @@ export default function FacturaPreview({ data = null }) {
         </div>
       </div>
 
+      {/* ── Ícone monedero ────────────────────────────────────────────────── */}
+      <div style={{ padding: '22px 52px 0px', display: 'flex', alignItems: 'center' }}>
+        <img src="/monedero.svg" alt="" style={{ width: 36, height: 36 }} />
+      </div>
+
       {/* ── Tabla detallada ────────────────────────────────────────────────── */}
-      <div style={{ padding: '0 32px 28px', borderTop: '1px solid #eee', overflowX: 'auto' }}>
+      <div style={{ padding: '0 32px 28px', overflowX: 'auto' }}>
         <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', marginBottom: 12, paddingTop: 16, borderBottom: '2px solid #7CB342', paddingBottom: 4 }}>
           MÁS INFORMACIÓN SOBRE TU FACTURA
         </p>
