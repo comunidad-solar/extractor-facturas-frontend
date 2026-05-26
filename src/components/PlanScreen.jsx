@@ -170,22 +170,20 @@ export default function PlanScreen({
             </div>
           )}
 
-          {/* Columna derecha: imagen */}
-          <div className="cs-plan-hero-img" style={{ flex:"0 0 auto", display:"flex", alignItems:"flex-start" }}>
+          {/* Columna derecha: imagen + ¿Tienes dudas? */}
+          <div className="cs-plan-hero-img" style={{ flex:"0 0 auto", display:"flex", flexDirection:"column", alignItems:"flex-end", gap:40, marginBottom: 40 }}>
             <img
               src={ceFotoUrl || "/Intersect.png"}
               alt="Instalación solar"
-              style={{ width:300, height:340, objectFit:"cover", borderRadius:20, display:"block" }}
+              style={{ width:460, height:500, objectFit:"cover", borderRadius:20, display:"block" }}
             />
+            <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+              <span style={{ fontSize:13, color:"#777", fontWeight:500 }}>¿Tienes dudas?</span>
+              <button className="cs-btn-asesor" onClick={() => {}}>
+                Contacta con tu asesor
+              </button>
+            </div>
           </div>
-        </div>
-
-        {/* ¿Tienes dudas? — dentro del hero, fondo beige, alineado a la derecha */}
-        <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:18, marginTop:28, paddingTop:20, borderTop:"1px solid rgba(0,0,0,0.10)" }}>
-          <span style={{ fontSize:13, color:"#777", fontWeight:500 }}>¿Tienes dudas?</span>
-          <button className="cs-btn-asesor" onClick={() => {}}>
-            Contacta con tu asesor
-          </button>
         </div>
       </div>
 
@@ -258,7 +256,7 @@ export default function PlanScreen({
 
           {/* Conector → */}
           <div className="cs-plan-connector">
-            <span style={{ fontSize:26, color:"#EF931D", fontWeight:700, lineHeight:1 }}>→</span>
+            <img src="/Arrow.svg" alt="→" style={{ width:52, height:52 }} />
           </div>
 
           {/* Tarjeta Destino — domicilio */}
