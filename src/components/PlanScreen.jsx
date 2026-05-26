@@ -103,18 +103,18 @@ export default function PlanScreen({
         <div className="cs-plan-hero">
           {modoAlquiler ? (
             /* HERO ALQUILER */
-            <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column" }}>
-              <p style={{ fontSize:20, fontWeight:500, marginBottom:6, color:"#121212" }}>
-                Hola <strong>{cliente.nombre}</strong>, estás a un paso de
+            <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column", fontFamily:"'Montserrat', sans-serif" }}>
+              <p style={{ fontSize:22, fontWeight:500, marginBottom:8, color:"#121212", fontFamily:"'Montserrat', sans-serif" }}>
+                <strong style={{ fontWeight:800 }}>Hola {cliente.nombre}</strong>, estás a un paso de
               </p>
-              <p className="cs-plan-hero-title" style={{ fontSize:46, fontWeight:800, lineHeight:1.1, marginBottom:20, color:"#EF931D" }}>
-                ahorrar un {planData?.ahorroAnualPercent ?? 30}% en tu<br />factura de la luz
+              <p className="cs-plan-hero-title" style={{ fontSize:48, fontWeight:700, lineHeight:1.05, marginBottom:0, color:"#121212", fontFamily:"'Montserrat', sans-serif" }}>
+                <span style={{ color:"#EF931D" }}>ahorrar un {planData?.ahorroAnualPercent ?? 30}%</span>
+                <br />
+                
               </p>
-              <p style={{ fontSize:16, fontWeight:400, marginBottom:2, color:"#121212" }}>
-                Este es tu fantástico plan en la Comunidad Energética de
-              </p>
-              <p style={{ fontSize:16, fontWeight:700, color:"#121212", marginBottom:28 }}>
-                {ceNombre || "—"}.
+               <p style={{ fontSize:42, fontWeight:700, marginBottom:8, color:"#121212", fontFamily:"'Montserrat', sans-serif" }}>en tu factura de la luz</p>
+              <p style={{ fontSize:16, fontWeight:400, color:"#121212", marginTop:20, marginBottom:28, fontFamily:"'Montserrat', sans-serif" }}>
+                Este es tu fantástico plan en la Comunidad Energética de <strong style={{ fontWeight:700 }}>{ceNombre || "—"}</strong>.
               </p>
               <div style={{ background:"#fff", borderRadius:16, padding:"22px 26px", display:"inline-block", maxWidth:400, boxShadow:"0 6px 28px rgba(0,0,0,0.11)" }}>
                 <p style={{ fontSize:21, color:"#121212", marginBottom:2, display:"flex", alignItems:"center", gap:6 }}>
