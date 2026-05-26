@@ -395,6 +395,11 @@ export default function FacturaPreview({ data = null }) {
         </div>
       </div>
 
+      {/* ── Ícone monedero ────────────────────────────────────────────────── */}
+      <div style={{ padding: '22px 52px 0px', display: 'flex', alignItems: 'center' }}>
+        <img src="/monedero.svg" alt="" style={{ width: 36, height: 36 }} />
+      </div>
+
       {/* ── Tabla detallada ────────────────────────────────────────────────── */}
       <div style={{ padding: '0 32px 28px', overflowX: 'auto' }}>
         <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', marginBottom: 12, paddingTop: 16, borderBottom: '2px solid #7CB342', paddingBottom: 4 }}>
