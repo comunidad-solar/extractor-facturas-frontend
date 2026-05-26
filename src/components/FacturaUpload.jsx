@@ -1618,7 +1618,7 @@ export default function FacturaUpload() {
       setDniError("El DNI es obligatorio"); return;
     }
     if (!validarDNI(dniContrato.trim())) {
-      setDniError("El DNI no es válido"); return;
+      setDniError("El DNI o NIE no es válido"); return;
     }
     if (!ibanContrato.trim()) {
       setIbanError("El IBAN es obligatorio"); return;
@@ -3395,14 +3395,14 @@ export default function FacturaUpload() {
               Confirmar contratación
             </h3>
             <p style={{ fontSize:13, color:"#777", marginBottom:24 }}>
-              Introduce tu DNI para completar la contratación.
+              Introduce tu DNI o NIE para completar la contratación.
             </p>
 
             <div className="cs-field-group" style={{ marginBottom:16 }}>
-              <label className="cs-label">DNI</label>
+              <label className="cs-label">DNI / NIE</label>
               <input
                 className={`cs-input${dniError ? " error" : ""}`}
-                placeholder="12345678A"
+                placeholder="12345678A o X1234567A"
                 value={dniContrato}
                 onChange={(e) => { setDniContrato(e.target.value); setDniError(""); }}
                 onKeyDown={(e) => e.key === "Enter" && handleContratar()}
