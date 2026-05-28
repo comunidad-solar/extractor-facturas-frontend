@@ -12,6 +12,24 @@ import {
 // ── Validação de valor ────────────────────────────────────────────────────────
 export const hasValue = (v) => v !== null && v !== undefined && v !== "" && v != 0;
 
+// ── Lista de espera ───────────────────────────────────────────────────────────
+// Determina o motivo de espera com base no estado da CE e no número de paneles
+// pretendidos vs disponíveis. Devolve:
+//   - "Sin plazas" se panelesSel > panelesDisponibles
+//   - "Quoting"    se a CE não está "Available" mas o cliente está em zona
+//   - null         se o cliente pode contratar normalmente
+//
+// Regra única partilhada entre PlanScreen (payload 09) e handleContratar (payload 08).
+export function calcularMotivoDeEspera({ ceStatus, fsmstate, panelesDisponibles, panelesSel }) {
+  if (panelesDisponibles != null && panelesSel != null && panelesDisponibles < panelesSel) {
+    return "Sin plazas";
+  }
+  if (fsmstate === "01_DENTRO_ZONA" && ceStatus !== "Available") {
+    return "Quoting";
+  }
+  return null;
+}
+
 // Objeto inicial para campos manuais do passo 2
 export const emptyManual = () =>
   Object.fromEntries(

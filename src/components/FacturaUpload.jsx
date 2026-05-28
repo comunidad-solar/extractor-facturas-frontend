@@ -17,7 +17,7 @@ import {
 import {
   hasValue, emptyManual, resolverIdGeneracion, getCeNombreById,
   haversineDistance, buildPayloadAsesor, enviarLead,
-  validarDNI, validarIBAN, sugerirMeses3TD,
+  validarDNI, validarIBAN, sugerirMeses3TD, calcularMotivoDeEspera,
 } from "../utils/facturaUtils";
 import OptimizerModal from "./OptimizerModal";
 import PlanScreen from "./PlanScreen";
@@ -1804,28 +1804,20 @@ export default function FacturaUpload() {
     // motivoDeEspera — habitualmente null en este flujo (el cliente sólo llega aquí si
     // puedeContratar=true en PlanScreen, es decir CE Available y hay plazas). Recalculamos
     // por defensa para que el backend reciba el motivo si alguna condición cambió en
-    // medio (race con refresh de sesión, etc.).
+    // medio (race con refresh de sesión, etc.). Usa o util partilhado com PlanScreen 09.
     const ceStatusEffH = ceStatus || sdCe.status || urlRef.ce?.status || "";
     const fsmEffH      = Fsmstate || sd?.Fsmstate || urlRef.fsmstate || "";
     const panelesDispEffH = cePanelesDisponibles ?? sdCe.paneles_disponibles ?? null;
-    let motivoDeEspera = null;
-    if (panelesDispEffH != null && panelesSel != null && panelesDispEffH < panelesSel) {
-      motivoDeEspera = "Sin plazas";
-    } else if (fsmEffH === "01_DENTRO_ZONA" && ceStatusEffH !== "Available") {
-      motivoDeEspera = "Quoting";
-    }
-    console.log("[handleContratar] motivoDeEspera calculado:", {
-      motivoDeEspera,
+    const motivoDeEspera = calcularMotivoDeEspera({
+      ceStatus: ceStatusEffH,
+      fsmstate: fsmEffH,
+      panelesDisponibles: panelesDispEffH,
+      panelesSel,
+    });
+    console.log("[handleContratar] motivoDeEspera calculado:", motivoDeEspera, {
       panelesDisp_state: cePanelesDisponibles,
       panelesDisp_sesion: sdCe.paneles_disponibles,
-      panelesDispEffH,
-      panelesSel,
-      ceStatusEffH,
-      fsmEffH,
-      reglaAplicada:
-        motivoDeEspera === "Sin plazas" ? "panelesDispEffH < panelesSel" :
-        motivoDeEspera === "Quoting"    ? "01_DENTRO_ZONA y ceStatus != Available" :
-        "ninguna (null, esperado en flujo Contratar normal)",
+      panelesDispEffH, panelesSel, ceStatusEffH, fsmEffH,
     });
 
     const payload = {
@@ -2233,6 +2225,24 @@ export default function FacturaUpload() {
               if (cotizacionEnviadaRef.current) return;
               cotizacionEnviadaRef.current = true;
               const sessionIdCotiz = extractSessionId ?? localStorage.getItem("cs_session_id") ?? null;
+
+              // Calcular motivoDeEspera ANTES de construir o payload — mesma regra que handleContratar
+              // (para o backend/Zoho poder preparar lista de espera mesmo antes do utilizador clicar)
+              const _ceStatusCotiz   = data?.ce?.status    ?? ceStatus    ?? "";
+              const _fsmCotiz        = data?.Fsmstate      ?? Fsmstate    ?? "";
+              const _panelesDispCotiz = data?.ce?.paneles_disponibles ?? cePanelesDisponibles ?? null;
+              const _motivoEsperaCotiz = calcularMotivoDeEspera({
+                ceStatus: _ceStatusCotiz,
+                fsmstate: _fsmCotiz,
+                panelesDisponibles: _panelesDispCotiz,
+                panelesSel: planData?.panelesSel ?? panelesSel ?? null,
+              });
+              const _listaDeEsperaCotiz = _motivoEsperaCotiz !== null;
+              console.log("[09_COTIZACION_ALQ] motivoDeEspera:", _motivoEsperaCotiz, "listaDeEspera:", _listaDeEsperaCotiz, {
+                ceStatus: _ceStatusCotiz, fsm: _fsmCotiz,
+                panelesDisp: _panelesDispCotiz, panelesSel: planData?.panelesSel ?? panelesSel ?? null,
+              });
+
               const sendCotiz = () => {
                 const cotizPayload = {
                   plan_url: window.location.href,
@@ -2245,7 +2255,9 @@ export default function FacturaUpload() {
                     iban:           "",
                     tipoVenta:      modoAlquiler ? "Alquiler" : "Venta",
                     planContratado: false,
+                    listaDeEspera:  _listaDeEsperaCotiz,
                   },
+                  motivoDeEspera: _motivoEsperaCotiz,
                   Fsmstate:    "09_COTIZACION_ALQ",
                   FsmPrevious: data?.Fsmstate ?? Fsmstate ?? null,
                   session_id:  sessionIdCotiz,
