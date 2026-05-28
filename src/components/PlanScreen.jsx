@@ -292,11 +292,11 @@ export default function PlanScreen({
                 </>
               )}
             </div>
-            {/* Fianza — solo alquiler */}
+            {/* Depósito de garantía — solo alquiler */}
             {modoAlquiler && (
               <div style={{ border:"2px solid transparent", borderRadius:14, padding:"18px 18px", display:"flex", flexDirection:"column", gap:4, background:"linear-gradient(white, white) padding-box, linear-gradient(to bottom, #EF931D, #2EC4C4) border-box", alignItems:"center" }}>
                 <p style={{ fontSize:28, fontWeight:800, color:"#121212", lineHeight:1 }}>{fmtES((cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0) * 2)}€</p>
-                <p style={{ fontSize:11, fontWeight:600, color:"#000000", marginTop:5 }}>Fianza</p>
+                <p style={{ fontSize:11, fontWeight:600, color:"#000000", marginTop:5 }}>Depósito de garantía</p>
               </div>
             )}
           </div>
