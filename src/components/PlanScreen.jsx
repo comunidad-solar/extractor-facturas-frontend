@@ -175,11 +175,17 @@ export default function PlanScreen({
             <img
               src={ceFotoUrl || "/Intersect.png"}
               alt="Instalación solar"
-              style={{ width:460, height:500, objectFit:"cover", borderRadius:20, display:"block" }}
+              style={{
+                width:460, height:500, objectFit:"cover", display:"block",
+                ...(ceFotoUrl ? {
+                  borderRadius: 0,
+                  clipPath: "path('M433.1 0 C448.1 0 460 12.1 460 27.1 V472.9 C460 487.8 448.1 500 433.2 500 H316.5 C302.9 500 292.3 486.9 281.6 478.5 C277.1 475.0 271.4 472.9 265.2 472.9 H24.5 C11.0 472.9 0 461.8 0 448.2 V51.8 C0 38.1 11.0 27.1 24.5 27.1 H153.1 C159.4 27.1 165.0 24.9 169.5 21.4 C180.2 13.1 190.9 0 204.3 0 H433.1 Z')",
+                } : { borderRadius: 20 }),
+              }}
             />
             <div style={{ display:"flex", alignItems:"center", gap:14 }}>
               <span style={{ fontSize:13, color:"#777", fontWeight:500 }}>¿Tienes dudas?</span>
-              <button className="cs-btn-asesor" onClick={() => {}}>
+              <button className="cs-btn-asesor" onClick={() => window.open("https://comunidadsolar.zohobookings.eu/#/108535000001261056", "_blank")}>
                 Contacta con tu asesor
               </button>
             </div>
@@ -313,7 +319,7 @@ export default function PlanScreen({
                 <tr><td>Producción de energía anual estimada*</td><td>{fmtES(planData?.produccionAnual ?? 4101.25)} kWh</td></tr>
                 <tr><td>Ahorro anual medio estimado**</td><td>{fmtES(planData?.ahorroAnual ?? 522.48)} €</td></tr>
                 {modoAlquiler ? (
-                  <tr><td>Precio mensual</td><td>{fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)} €</td></tr>
+                  <tr><td>Cuota mensual</td><td>{fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)} €</td></tr>
                 ) : (
                   <>
                     <tr><td>Ahorro total estimado durante 25 años*</td><td>{fmtES(planData?.ahorro25Anos ?? 15707.25)} €</td></tr>
@@ -401,29 +407,29 @@ export default function PlanScreen({
 
             {tabActiva === "como" && (
               <div>
-                <p style={{ marginBottom:10 }}>Al pulsar <strong>"Contratar"</strong>, comenzaremos a generar tres documentos:</p>
-                <ul style={{ paddingLeft:20, marginBottom:10, lineHeight:1.7 }}>
+                <p style={{ marginBottom:10 }}>Al pulsar <strong>"Contratar"</strong>, comenzaremos a generar 5 documentos:</p>
+                <ul style={{ paddingLeft:20, marginBottom:10, lineHeight:1.7, listStyleType:"disc" }}>
                   <li>Tu contrato de alquiler de paneles asociado a la comunidad energética.</li>
                   <li>Tu alta en la comercializadora de Comunidad Solar, para recibir electricidad a coste acordado.</li>
-                  <li>Firma de documento de Autorización de Gestor de Autoconsumo.</li>
+                  <li>Documento de Autorización de Gestor de Autoconsumo.</li>
+                  <li>Orden SEPA</li>
+                  <li>Documento de reparto</li>
                 </ul>
                 <p style={{ marginBottom:10 }}>Para hacer efectiva la reserva, deberás realizar en ese momento el pago de un depósito de garantía <strong>equivalente a 2 meses de tu cuota mensual.</strong></p>
-                <p style={{ marginBottom:10 }}>Tu plaza quedará bloqueada durante X <strong>días</strong>. Si no firmas la documentación en ese plazo, la reserva quedará sin efecto.</p>
-                <p style={{ marginBottom:10 }}>Una vez firmada la documentación, tendrás 48 horas para realizar el pago del depósito de garantía.</p>
+                <p style={{ marginBottom:10 }}>Tu plaza quedará bloqueada durante <strong>24 horas</strong>. Si no firmas la documentación en ese plazo, la reserva quedará sin efecto.</p>
+                <p style={{ marginBottom:10 }}>Una vez firmada la documentación, tendrás <strong>24 horas</strong> para realizar el pago del depósito de garantía y así completar todo el proceso de contratación.</p>
                 <p>Una vez la planta esté en funcionamiento, comenzarás a abonar tu cuota mensual y se aplicará un <strong>compromiso de permanencia de 1 año.</strong></p>
               </div>
             )}
 
             {tabActiva === "plan" && (
               <div>
-                <p style={{ marginBottom:10 }}>A continuación, te mostramos tu plan recomendado de participación en la Comunidad Energética <strong>{ceNombre || "—"}</strong>. Este plan está basado en el consumo eléctrico que nos has facilitado y está diseñado para que puedas ahorrar <strong>un {planData?.ahorroAnualPercent ?? 30}% en tu factura de la luz.</strong></p>
-                <p style={{ marginBottom:10 }}>Tu participación incluye la asignación de <strong>{panelesSel === 1 ? "1 panel solar" : `${panelesSel} paneles solares`},</strong> con una potencia nominal total de <strong>{fmtES(planData?.potenciaTotal)} kW,</strong> que generarán aproximadamente <strong>{fmtES(planData?.produccionAnual)} kWh</strong> de electricidad durante un periodo estimado de <strong>25 años.</strong></p>
+                <p style={{ marginBottom:10 }}>A continuación, te mostramos tu plan recomendado de participación en la Comunidad Energética <strong>{ceNombre || "—"}</strong>. Este plan está basado en el consumo eléctrico que nos has facilitado y está diseñado para que puedas ahorrar un {planData?.ahorroAnualPercent ?? 30}% en tu factura de la luz.</p>
+                <p style={{ marginBottom:10 }}>Tu participación incluye la asignación de <strong>{panelesSel === 1 ? "1 panel solar" : `${panelesSel} paneles solares`}</strong>, con una potencia nominal total de {fmtES(planData?.potenciaTotal)} kW, que generarán aproximadamente <strong>{fmtES(planData?.produccionAnual)} kWh</strong> de electricidad durante un periodo de <strong>25 años</strong>.</p>
                 <p style={{ marginBottom:10 }}>Al formar parte de la Comunidad Energética, pagarás 0€ por la energía autoconsumida, sin peajes ni márgenes comerciales.</p>
-                <p style={{ marginBottom:8 }}>Basándonos en la evolución de los precios de la energía (considerando un incremento del {planData?.ahorroAnualPercent ?? 0}% anual) se estiman los siguientes beneficios:</p>
-                <ul style={{ paddingLeft:20, marginBottom:10, lineHeight:1.7 }}>
-                  <li>Ahorro medio mensual de <strong>{fmtES(planData?.ahorroMensual)}€</strong></li>
-                  <li>Ahorro estimado anual <strong>{fmtES(planData?.ahorroAnual)}€</strong></li>
-                </ul>
+                <p style={{ marginBottom:8 }}>Basándonos en la evolución de los precios de la energía (considerando un incremento del <strong style={{ background:"#FFE066", padding:"0 2px" }}>2.5%</strong> anual) se estiman los siguientes beneficios:</p>
+                <p style={{ marginBottom:4 }}>Ahorro medio mensual de <strong>{fmtES(planData?.ahorroMensual)}€</strong></p>
+                <p style={{ marginBottom:4 }}>Ahorro estimado anual <strong>{fmtES(planData?.ahorroAnual)}€</strong></p>
               </div>
             )}
 
@@ -432,9 +438,9 @@ export default function PlanScreen({
                 <p style={{ marginBottom:10 }}>Al formar parte de la Comunidad Energética <strong>{ceNombre || "—"}</strong>, verás reflejada en tu factura de la luz la energía generada por la planta, que se asignará a tu suministro a través de tu comercializadora.</p>
                 <p style={{ marginBottom:10 }}>Desde el momento en que la planta entre en funcionamiento, comenzarás a beneficiarte de un menor coste energético, reduciendo el importe de tu factura eléctrica.</p>
                 <p style={{ marginBottom:10 }}>Podrás cambiar de comercializadora en cualquier momento, ya que no existe permanencia con la comercializadora de Comunidad Solar. La distribuidora seguirá asignando tu porcentaje de energía, y la nueva comercializadora deberá reflejarlo en tu factura.</p>
-                <p style={{ marginBottom:10 }}>Toda la energía que no consumas será vendida a la red pública a precio de mercado, y ese valor se descontará de tu factura. Para cualquier energía adicional que necesites, pagarás el precio de coste junto con los cargos regulados, sin ningún margen adicional.</p>
+                <p style={{ marginBottom:10 }}>Toda la <strong>energía que no consumas</strong> será vendida a la red pública a precio de mercado, y <strong>ese valor se descontará de tu factura</strong>. Para cualquier energía adicional que necesites, pagarás el precio de coste junto con los cargos regulados, sin ningún margen adicional.</p>
                 <p style={{ marginBottom:10 }}>Comunidad Solar no busca obtener beneficios a través de la comercializadora; este es simplemente el mecanismo necesario para llevar la energía a tu hogar.</p>
-                <p>Este es un resumen de las condiciones. Te recomendamos leer toda la documentación para conocer todos los términos y detalles.</p>
+                <p>Este es un resumen de las condiciones. Te <strong>recomendamos leer toda la documentación para conocer todos los términos y detalles.</strong></p>
               </div>
             )}
           </div>

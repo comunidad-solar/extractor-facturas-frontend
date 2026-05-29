@@ -122,9 +122,9 @@ const SectionRow = ({ label }) => (
 // ─── Bar chart data builder ───────────────────────────────────────────────────
 const buildBarData = (gb, produto) => [
   ...(produto === 'AR' ? [{ name: 'Autoconsumo remoto', value: gb.autoconsumo_remoto_kwh, fill: '#A5D6A7' }] : []),
-  { name: 'Energía del mercado', value: gb.energia_mercado_kwh, fill: '#fcd823' },
-  { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,      fill: '#9ee151' },
-  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#85f4dc' },
+  { name: 'Energía del mercado', value: gb.energia_mercado_kwh, fill: '#fed81a' },
+  { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,      fill: '#8cda32' },
+  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#6df0d4' },
 ];
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -167,9 +167,9 @@ export default function FacturaPreview({ data = null }) {
 
   const energyRows = [
     ...(d.produto === 'AR' ? [{ label: 'Autoconsumo remoto', val: r.autoconsumo_remoto, color: '#7CB342' }] : []),
-    { label: 'Energía del mercado', val: r.energia_mercado,  color: '#FFDF3C' },
-    { label: 'Autoconsumo',         val: 0,                   color: '#ADE272' },
-    { label: 'Excedente',           val: r.excedente_remoto, color: r.excedente_remoto < 0 ? '#ADF4E5' : '#111' },
+    { label: 'Energía del mercado', val: r.energia_mercado,  color: '#fed81a' },
+    { label: 'Autoconsumo',         val: 0,                   color: '#8cda32' },
+    { label: 'Excedente',           val: r.excedente_remoto, color: r.excedente_remoto < 0 ? '#6df0d4' : '#111' },
   ];
   const otherRows = [
     { label: 'Potencia',            val: r.potencia },

@@ -2457,15 +2457,20 @@ export default function FacturaUpload() {
         )}
 
         {/* ── ASESOR SOLICITADO ── */}
+        {/* Quando accionRealizada === "contratado" significa que o polling do contrato
+            (handleContratar) falhou após 8 minutos — caso raro. Mostra tela de erro
+            em vez de "¡Contrato generado!" porque o cliente não chegou a abrir o contrato. */}
         {!loading && status === "asesor_solicitado" && (
           <div className="cs-card fade-in" style={{ textAlign:"center" }}>
-            <div style={{ fontSize:48, marginBottom:16 }}>✅</div>
+            <div style={{ fontSize:48, marginBottom:16 }}>
+              {accionRealizada === "contratado" ? "⚠️" : "✅"}
+            </div>
             <h2 style={{ fontSize:20, fontWeight:700, color:"#111", marginBottom:8 }}>
-              {accionRealizada === "contratado" ? "¡Contrato generado con éxito!" : "¡Solicitud recibida!"}
+              {accionRealizada === "contratado" ? "No hemos podido generar tu contrato" : "¡Solicitud recibida!"}
             </h2>
             <p style={{ fontSize:14, color:"#555", marginBottom:28, lineHeight:1.7 }}>
               {accionRealizada === "contratado"
-                ? "Tu contrato ha sido generado con éxito y también fue enviado a tu email. Puedes cerrar esta pantalla."
+                ? "Estamos teniendo problemas para generar tu contrato. Por favor, inténtalo de nuevo."
                 : "El contrato ha sido enviado a tu email. Tienes 30 minutos para firmarlo."}
             </p>
             <button className="cs-btn-ghost" onClick={handleReset}>← Volver al inicio</button>
@@ -3420,8 +3425,14 @@ export default function FacturaUpload() {
             <h3 style={{ fontSize:18, fontWeight:700, color:"#111", marginBottom:8 }}>
               Confirmar contratación
             </h3>
-            <p style={{ fontSize:13, color:"#777", marginBottom:24 }}>
-              Introduce tu DNI o NIE para completar la contratación.
+            <p style={{ fontSize:13, color:"#555", marginBottom:6 }}>
+              Necesitamos estos datos para preparar tu contratación.
+            </p>
+            <p style={{ fontSize:12, color:"#777", marginBottom:4 }}>
+              <strong>DNI / NIE</strong> Para emitir tu contrato de alquiler de paneles y tu contrato de suministro eléctrico.
+            </p>
+            <p style={{ fontSize:12, color:"#777", marginBottom:20 }}>
+              <strong>IBAN</strong> Cuenta en la que domiciliaremos tu factura de luz con la comercializadora (orden SEPA).
             </p>
 
             <div className="cs-field-group" style={{ marginBottom:16 }}>
@@ -3451,19 +3462,21 @@ export default function FacturaUpload() {
             <div style={{ display:"flex", gap:12 }}>
               <button
                 className="cs-btn-ghost"
-                style={{ flex:1, marginTop:0 }}
+                style={{ flex:"0 0 120px", marginTop:0, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}
                 onClick={() => { setModalContratar(false); setDniContrato(""); setDniError(""); setIbanContrato(""); setIbanError(""); }}
                 disabled={enviandoContrato}
               >
-                ← Volver
+                <img src="/leftArrow.png" alt="" style={{ width:22, height:22 }} />
+                Volver
               </button>
               <button
                 className="cs-btn-primary"
-                style={{ flex:1, marginTop:0 }}
+                style={{ flex:1, marginTop:0, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}
                 onClick={handleContratar}
                 disabled={enviandoContrato}
               >
-                {enviandoContrato ? "Enviando..." : (ceStatus !== "Available" ? "Entrar en lista de espera →" : "Contratar ahora →")}
+                {enviandoContrato ? "Enviando..." : (ceStatus !== "Available" ? "Entrar en lista de espera" : "Contratar ahora")}
+                {!enviandoContrato && <img src="/rightArrow.png" alt="" style={{ width:22, height:22 }} />}
               </button>
             </div>
           </div>
