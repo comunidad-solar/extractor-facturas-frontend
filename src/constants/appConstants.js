@@ -81,7 +81,7 @@ export const PERIODOS_POR_MES_3TD = {
 export const RESTRICT_TO_CE = null;
 
 export const FACTURA_PREVIEW_MOCK_FALLBACK = false;
-export const CE_FOTO_ENABLED = false; // true = busca foto da CE via GET /ce/foto; false = usa /Intersect.png
+export const CE_FOTO_ENABLED = true; // true = busca foto da CE via GET /ce/foto; false = usa /Intersect.png
 export const FORCE_WAITING_LIST = false; // true = fuerza badge "En Espera", botón lista espera al contratar //
 export const SUMINISTRO_ZONA_CHECK = false; // true = aviso discreto si el suministro de la factura queda fuera de zona
 export const CUPS_ENABLED = false; // false = oculta opción "Introducir CUPS" en paso 2
