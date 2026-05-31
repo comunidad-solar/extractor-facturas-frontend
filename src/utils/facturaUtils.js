@@ -20,8 +20,11 @@ export const hasValue = (v) => v !== null && v !== undefined && v !== "" && v !=
 //   - null         se o cliente pode contratar normalmente
 //
 // Regra única partilhada entre PlanScreen (payload 09) e handleContratar (payload 08).
-export function calcularMotivoDeEspera({ ceStatus, fsmstate, panelesDisponibles, panelesSel }) {
+export function calcularMotivoDeEspera({ ceStatus, fsmstate, panelesDisponibles, panelesSel, excedeMinimoProprietario = false }) {
   if (panelesDisponibles != null && panelesSel != null && panelesDisponibles < panelesSel) {
+    return "Sin plazas";
+  }
+  if (excedeMinimoProprietario) {
     return "Sin plazas";
   }
   if (fsmstate === "01_DENTRO_ZONA" && ceStatus !== "Available") {

@@ -132,6 +132,7 @@ export default function FacturaUpload() {
   const [enviandoContrato, setEnviandoContrato] = useState(false);
   const [accionRealizada, setAccionRealizada]   = useState(null); // null | "contratado" | "lista_espera"
   const [motivoListaEspera, setMotivoListaEspera] = useState(null); // null | "Sin plazas" | "Quoting"
+  const excedeMinimoProprietarioRef             = useRef(false); // mirror síncrono do valor calculado na PlanScreen
   const [planAbierto, setPlanAbierto]           = useState(false);
   const [advertenciaAno, setAdvertenciaAno]     = useState(false);
   const [ibanContrato, setIbanContrato]         = useState("");
@@ -1836,6 +1837,7 @@ export default function FacturaUpload() {
       fsmstate: fsmEffH,
       panelesDisponibles: panelesDispEffH,
       panelesSel,
+      excedeMinimoProprietario: excedeMinimoProprietarioRef.current,
     });
     console.log("[handleContratar] motivoDeEspera calculado:", motivoDeEspera, {
       panelesDisp_state: cePanelesDisponibles,
@@ -2172,6 +2174,7 @@ export default function FacturaUpload() {
             onSetPanelesPropuesta={setPanelesPropuesta}
             onSetTabActiva={setTabActiva}
             onSesionError={() => setSesionError(true)}
+            onExcedeMinimoProprietario={(val) => { excedeMinimoProprietarioRef.current = val; }}
             facturaPreviewData={facturaPreviewData}
             onSesionLoaded={(data) => {
               setSesionData(data);
@@ -2279,6 +2282,7 @@ export default function FacturaUpload() {
                 fsmstate: _fsmCotiz,
                 panelesDisponibles: _panelesDispCotiz,
                 panelesSel: planData?.panelesSel ?? panelesSel ?? null,
+                excedeMinimoProprietario: excedeMinimoProprietarioRef.current,
               });
               const _listaDeEsperaCotiz = _motivoEsperaCotiz !== null;
               console.log("[09_COTIZACION_ALQ] motivoDeEspera:", _motivoEsperaCotiz, "listaDeEspera:", _listaDeEsperaCotiz, {
