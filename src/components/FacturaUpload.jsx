@@ -28,6 +28,7 @@ export default function FacturaUpload() {
   const [step, setStep] = useState(1);  // 1 | 2
   const [mode, setMode] = useState(null); // null | "pdf" | "cups"
   const [modoAsesor, setModoAsesor] = useState(false);
+  const [modoProprietario, setModoProprietario] = useState(false);
 
   // ── Step 1 — client data ─────────────────────────────────────────────────
   const [cliente, setCliente] = useState({
@@ -203,7 +204,13 @@ export default function FacturaUpload() {
       },
     };
 
-    if (params.get("interno-asesores") !== "false") {
+    // Modo proprietário — query param ?modo-proprietario=true
+    // Toma prioridade sobre modo asesor (são mutuamente exclusivos)
+    const modoProprietarioParam = params.get("modo-proprietario") === "true";
+    if (modoProprietarioParam) {
+      setModoProprietario(true);
+      console.log("[URL] modo proprietário activado via ?modo-proprietario=true");
+    } else if (params.get("interno-asesores") !== "false") {
       if (!params.has("interno-asesores")) {
         params.set("interno-asesores", "true");
         window.history.replaceState({}, "", `${window.location.origin}/?${params.toString()}`);
@@ -426,6 +433,12 @@ export default function FacturaUpload() {
           }
           if (data?.Fsmstate)    setFsmstate(data.Fsmstate);
           if (data?.FsmPrevious) setFsmPrevious(data.FsmPrevious);
+          // Hidratar modoProprietario a partir da sessão — cobre F5/clean URL.
+          // Gravado pelo backend em /continuar-proprietario e /enviar-proprietario.
+          if (data?.modoProprietario === true) {
+            console.log("[useEffect] modoProprietario detectado na sessão → activando");
+            setModoProprietario(true);
+          }
           // Hidratar modoAlquiler a partir de múltiplas fontes:
           //   1ª prioridade: data.modo (se algum dia gravado no PATCH)
           //   2ª prioridade: data.cliente.tipoVenta — sempre presente após /enviar
@@ -656,7 +669,10 @@ export default function FacturaUpload() {
       console.log("[/continuar] enviando payload:", payload);
       const fd = new FormData();
       fd.append("data", JSON.stringify(payload));
-      const res = await fetch(`${API_BASE}/continuar`, { method: "POST", body: fd });
+      // Modo proprietário usa endpoint dedicado (/continuar-proprietario) com webhook Zoho diferente
+      const continuarEndpoint = modoProprietario ? "/continuar-proprietario" : "/continuar";
+      console.log("[/continuar] endpoint:", continuarEndpoint, " modoProprietario:", modoProprietario);
+      const res = await fetch(`${API_BASE}${continuarEndpoint}`, { method: "POST", body: fd });
       if (res.ok) {
         const { session_id } = await res.json();
         console.log("[/continuar] session_id recebido:", session_id ?? null);
@@ -1292,7 +1308,10 @@ export default function FacturaUpload() {
       console.log("[handleEnviar] session_id no payload:", effectiveExtractSessionId, "(override:", sessionIdOverride, ", state:", extractSessionId, ")");
       fd.append("data", JSON.stringify(dataPayload));
       if (mode === "pdf" && file) fd.append("file", file, file.name);
-      const resEnviar  = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
+      // Modo proprietário usa endpoint dedicado (/enviar-proprietario) com webhook Zoho diferente
+      const enviarEndpoint = modoProprietario ? "/enviar-proprietario" : "/enviar";
+      console.log("[handleEnviar] endpoint:", enviarEndpoint, " modoProprietario:", modoProprietario);
+      const resEnviar  = await fetch(`${API_BASE}${enviarEndpoint}`, { method: "POST", body: fd });
       const dataEnviar = await resEnviar.json().catch(() => ({}));
       if (!resEnviar.ok) {
         const detail = typeof dataEnviar.detail === "string" ? dataEnviar.detail : JSON.stringify(dataEnviar.detail) || `HTTP ${resEnviar.status}`;
@@ -2042,6 +2061,20 @@ export default function FacturaUpload() {
             🔒 Modo interno — Asesores
           </div>
         )}
+        {/* Indicador modo proprietário */}
+        {modoProprietario && !(loading && loadingMsg === "Preparando tu contrato...") && (
+          <div style={{
+            textAlign: "center",
+            fontSize: 11,
+            fontWeight: 600,
+            color: "#1FA84E",
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            marginBottom: 8,
+          }}>
+            🏠 Modo Proprietario
+          </div>
+        )}
 
         {/* ── LOADING CONTRATO — header próprio com logo grande + fones ── */}
         {loading && loadingMsg === "Preparando tu contrato..." && (
@@ -2120,6 +2153,7 @@ export default function FacturaUpload() {
             ceStatus={ceStatus}
             cePanelesDisponibles={cePanelesDisponibles}
             modoAlquiler={modoAlquiler}
+            modoProprietario={modoProprietario}
             cuotaAlquilerMes={cuotaAlquilerMes}
             planData={planData}
             panelesSel={panelesSel}
@@ -2290,7 +2324,10 @@ export default function FacturaUpload() {
                 };
                 const fdCotiz = new FormData();
                 fdCotiz.append("data", JSON.stringify(cotizPayload));
-                fetch(`${API_BASE}/enviar`, { method: "POST", body: fdCotiz }).catch(() => {});
+                // Modo proprietário usa endpoint dedicado (/enviar-proprietario)
+                const cotizEndpoint = modoProprietario ? "/enviar-proprietario" : "/enviar";
+                console.log("[09_COTIZACION_ALQ] endpoint:", cotizEndpoint, " modoProprietario:", modoProprietario);
+                fetch(`${API_BASE}${cotizEndpoint}`, { method: "POST", body: fdCotiz }).catch(() => {});
               };
               sendCotiz();
             }}
@@ -2480,7 +2517,7 @@ export default function FacturaUpload() {
         {/* ── STEP 1 — Datos del cliente ── */}
         {!loading && status !== "sent" && status !== "fuera_zona" && status !== "asesor_solicitado" && status !== "lista_espera" && step === 1 && (
           <div style={{ position: 'relative', width: '100%', maxWidth: 620 }}>
-            {(import.meta.env.DEV || window.location.hostname.split(".")[0] === "develop") && (
+            {(import.meta.env.DEV || window.location.hostname.split(".")[0] === "develop" || modoProprietario) && (
               <div style={{ position: 'absolute', left: -140, top: 0 }}>
                 <select
                   onChange={e => handleDevCESelect(e.target.value)}
