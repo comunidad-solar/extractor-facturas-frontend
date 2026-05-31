@@ -81,12 +81,17 @@ export default function PlanScreen({
     if (onExcedeMinimoProprietario) onExcedeMinimoProprietario(excedeMinimoProprietario);
   }, [excedeMinimoProprietario]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cargar coeficientes del propietario para validar cupo antes de contratar
+  // id_generacion para buscar coeficientes del propietario —
+  // pode vir da URL (primeira carga) ou da sessão (após onSesionLoaded)
+  const [idGenCE, setIdGenCE] = useState(
+    () => new URLSearchParams(window.location.search).get("id_generacion") ?? null
+  );
+
+  // Cargar coeficientes del propietario cuando idGenCE esté disponible
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const idGen = params.get("id_generacion") ?? planData?.idGeneracion ?? null;
-    if (!idGen) return;
-    fetch(`${API_BASE}/ce/proprietario-coef?id_generacion=${encodeURIComponent(idGen)}`)
+    if (!idGenCE) return;
+    console.log("[PlanScreen] buscando coef propietario para id_generacion:", idGenCE);
+    fetch(`${API_BASE}/ce/proprietario-coef?id_generacion=${encodeURIComponent(idGenCE)}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data) {
@@ -95,7 +100,7 @@ export default function PlanScreen({
         }
       })
       .catch(() => {}); // si falla no bloqueamos
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [idGenCE]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!CE_FOTO_ENABLED || !ceNombre) return;
@@ -118,6 +123,9 @@ export default function PlanScreen({
       })
       .then(data => {
         setSesionData(data);
+        // Propagar id_generacion da sessão para disparar fetch do coef propietario
+        const idGenFromSesion = data?.ce?.id_generacion ? String(data.ce.id_generacion) : null;
+        if (idGenFromSesion) setIdGenCE(prev => prev ?? idGenFromSesion);
         if (onSesionLoaded) onSesionLoaded(data);
       })
       .catch(() => {
