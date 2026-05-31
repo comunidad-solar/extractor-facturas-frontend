@@ -25,12 +25,15 @@ export default function PlanScreen({
   onSetTabActiva,
   onSesionError,
   onSesionLoaded,
+  onExcedeMinimoProprietario,
   facturaPreviewData = null,
 }) {
   // eslint-disable-next-line no-unused-vars
   const [sesionData, setSesionData] = useState(sesionDataProp ?? null);
   const [sesionFailed, setSesionFailed] = useState(false);
   const [ceFotoUrl, setCeFotoUrl] = useState(null);
+  // Coeficientes del propietario — null = aún cargando o sin participación (no bloqueamos)
+  const [coefProprietario, setCoefProprietario] = useState(null);
 
   const yaContratado = accionRealizada === "contratado";
   const yaEnEspera   = accionRealizada === "lista_espera";
@@ -38,20 +41,61 @@ export default function PlanScreen({
   // Sin plazas — cuando Paneles_disponibles del CRM es menor que panelesSel del cliente.
   // Si paneles_disponibles es null/undefined no bloqueamos (no podemos afirmar que no haya plazas).
   const sinPlazas = cePanelesDisponibles != null && panelesSel != null && cePanelesDisponibles < panelesSel;
-  // El botón "Contratar" sólo abre el modal cuando la CE está Available Y hay plazas.
+
+  // excedeMinimoProprietario: el coeficiente del cliente supera el espacio disponible
+  // por encima del mínimo garantido al propietario.
+  //   disponible = coeficiente_cajon - coeficiente_reparto (reparto null → 0)
+  //   coeficiente_cliente = coeficienteDistribucion (calculado por el cotizador para panelesSel)
+  //   si coeficiente_cliente > disponible → excedeMinimoProprietario → lista de espera
+  // Si coefProprietario es null (sin participación de propietario) → no bloqueamos.
+  const excedeMinimoProprietario = (() => {
+    if (!coefProprietario) return false;
+    const coefReparto = coefProprietario.coeficiente_reparto ?? 0; // null → tratar como 0
+    const coefCajon   = coefProprietario.coeficiente_cajon;
+    if (coefCajon == null) return false; // sin cajón definido → no bloqueamos
+    const coefCliente = planData?.coeficienteDistribucion ?? 0;
+    const disponible  = coefCajon - coefReparto;
+    const bloqueado   = coefCliente > disponible + 1e-9; // tolerancia float
+    console.log("[PlanScreen] excedeMinimoProprietario:", { coefReparto, coefCajon, disponible, coefCliente, bloqueado });
+    return bloqueado;
+  })();
+
+  // El botón "Contratar" sólo abre el modal cuando la CE está Available Y hay plazas Y hay cupo.
   // En caso contrario va a la lista de espera (sin mensaje extra — comportamiento silencioso).
-  const puedeContratar = ceStatus === "Available" && !sinPlazas;
+  const puedeContratar = ceStatus === "Available" && !sinPlazas && !excedeMinimoProprietario;
 
   console.log("[PlanScreen] cálculo paneles:", {
     cePanelesDisponibles,
     panelesSel,
     ceStatus,
     sinPlazas,
+    excedeMinimoProprietario,
     puedeContratar,
     rama: puedeContratar ? "→ Contratar (modal)" : "→ Lista de espera",
   });
 
 
+
+  // Notificar pai sempre que excedeMinimoProprietario mudar (para payload 08/09)
+  useEffect(() => {
+    if (onExcedeMinimoProprietario) onExcedeMinimoProprietario(excedeMinimoProprietario);
+  }, [excedeMinimoProprietario]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cargar coeficientes del propietario para validar cupo antes de contratar
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const idGen = params.get("id_generacion") ?? planData?.idGeneracion ?? null;
+    if (!idGen) return;
+    fetch(`${API_BASE}/ce/proprietario-coef?id_generacion=${encodeURIComponent(idGen)}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) {
+          console.log("[PlanScreen] coef propietario recibido:", data);
+          setCoefProprietario(data);
+        }
+      })
+      .catch(() => {}); // si falla no bloqueamos
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!CE_FOTO_ENABLED || !ceNombre) return;
