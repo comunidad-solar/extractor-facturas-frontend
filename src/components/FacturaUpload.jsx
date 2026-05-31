@@ -1338,12 +1338,16 @@ export default function FacturaUpload() {
       localStorage.setItem("cs_mode",       mode              ?? "");
       localStorage.setItem("cs_session_id", sessionIdRecebido ?? "");
 
-      // Abrir Cotizador em nova aba com URL simplificada
+      // Abrir Cotizador — mesma aba em modo proprietário, nova aba nos restantes
       const idGenResolvido = resolverIdGeneracion(idGeneracion, ceNombre);
       const redirectUrl = `${PLAN_REDIRECT_URL}?coming-from-extractor=true&id_generacion=${encodeURIComponent(idGenResolvido ?? "")}&session_id=${encodeURIComponent(sessionIdRecebido ?? "")}`;
       console.log("[handleEnviar] redirect URL:", redirectUrl);
       setLoading(false);
-      window.open(redirectUrl, "_blank");
+      if (modoProprietario) {
+        window.location.href = redirectUrl;
+      } else {
+        window.open(redirectUrl, "_blank");
+      }
       setPlanAbierto(true);
 
       // O plano é calculado e mostrado no Cotizador (nova aba) — não chamar QUOTING_URL aqui
@@ -2172,6 +2176,11 @@ export default function FacturaUpload() {
             onSesionLoaded={(data) => {
               setSesionData(data);
               if (data?.facturaPreview) setFacturaPreviewData(data.facturaPreview);
+              // Hidratar modoProprietario a partir da sessão (gravado por /enviar-proprietario)
+              if (data?.modoProprietario === true) {
+                console.log("[onSesionLoaded] modoProprietario detectado na sessão → activando");
+                setModoProprietario(true);
+              }
               // Hidratar planData / panelesSel / cuotaAlquilerMes / modoAlquiler a partir do
               // `plan` da sessão DB. Cobre cenário "outro navegador / 10 dias depois" onde a
               // URL chega só com session_id e o state local ainda não tem o plan.
@@ -2324,9 +2333,10 @@ export default function FacturaUpload() {
                 };
                 const fdCotiz = new FormData();
                 fdCotiz.append("data", JSON.stringify(cotizPayload));
-                // Modo proprietário usa endpoint dedicado (/enviar-proprietario)
-                const cotizEndpoint = modoProprietario ? "/enviar-proprietario" : "/enviar";
-                console.log("[09_COTIZACION_ALQ] endpoint:", cotizEndpoint, " modoProprietario:", modoProprietario);
+                // Modo proprietário — ler da sessão (data) porque o state ainda não foi re-renderizado
+                const isModoProprietarioCotiz = data?.modoProprietario === true || modoProprietario;
+                const cotizEndpoint = isModoProprietarioCotiz ? "/enviar-proprietario" : "/enviar";
+                console.log("[09_COTIZACION_ALQ] endpoint:", cotizEndpoint, " modoProprietario:", isModoProprietarioCotiz);
                 fetch(`${API_BASE}${cotizEndpoint}`, { method: "POST", body: fdCotiz }).catch(() => {});
               };
               sendCotiz();
