@@ -10,14 +10,15 @@ import {
   FIELD_LABELS, MANUAL_FIELD_KEYS, PRECIOS_POT_3TD_KEYS,
   PRECIOS_ENERGIA_BASE_KEYS, PRECIOS_ENERGIA_3TD_KEYS, API_AUTO_KEYS,
   PERIODOS_POR_MES_3TD, TARIFAS_MULTI_FACTURA,
-  CE_API_URL, API_BASE, SESION_URL, PLAN_REDIRECT_URL, QUOTING_URL, LEAD_URL,
+  CE_API_URL, API_BASE, SESION_URL, PLAN_REDIRECT_URL, QUOTING_URL, LEAD_URL, AR_CALCULATOR_URL,
   NOMINATIM_URL, CE_STATUS_LABELS, CE_ESTATUS_MAP,
-  ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL, RESTRICT_TO_CE, FORCE_WAITING_LIST, SUMINISTRO_ZONA_CHECK, CUPS_ENABLED, ASESOR_ENABLED,
+  ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL, RESTRICT_TO_CE, FORCE_WAITING_LIST, SUMINISTRO_ZONA_CHECK, CUPS_MATCH_CHECK, CUPS_ENABLED, ASESOR_ENABLED,
 } from "../constants/appConstants";
 import {
   hasValue, emptyManual, resolverIdGeneracion, getCeNombreById,
   haversineDistance, buildPayloadAsesor, enviarLead,
-  validarDNI, validarIBAN, sugerirMeses3TD,
+  validarDNI, validarIBAN, sugerirMeses3TD, calcularMotivoDeEspera,
+  mismoCups, findCeSeleccionada, suministroDentroDeZona, buildArCalculatorURL,
 } from "../utils/facturaUtils";
 import OptimizerModal from "./OptimizerModal";
 import PlanScreen from "./PlanScreen";
@@ -28,10 +29,13 @@ export default function FacturaUpload() {
   const [step, setStep] = useState(1);  // 1 | 2
   const [mode, setMode] = useState(null); // null | "pdf" | "cups"
   const [modoAsesor, setModoAsesor] = useState(false);
+  const [modoProprietario, setModoProprietario] = useState(false);
+  const [showCeSelector, setShowCeSelector] = useState(false); // seletor CE oculto; toggle ao clicar no texto do modo
 
   // ── Step 1 — client data ─────────────────────────────────────────────────
   const [cliente, setCliente] = useState({
-    nombre: "", apellidos: "", correo: "", telefono: "", direccion: "",
+    nombre: "", apellidos: "", empresa: "", correo: "", telefono: "", direccion: "",
+    PessoaJuridica: false,
   });
   const [clienteErrors, setClienteErrors] = useState({});
 
@@ -91,6 +95,8 @@ export default function FacturaUpload() {
   const [error2, setError2]                     = useState("");           // PDF inválido (3ª)
   const [errorMes1, setErrorMes1]               = useState(false);        // mês não coincide (2ª)
   const [errorMes2, setErrorMes2]               = useState(false);        // mês não coincide (3ª)
+  const [errorCups1, setErrorCups1]             = useState(false);        // CUPS não coincide (2ª)
+  const [errorCups2, setErrorCups2]             = useState(false);        // CUPS não coincide (3ª)
   const [mesesSugeridos1, setMesesSugeridos1]   = useState([]); // sugestões para 2ª fatura
   const [mesesSugeridos2, setMesesSugeridos2]   = useState([]); // sugestões para 3ª fatura
   const [modalConfirmarEnvio, setModalConfirmarEnvio] = useState(false);
@@ -115,6 +121,7 @@ export default function FacturaUpload() {
   const [tabActiva, setTabActiva]     = useState("como"); // "como" | "plan" | "condiciones"
   const [modoAlquiler, setModoAlquiler]         = useState(false);
   const [cuotaAlquilerMes, setCuotaAlquilerMes] = useState(null);
+  const importeDeposito = cuotaAlquilerMes != null ? String(cuotaAlquilerMes * 2) : null;
   const [extractSessionId,  setExtractSessionId]  = useState(null);
   const [extract1SessionId, setExtract1SessionId] = useState(null);
   const [extract2SessionId, setExtract2SessionId] = useState(null);
@@ -130,6 +137,7 @@ export default function FacturaUpload() {
   const [enviandoContrato, setEnviandoContrato] = useState(false);
   const [accionRealizada, setAccionRealizada]   = useState(null); // null | "contratado" | "lista_espera"
   const [motivoListaEspera, setMotivoListaEspera] = useState(null); // null | "Sin plazas" | "Quoting"
+  const excedeMinimoProprietarioRef             = useRef(false); // mirror síncrono do valor calculado na PlanScreen
   const [planAbierto, setPlanAbierto]           = useState(false);
   const [advertenciaAno, setAdvertenciaAno]     = useState(false);
   const [ibanContrato, setIbanContrato]         = useState("");
@@ -202,10 +210,16 @@ export default function FacturaUpload() {
       },
     };
 
-    if (params.get("interno-asesores") !== "false") {
+    // Modo proprietário — query param ?modo-proprietario=true
+    // Toma prioridade sobre modo asesor (são mutuamente exclusivos)
+    const modoProprietarioParam = params.get("modo-proprietario") === "true";
+    if (modoProprietarioParam) {
+      setModoProprietario(true);
+      console.log("[URL] modo proprietário activado via ?modo-proprietario=true");
+    } else if (params.get("interno-asesores") !== "false") {
       if (!params.has("interno-asesores")) {
         params.set("interno-asesores", "true");
-        window.history.replaceState({}, "", `${window.location.pathname}?${params.toString()}`);
+        window.history.replaceState({}, "", `${window.location.origin}/?${params.toString()}`);
       }
       setModoAsesor(true);
     }
@@ -277,6 +291,8 @@ export default function FacturaUpload() {
       setCliente(c => ({
         nombre:    c.nombre    || cleanUrl(s("cliente.nombre"))    || cleanUrl(s("nombre"))    || "",
         apellidos: c.apellidos || cleanUrl(s("cliente.apellidos")) || cleanUrl(s("apellidos")) || "",
+        empresa:   c.empresa   || cleanUrl(s("cliente.empresa"))   || cleanUrl(s("empresa"))   || "",
+        PessoaJuridica: c.PessoaJuridica || s("PessoaJuridica") === "true" || s("cliente.PessoaJuridica") === "true",
         correo:    c.correo    || cleanUrl(s("cliente.correo"))    || cleanUrl(s("correo"))    || "",
         telefono:  c.telefono  || cleanUrl(s("cliente.telefono"))  || cleanUrl(s("telefono"))  || "",
         direccion: c.direccion || cleanUrl(s("cliente.direccion")) || cleanUrl(s("direccion")) || "",
@@ -313,6 +329,8 @@ export default function FacturaUpload() {
         setCliente(prev => ({
           nombre:    prev.nombre    || c.nombre    || "",
           apellidos: prev.apellidos || c.apellidos || "",
+          empresa:   prev.empresa   || c.empresa   || "",
+          PessoaJuridica: prev.PessoaJuridica || !!c.PessoaJuridica,
           correo:    prev.correo    || c.correo    || "",
           telefono:  prev.telefono  || c.telefono  || "",
           direccion: prev.direccion || c.direccion || "",
@@ -402,15 +420,19 @@ export default function FacturaUpload() {
             setCliente(prev => ({
               nombre:    prev.nombre    || data.cliente.nombre    || "",
               apellidos: prev.apellidos || data.cliente.apellidos || "",
+              empresa:   prev.empresa   || data.cliente.empresa   || "",
+              PessoaJuridica: prev.PessoaJuridica || !!data.cliente.PessoaJuridica,
               correo:    prev.correo    || data.cliente.correo    || "",
               telefono:  prev.telefono  || data.cliente.telefono  || "",
               direccion: prev.direccion || data.cliente.direccion || "",
             }));
-            if (data.cliente.dealId)   setDealId(data.cliente.dealId);
-            if (data.cliente.mpklogId) setMpklogId(data.cliente.mpklogId);
+            if (data.cliente.dealId)   { setDealId(data.cliente.dealId);     urlParamsRef.current.dealId   = data.cliente.dealId;   }
+            if (data.cliente.mpklogId) { setMpklogId(data.cliente.mpklogId); urlParamsRef.current.mpklogId = data.cliente.mpklogId; }
           }
-          if (data?.dealId)   setDealId(prev   => prev || data.dealId);
-          if (data?.mpklogId) setMpklogId(prev => prev || data.mpklogId);
+          if (data?.dealId)   { setDealId(prev   => prev || data.dealId);   if (data.dealId)   urlParamsRef.current.dealId   = data.dealId;   }
+          const mpklogFromVerification = data?.verification?.mpklog_id ?? null;
+          const mpklogResolved = data?.mpklogId ?? mpklogFromVerification;
+          if (mpklogResolved) { setMpklogId(prev => prev || mpklogResolved); urlParamsRef.current.mpklogId = mpklogResolved; }
           if (data?.ce) {
             if (data.ce.nombre)        setCeNombre(data.ce.nombre);
             if (data.ce.status)        setCeStatus(data.ce.status);
@@ -423,6 +445,12 @@ export default function FacturaUpload() {
           }
           if (data?.Fsmstate)    setFsmstate(data.Fsmstate);
           if (data?.FsmPrevious) setFsmPrevious(data.FsmPrevious);
+          // Hidratar modoProprietario a partir da sessão — cobre F5/clean URL.
+          // Gravado pelo backend em /continuar-proprietario e /enviar-proprietario.
+          if (data?.modoProprietario === true) {
+            console.log("[useEffect] modoProprietario detectado na sessão → activando");
+            setModoProprietario(true);
+          }
           // Hidratar modoAlquiler a partir de múltiplas fontes:
           //   1ª prioridade: data.modo (se algum dia gravado no PATCH)
           //   2ª prioridade: data.cliente.tipoVenta — sempre presente após /enviar
@@ -470,7 +498,7 @@ export default function FacturaUpload() {
     try {
       const sidUrl = params.get("session_id");
       if (sidUrl) {
-        const cleanUrl = `${window.location.pathname}?session_id=${encodeURIComponent(sidUrl)}`;
+        const cleanUrl = `${window.location.origin}/?session_id=${encodeURIComponent(sidUrl)}`;
         // Sólo aplica si la URL actual tiene más params que session_id
         if (window.location.search && window.location.search !== `?session_id=${encodeURIComponent(sidUrl)}`) {
           window.history.replaceState({}, "", cleanUrl);
@@ -557,8 +585,12 @@ export default function FacturaUpload() {
 
   const validateCliente = () => {
     const errs = {};
-    if (!cliente.nombre.trim())     errs.nombre    = "Obligatorio";
-    if (!cliente.apellidos.trim())  errs.apellidos = "Obligatorio";
+    if (cliente.PessoaJuridica) {
+      if (!cliente.empresa.trim())  errs.empresa = "Obligatorio";
+    } else {
+      if (!cliente.nombre.trim())     errs.nombre    = "Obligatorio";
+      if (!cliente.apellidos.trim())  errs.apellidos = "Obligatorio";
+    }
     if (!cliente.correo.trim())     errs.correo    = "Obligatorio";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cliente.correo.trim()))
       errs.correo = "Introduce un correo electrónico válido";
@@ -645,7 +677,7 @@ export default function FacturaUpload() {
   const chamarContinuar = async (ceResult) => {
     try {
       const payload = {
-        cliente: { nombre: cliente.nombre, apellidos: cliente.apellidos, correo: cliente.correo, telefono: cliente.telefono, direccion: cliente.direccion },
+        cliente: { nombre: cliente.nombre, apellidos: cliente.apellidos, empresa: cliente.empresa, PessoaJuridica: !!cliente.PessoaJuridica, correo: cliente.correo, telefono: cliente.telefono, direccion: cliente.direccion },
         ce: { nombre: ceResult?.ceNombre ?? ceNombre, direccion: ceResult?.ceDireccion ?? ceDireccion, status: FORCE_WAITING_LIST ? "Waiting list" : (ceResult?.ceStatus ?? ceStatus), etiqueta: ceResult?.ceEtiqueta ?? ceEtiqueta, id_generacion: ceResult?.idGeneracion || resolverIdGeneracion(idGeneracion, ceResult?.ceNombre ?? ceNombre), paneles_disponibles: ceResult?.panelesDisponibles ?? cePanelesDisponibles ?? null, paneles_a_la_venta: ceResult?.panelesALaVenta ?? cePanelesALaVenta ?? null, paneles_totales: ceResult?.panelesTotales ?? cePanelesTotales ?? null },
         Fsmstate: ceResult?.fsmstate ?? "02_FUERA_ZONA",
         FsmPrevious: null,
@@ -653,7 +685,10 @@ export default function FacturaUpload() {
       console.log("[/continuar] enviando payload:", payload);
       const fd = new FormData();
       fd.append("data", JSON.stringify(payload));
-      const res = await fetch(`${API_BASE}/continuar`, { method: "POST", body: fd });
+      // Modo proprietário usa endpoint dedicado (/continuar-proprietario) com webhook Zoho diferente
+      const continuarEndpoint = modoProprietario ? "/continuar-proprietario" : "/continuar";
+      console.log("[/continuar] endpoint:", continuarEndpoint, " modoProprietario:", modoProprietario);
+      const res = await fetch(`${API_BASE}${continuarEndpoint}`, { method: "POST", body: fd });
       if (res.ok) {
         const { session_id } = await res.json();
         console.log("[/continuar] session_id recebido:", session_id ?? null);
@@ -906,14 +941,34 @@ export default function FacturaUpload() {
       setSuministroLon(data.suministro_lon ?? null);
       setNombreCliente(data.nombre_cliente ?? null);
       setDireccionSuministro(data.direccion_suministro ?? null);
+      // Verificação: o ponto de fornecimento da factura está dentro da zona da CE selecionada?
+      setZonaWarn("");
+      let fueraDeZona = false;
       if (SUMINISTRO_ZONA_CHECK && data.suministro_lat && data.suministro_lon) {
         const ces = listaCERef.current.length > 0 ? listaCERef.current : listaCE;
-        if (ces && ces.length > 0) {
-          const dentroZona = ces.some(ce =>
-            haversineDistance(data.suministro_lat, data.suministro_lon, parseFloat(ce.lat), parseFloat(ce.lng)) <= parseFloat(ce.radioMetros)
-          );
-          if (!dentroZona) setZonaWarn("El punto de suministro de la factura está fuera de la zona de cobertura.");
+        const ceSel = findCeSeleccionada(ces, { idGeneracion, ceNombre });
+        const dentro = suministroDentroDeZona(data.suministro_lat, data.suministro_lon, ceSel);
+        const distancia = ceSel ? Math.round(haversineDistance(data.suministro_lat, data.suministro_lon, parseFloat(ceSel.lat), parseFloat(ceSel.lng))) : null;
+        console.log("🏠 [Verificación dirección factura]", {
+          suministro: { lat: data.suministro_lat, lon: data.suministro_lon, direccion: data.direccion_suministro ?? null },
+          ceSeleccionada: ceSel ? { nombre: ceSel.name || ceSel.addressName, lat: ceSel.lat, lng: ceSel.lng, radioMetros: ceSel.radioMetros } : null,
+          distanciaMetros: distancia,
+          dentroDeZona: dentro,
+          resultado: dentro === false ? "FUERA DE ZONA ⚠️" : (dentro === true ? "Dentro de zona ✅" : "Sin datos suficientes"),
+        });
+        if (dentro === false) {
+          fueraDeZona = true;
+          setZonaWarn(
+  `La dirección de la factura está fuera de la zona de la Comunidad Energética${ceSel?.name || ceNombre ? ` ${ceSel?.name || ceNombre}` : ""}. Suba una factura con la misma dirección que introdujo anteriormente.`
+);
         }
+      }
+      // Fora de zona: bloqueia — mostra a tela analisada com o aviso e NÃO envia ao cotizador
+      if (fueraDeZona) {
+        console.log("🚫 [Bloqueo] Factura fuera de zona — no se envía al cotizador");
+        setStatus("analyzed");
+        setLoading(false);
+        return;
       }
       const facturaBuiltPDF = {
         ...buildFactura({ ...flat, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), modo: modoAlquiler ? "alquiler" : "venta" }),
@@ -963,7 +1018,7 @@ export default function FacturaUpload() {
       setError1("Archivo no válido. Asegúrate de que sea una factura en formato PDF.");
       return;
     }
-    setFile1(f); setLoading1(true); setError1(""); setErrorMes1(false);
+    setFile1(f); setLoading1(true); setError1(""); setErrorMes1(false); setErrorCups1(false);
     try {
       const fd = new FormData();
       fd.append("file", f, f.name);
@@ -972,6 +1027,18 @@ export default function FacturaUpload() {
       const data = await res.json();
 
       const flat1 = flattenFacturaResponse(data);
+      // CUPS deve coincidir com o da primeira factura (mesmo ponto de fornecimento)
+      const cupsOk1 = mismoCups(flat1.cups, facturaData?.cups);
+      console.log("🔌 [Verificación CUPS — 2ª factura]", {
+        cupsPrimera: facturaData?.cups ?? null,
+        cupsSegunda: flat1.cups ?? null,
+        coincide: cupsOk1,
+        resultado: cupsOk1 ? "Mismo punto de suministro ✅" : "CUPS DISTINTO ⚠️",
+      });
+      if (CUPS_MATCH_CHECK && !cupsOk1) {
+        setErrorCups1(true);
+        setFile1(null); setLoading1(false); return;
+      }
       const mes1 = parseInt(facturaData?.periodo_fin?.split("/")?.[1]);
       const mes2 = parseInt(flat1.periodo_fin?.split("/")?.[1]);
       // Mês deve estar nos sugeridos (e diferente do da 1ª)
@@ -1004,7 +1071,7 @@ export default function FacturaUpload() {
       setError2("Archivo no válido. Asegúrate de que sea una factura en formato PDF.");
       return;
     }
-    setFile2(f); setLoading2(true); setError2(""); setErrorMes2(false);
+    setFile2(f); setLoading2(true); setError2(""); setErrorMes2(false); setErrorCups2(false);
     try {
       const fd = new FormData();
       fd.append("file", f, f.name);
@@ -1013,6 +1080,18 @@ export default function FacturaUpload() {
       const data = await res.json();
 
       const flat2 = flattenFacturaResponse(data);
+      // CUPS deve coincidir com o da primeira factura (mesmo ponto de fornecimento)
+      const cupsOk2 = mismoCups(flat2.cups, facturaData?.cups);
+      console.log("🔌 [Verificación CUPS — 3ª factura]", {
+        cupsPrimera: facturaData?.cups ?? null,
+        cupsTercera: flat2.cups ?? null,
+        coincide: cupsOk2,
+        resultado: cupsOk2 ? "Mismo punto de suministro ✅" : "CUPS DISTINTO ⚠️",
+      });
+      if (CUPS_MATCH_CHECK && !cupsOk2) {
+        setErrorCups2(true);
+        setFile2(null); setLoading2(false); return;
+      }
       const mes1 = parseInt(facturaData?.periodo_fin?.split("/")?.[1]);
       const mes3 = parseInt(flat2.periodo_fin?.split("/")?.[1]);
       const mesesSugeridosMes3 = mesesSugeridos2.map(({ mes }) => mes);
@@ -1070,6 +1149,8 @@ export default function FacturaUpload() {
   const buildClientePayload = (overrideDealId = null, overrideMpklogId = null) => ({
     nombre:     cliente.nombre,
     apellidos:  cliente.apellidos,
+    empresa:    cliente.empresa,
+    PessoaJuridica: !!cliente.PessoaJuridica,
     correo:     cliente.correo,
     telefono:   cliente.telefono,
     direccion:  cliente.direccion,
@@ -1113,6 +1194,7 @@ export default function FacturaUpload() {
       alq_eq_dia:       d.alq_eq_dia       || null,
       bono_social:      d.bono_social      ?? null,
       cuotaAlquilerMes: d.cuotaAlquilerMes ?? null,
+      importeDeposito:  d.cuotaAlquilerMes != null ? String(d.cuotaAlquilerMes * 2) : null,
       consumo_periodo1_kwh:        d.consumo_periodo1_kwh        ?? null,
       precio_periodo1_eur_kwh:     d.precio_periodo1_eur_kwh     ?? null,
       importe_periodo1_eur:        d.importe_periodo1_eur        ?? null,
@@ -1249,8 +1331,8 @@ export default function FacturaUpload() {
 
         // Guardar dados flat para restaurar após redirect do Cotizador (modo asesor)
         const facturaFlatAsesor = mode === "pdf"
-          ? { ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null }
-          : { cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null };
+          ? { ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null, importeDeposito: importeDeposito ?? null }
+          : { cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null, importeDeposito: importeDeposito ?? null };
         localStorage.setItem("cs_cliente",    JSON.stringify({ ...buildClientePayload(dealIdRecebido, mpklogIdRecebido) }));
         localStorage.setItem("cs_factura",    JSON.stringify(facturaFlatAsesor));
         localStorage.setItem("cs_ce",         JSON.stringify(cePayload));
@@ -1288,7 +1370,10 @@ export default function FacturaUpload() {
       console.log("[handleEnviar] session_id no payload:", effectiveExtractSessionId, "(override:", sessionIdOverride, ", state:", extractSessionId, ")");
       fd.append("data", JSON.stringify(dataPayload));
       if (mode === "pdf" && file) fd.append("file", file, file.name);
-      const resEnviar  = await fetch(`${API_BASE}/enviar`, { method: "POST", body: fd });
+      // Modo proprietário usa endpoint dedicado (/enviar-proprietario) com webhook Zoho diferente
+      const enviarEndpoint = modoProprietario ? "/enviar-proprietario" : "/enviar";
+      console.log("[handleEnviar] endpoint:", enviarEndpoint, " modoProprietario:", modoProprietario);
+      const resEnviar  = await fetch(`${API_BASE}${enviarEndpoint}`, { method: "POST", body: fd });
       const dataEnviar = await resEnviar.json().catch(() => ({}));
       if (!resEnviar.ok) {
         const detail = typeof dataEnviar.detail === "string" ? dataEnviar.detail : JSON.stringify(dataEnviar.detail) || `HTTP ${resEnviar.status}`;
@@ -1304,8 +1389,8 @@ export default function FacturaUpload() {
       // Guardar dados para restaurar após redirect do Cotizador
       // cs_factura em formato flat (não estruturado) — buildFactura() espera pot_p1_kw, pe_p1, etc.
       const facturaFlat = mode === "pdf"
-        ? { ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null }
-        : { cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null };
+        ? { ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null, importeDeposito: importeDeposito ?? null }
+        : { cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null, importeDeposito: importeDeposito ?? null };
       localStorage.setItem("cs_cliente",    JSON.stringify({ ...buildClientePayload(dealIdRecebido, mpklogIdRecebido) }));
       localStorage.setItem("cs_factura",    JSON.stringify(facturaFlat));
       localStorage.setItem("cs_ce",         JSON.stringify({ nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null, paneles_a_la_venta: cePanelesALaVenta ?? null, paneles_totales: cePanelesTotales ?? null }));
@@ -1315,12 +1400,16 @@ export default function FacturaUpload() {
       localStorage.setItem("cs_mode",       mode              ?? "");
       localStorage.setItem("cs_session_id", sessionIdRecebido ?? "");
 
-      // Abrir Cotizador em nova aba com URL simplificada
+      // Abrir Cotizador — mesma aba em modo proprietário, nova aba nos restantes
       const idGenResolvido = resolverIdGeneracion(idGeneracion, ceNombre);
       const redirectUrl = `${PLAN_REDIRECT_URL}?coming-from-extractor=true&id_generacion=${encodeURIComponent(idGenResolvido ?? "")}&session_id=${encodeURIComponent(sessionIdRecebido ?? "")}`;
       console.log("[handleEnviar] redirect URL:", redirectUrl);
       setLoading(false);
-      window.open(redirectUrl, "_blank");
+      if (modoProprietario) {
+        window.location.href = redirectUrl;
+      } else {
+        window.open(redirectUrl, "_blank");
+      }
       setPlanAbierto(true);
 
       // O plano é calculado e mostrado no Cotizador (nova aba) — não chamar QUOTING_URL aqui
@@ -1391,11 +1480,11 @@ export default function FacturaUpload() {
     let factura;
     if (modeEff === "pdf") {
       factura = facturaData
-        ? ensureStructured({ ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null })
+        ? ensureStructured({ ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null, importeDeposito: importeDeposito ?? null })
         : ensureStructured(sdFactura ?? facturaLS);
     } else if (modeEff === "cups") {
       factura = cupsData
-        ? ensureStructured({ cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null })
+        ? ensureStructured({ cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null, importeDeposito: importeDeposito ?? null })
         : ensureStructured(sdFactura ?? facturaLS);
     } else {
       factura = ensureStructured(sdFactura ?? facturaLS ?? rawData);
@@ -1436,6 +1525,8 @@ export default function FacturaUpload() {
       cliente: {
         nombre:         cliente.nombre    || sdCliente.nombre    || cleanUrl(urlCli.nombre)    || "",
         apellidos:      cliente.apellidos || sdCliente.apellidos || cleanUrl(urlCli.apellidos) || "",
+        empresa:        cliente.empresa   || sdCliente.empresa   || cleanUrl(urlCli.empresa)   || "",
+        PessoaJuridica: !!(cliente.PessoaJuridica ?? sdCliente.PessoaJuridica),
         correo:         cliente.correo    || sdCliente.correo    || cleanUrl(urlCli.correo)    || "",
         telefono:       cliente.telefono  || sdCliente.telefono  || cleanUrl(urlCli.telefono)  || "",
         direccion:      cliente.direccion || sdCliente.direccion || cleanUrl(urlCli.direccion) || "",
@@ -1481,6 +1572,7 @@ export default function FacturaUpload() {
         plazoRecuperacion:       planData?.plazoRecuperacion,
         panelesSel:              planData?.panelesSel,
         cuotaAlquilerMes:        planData?.cuotaAlquilerMes,
+        importeDeposito:         importeDeposito ?? null,
       },
       ce: {
         nombre:        ceNombre    || sdCe.nombre    || urlRef.ce?.nombre    || "",
@@ -1615,7 +1707,7 @@ export default function FacturaUpload() {
       setDniError("El DNI es obligatorio"); return;
     }
     if (!validarDNI(dniContrato.trim())) {
-      setDniError("El DNI no es válido"); return;
+      setDniError("El DNI o NIE no es válido"); return;
     }
     if (!ibanContrato.trim()) {
       setIbanError("El IBAN es obligatorio"); return;
@@ -1664,11 +1756,11 @@ export default function FacturaUpload() {
     let factura;
     if (modeEff === "pdf") {
       factura = facturaData
-        ? ensureStructured({ ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null })
+        ? ensureStructured({ ...facturaData, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), cuotaAlquilerMes: cuotaAlquilerMes ?? null, importeDeposito: importeDeposito ?? null })
         : ensureStructured(sdFactura ?? facturaLS);
     } else if (modeEff === "cups") {
       factura = cupsData
-        ? ensureStructured({ cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null })
+        ? ensureStructured({ cups, ...cupsData, ...manualFields, cuotaAlquilerMes: cuotaAlquilerMes ?? null, importeDeposito: importeDeposito ?? null })
         : ensureStructured(sdFactura ?? facturaLS);
     } else {
       factura = ensureStructured(sdFactura ?? facturaLS ?? rawData);
@@ -1694,6 +1786,8 @@ export default function FacturaUpload() {
         const clientePre = {
           nombre:    cliente.nombre    || urlCli.nombre    || "",
           apellidos: cliente.apellidos || urlCli.apellidos || "",
+          empresa:   cliente.empresa   || urlCli.empresa   || "",
+          PessoaJuridica: !!cliente.PessoaJuridica,
           correo:    cliente.correo    || urlCli.correo    || "",
           telefono:  cliente.telefono  || urlCli.telefono  || "",
           direccion: cliente.direccion || urlCli.direccion || "",
@@ -1799,34 +1893,29 @@ export default function FacturaUpload() {
     // motivoDeEspera — habitualmente null en este flujo (el cliente sólo llega aquí si
     // puedeContratar=true en PlanScreen, es decir CE Available y hay plazas). Recalculamos
     // por defensa para que el backend reciba el motivo si alguna condición cambió en
-    // medio (race con refresh de sesión, etc.).
+    // medio (race con refresh de sesión, etc.). Usa o util partilhado com PlanScreen 09.
     const ceStatusEffH = ceStatus || sdCe.status || urlRef.ce?.status || "";
     const fsmEffH      = Fsmstate || sd?.Fsmstate || urlRef.fsmstate || "";
     const panelesDispEffH = cePanelesDisponibles ?? sdCe.paneles_disponibles ?? null;
-    let motivoDeEspera = null;
-    if (panelesDispEffH != null && panelesSel != null && panelesDispEffH < panelesSel) {
-      motivoDeEspera = "Sin plazas";
-    } else if (fsmEffH === "01_DENTRO_ZONA" && ceStatusEffH !== "Available") {
-      motivoDeEspera = "Quoting";
-    }
-    console.log("[handleContratar] motivoDeEspera calculado:", {
-      motivoDeEspera,
+    const motivoDeEspera = calcularMotivoDeEspera({
+      ceStatus: ceStatusEffH,
+      fsmstate: fsmEffH,
+      panelesDisponibles: panelesDispEffH,
+      panelesSel,
+      excedeMinimoProprietario: excedeMinimoProprietarioRef.current,
+    });
+    console.log("[handleContratar] motivoDeEspera calculado:", motivoDeEspera, {
       panelesDisp_state: cePanelesDisponibles,
       panelesDisp_sesion: sdCe.paneles_disponibles,
-      panelesDispEffH,
-      panelesSel,
-      ceStatusEffH,
-      fsmEffH,
-      reglaAplicada:
-        motivoDeEspera === "Sin plazas" ? "panelesDispEffH < panelesSel" :
-        motivoDeEspera === "Quoting"    ? "01_DENTRO_ZONA y ceStatus != Available" :
-        "ninguna (null, esperado en flujo Contratar normal)",
+      panelesDispEffH, panelesSel, ceStatusEffH, fsmEffH,
     });
 
     const payload = {
       cliente: {
         nombre:         cliente.nombre    || sdCliente.nombre    || cleanUrl(urlCli.nombre)    || "",
         apellidos:      cliente.apellidos || sdCliente.apellidos || cleanUrl(urlCli.apellidos) || "",
+        empresa:        cliente.empresa   || sdCliente.empresa   || cleanUrl(urlCli.empresa)   || "",
+        PessoaJuridica: !!(cliente.PessoaJuridica ?? sdCliente.PessoaJuridica),
         correo:         cliente.correo    || sdCliente.correo    || cleanUrl(urlCli.correo)    || "",
         telefono:       cliente.telefono  || sdCliente.telefono  || cleanUrl(urlCli.telefono)  || "",
         direccion:      cliente.direccion || sdCliente.direccion || cleanUrl(urlCli.direccion) || "",
@@ -1873,6 +1962,7 @@ export default function FacturaUpload() {
         plazoRecuperacion:       planData?.plazoRecuperacion,
         panelesSel:              planData?.panelesSel,
         cuotaAlquilerMes:        planData?.cuotaAlquilerMes,
+        importeDeposito:         importeDeposito ?? null,
         ahorroAnualPercent:      planData?.ahorroAnualPercent,
       },
       ce: {
@@ -1970,7 +2060,7 @@ export default function FacturaUpload() {
     setStep(1); setMode(null); setFile(null); setFacturaData(null);
     setCups(""); setCupsData(null); setManualFields(emptyManual());
     setError(""); setStatus("idle"); setSending(false); setClienteErrors({});
-    setCliente({ nombre: "", apellidos: "", correo: "", telefono: "", direccion: "" });
+    setCliente({ nombre: "", apellidos: "", empresa: "", correo: "", telefono: "", direccion: "", PessoaJuridica: false });
     setFsmstate(""); setFsmPrevious(null); setCeNombre(""); setCeDireccion(""); setZonaWarn("");
     setUserCoords(null); setNominatimSuggestions([]); setShowDropdown(false);
     setCeDistancia(null); setCeRadio(null); setPlanData(null); setPanelesSel(3);
@@ -2032,16 +2122,40 @@ export default function FacturaUpload() {
 
         {/* Indicador modo asesor */}
         {modoAsesor && !(loading && loadingMsg === "Preparando tu contrato...") && (
-          <div style={{
-            textAlign: "center",
-            fontSize: 11,
-            fontWeight: 600,
-            color: "#E48409",
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            marginBottom: 8,
-          }}>
+          <div
+            onClick={() => setShowCeSelector(v => !v)}
+            title="Mostrar/ocultar selector de CE"
+            style={{
+              textAlign: "center",
+              fontSize: 11,
+              fontWeight: 600,
+              color: "#E48409",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              marginBottom: 8,
+              cursor: "pointer",
+              userSelect: "none",
+            }}>
             🔒 Modo interno — Asesores
+          </div>
+        )}
+        {/* Indicador modo proprietário */}
+        {modoProprietario && !(loading && loadingMsg === "Preparando tu contrato...") && (
+          <div
+            onClick={() => setShowCeSelector(v => !v)}
+            title="Mostrar/ocultar selector de CE"
+            style={{
+              textAlign: "center",
+              fontSize: 11,
+              fontWeight: 600,
+              color: "#1FA84E",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              marginBottom: 8,
+              cursor: "pointer",
+              userSelect: "none",
+            }}>
+            🏠 Modo Proprietario
           </div>
         )}
 
@@ -2122,6 +2236,8 @@ export default function FacturaUpload() {
             ceStatus={ceStatus}
             cePanelesDisponibles={cePanelesDisponibles}
             modoAlquiler={modoAlquiler}
+            modoProprietario={modoProprietario}
+            zonaWarn={zonaWarn}
             cuotaAlquilerMes={cuotaAlquilerMes}
             planData={planData}
             panelesSel={panelesSel}
@@ -2136,10 +2252,16 @@ export default function FacturaUpload() {
             onSetPanelesPropuesta={setPanelesPropuesta}
             onSetTabActiva={setTabActiva}
             onSesionError={() => setSesionError(true)}
+            onExcedeMinimoProprietario={(val) => { excedeMinimoProprietarioRef.current = val; }}
             facturaPreviewData={facturaPreviewData}
             onSesionLoaded={(data) => {
               setSesionData(data);
               if (data?.facturaPreview) setFacturaPreviewData(data.facturaPreview);
+              // Hidratar modoProprietario a partir da sessão (gravado por /enviar-proprietario)
+              if (data?.modoProprietario === true) {
+                console.log("[onSesionLoaded] modoProprietario detectado na sessão → activando");
+                setModoProprietario(true);
+              }
               // Hidratar planData / panelesSel / cuotaAlquilerMes / modoAlquiler a partir do
               // `plan` da sessão DB. Cobre cenário "outro navegador / 10 dias depois" onde a
               // URL chega só com session_id e o state local ainda não tem o plan.
@@ -2188,19 +2310,28 @@ export default function FacturaUpload() {
                   }
                   return data.dealId;
                 });
+                urlParamsRef.current.dealId = data.dealId;
               }
-              if (data?.mpklogId) {
+              const mpklogFromVerif = data?.verification?.mpklog_id ?? null;
+              const mpklogResolvedPS = data?.mpklogId ?? data?.cliente?.mpklogId ?? mpklogFromVerif ?? null;
+              if (mpklogResolvedPS) {
                 setMpklogId(prev => {
-                  if (prev && prev !== data.mpklogId) {
-                    console.warn("[PlanScreen/sesion] mpklogId sobrescrito:", { antes: prev, depois: data.mpklogId });
+                  if (prev && prev !== mpklogResolvedPS) {
+                    console.warn("[PlanScreen/sesion] mpklogId sobrescrito:", { antes: prev, depois: mpklogResolvedPS });
                   }
-                  return data.mpklogId;
+                  return mpklogResolvedPS;
                 });
+                urlParamsRef.current.mpklogId = mpklogResolvedPS;
               }
+              if (data?.dealId)            { urlParamsRef.current.dealId   = data.dealId;            }
+              if (data?.cliente?.dealId)   { urlParamsRef.current.dealId   = data.cliente.dealId;    }
+              if (data?.cliente?.mpklogId) { urlParamsRef.current.mpklogId = data.cliente.mpklogId;  }
               if (data?.cliente) {
                 setCliente(prev => ({
                   nombre:    prev.nombre    || data.cliente.nombre    || "",
                   apellidos: prev.apellidos || data.cliente.apellidos || "",
+                  empresa:   prev.empresa   || data.cliente.empresa   || "",
+                  PessoaJuridica: prev.PessoaJuridica || !!data.cliente.PessoaJuridica,
                   correo:    prev.correo    || data.cliente.correo    || "",
                   telefono:  prev.telefono  || data.cliente.telefono  || "",
                   direccion: prev.direccion || data.cliente.direccion || "",
@@ -2211,10 +2342,34 @@ export default function FacturaUpload() {
                 if (planContratado || listaDeEspera) cotizacionEnviadaRef.current = true;
               }
 
+              // Si la sesión ya tiene Fsmstate 09 o 08, no reenviar
+              if (data?.Fsmstate && ["09_COTIZACION_ALQ", "08_PROPUESTA_ALQ"].includes(data.Fsmstate)) {
+                cotizacionEnviadaRef.current = true;
+              }
+
               // Notificar Zoho que el usuario llegó a la pantalla del plan (só uma vez)
               if (cotizacionEnviadaRef.current) return;
               cotizacionEnviadaRef.current = true;
               const sessionIdCotiz = extractSessionId ?? localStorage.getItem("cs_session_id") ?? null;
+
+              // Calcular motivoDeEspera ANTES de construir o payload — mesma regra que handleContratar
+              // (para o backend/Zoho poder preparar lista de espera mesmo antes do utilizador clicar)
+              const _ceStatusCotiz   = data?.ce?.status    ?? ceStatus    ?? "";
+              const _fsmCotiz        = data?.Fsmstate      ?? Fsmstate    ?? "";
+              const _panelesDispCotiz = data?.ce?.paneles_disponibles ?? cePanelesDisponibles ?? null;
+              const _motivoEsperaCotiz = calcularMotivoDeEspera({
+                ceStatus: _ceStatusCotiz,
+                fsmstate: _fsmCotiz,
+                panelesDisponibles: _panelesDispCotiz,
+                panelesSel: planData?.panelesSel ?? panelesSel ?? null,
+                excedeMinimoProprietario: excedeMinimoProprietarioRef.current,
+              });
+              const _listaDeEsperaCotiz = _motivoEsperaCotiz !== null;
+              console.log("[09_COTIZACION_ALQ] motivoDeEspera:", _motivoEsperaCotiz, "listaDeEspera:", _listaDeEsperaCotiz, {
+                ceStatus: _ceStatusCotiz, fsm: _fsmCotiz,
+                panelesDisp: _panelesDispCotiz, panelesSel: planData?.panelesSel ?? panelesSel ?? null,
+              });
+
               const sendCotiz = () => {
                 const cotizPayload = {
                   plan_url: window.location.href,
@@ -2227,7 +2382,9 @@ export default function FacturaUpload() {
                     iban:           "",
                     tipoVenta:      modoAlquiler ? "Alquiler" : "Venta",
                     planContratado: false,
+                    listaDeEspera:  _listaDeEsperaCotiz,
                   },
+                  motivoDeEspera: _motivoEsperaCotiz,
                   Fsmstate:    "09_COTIZACION_ALQ",
                   FsmPrevious: data?.Fsmstate ?? Fsmstate ?? null,
                   session_id:  sessionIdCotiz,
@@ -2245,6 +2402,7 @@ export default function FacturaUpload() {
                     plazoRecuperacion:       planData?.plazoRecuperacion,
                     panelesSel:              planData?.panelesSel,
                     cuotaAlquilerMes:        planData?.cuotaAlquilerMes,
+                    importeDeposito:         importeDeposito ?? null,
                   },
                   ce: {
                     nombre:        data?.ce?.nombre        ?? ceNombre    ?? "",
@@ -2259,7 +2417,11 @@ export default function FacturaUpload() {
                 };
                 const fdCotiz = new FormData();
                 fdCotiz.append("data", JSON.stringify(cotizPayload));
-                fetch(`${API_BASE}/enviar`, { method: "POST", body: fdCotiz }).catch(() => {});
+                // Modo proprietário — ler da sessão (data) porque o state ainda não foi re-renderizado
+                const isModoProprietarioCotiz = data?.modoProprietario === true || modoProprietario;
+                const cotizEndpoint = isModoProprietarioCotiz ? "/enviar-proprietario" : "/enviar";
+                console.log("[09_COTIZACION_ALQ] endpoint:", cotizEndpoint, " modoProprietario:", isModoProprietarioCotiz);
+                fetch(`${API_BASE}${cotizEndpoint}`, { method: "POST", body: fdCotiz }).catch(() => {});
               };
               sendCotiz();
             }}
@@ -2311,7 +2473,7 @@ export default function FacturaUpload() {
             </p>
 
             <a
-              href="#"
+              href={buildArCalculatorURL(AR_CALCULATOR_URL, cliente)}
               style={{
                 display:"block",
                 width:"100%",
@@ -2426,15 +2588,20 @@ export default function FacturaUpload() {
         )}
 
         {/* ── ASESOR SOLICITADO ── */}
+        {/* Quando accionRealizada === "contratado" significa que o polling do contrato
+            (handleContratar) falhou após 8 minutos — caso raro. Mostra tela de erro
+            em vez de "¡Contrato generado!" porque o cliente não chegou a abrir o contrato. */}
         {!loading && status === "asesor_solicitado" && (
           <div className="cs-card fade-in" style={{ textAlign:"center" }}>
-            <div style={{ fontSize:48, marginBottom:16 }}>✅</div>
+            <div style={{ fontSize:48, marginBottom:16 }}>
+              {accionRealizada === "contratado" ? "⚠️" : "✅"}
+            </div>
             <h2 style={{ fontSize:20, fontWeight:700, color:"#111", marginBottom:8 }}>
-              {accionRealizada === "contratado" ? "¡Contrato generado con éxito!" : "¡Solicitud recibida!"}
+              {accionRealizada === "contratado" ? "No hemos podido generar tu contrato" : "¡Solicitud recibida!"}
             </h2>
             <p style={{ fontSize:14, color:"#555", marginBottom:28, lineHeight:1.7 }}>
               {accionRealizada === "contratado"
-                ? "Tu contrato ha sido generado con éxito y también fue enviado a tu email. Puedes cerrar esta pantalla."
+                ? "Estamos teniendo problemas para generar tu contrato. Por favor, inténtalo de nuevo."
                 : "El contrato ha sido enviado a tu email. Tienes 30 minutos para firmarlo."}
             </p>
             <button className="cs-btn-ghost" onClick={handleReset}>← Volver al inicio</button>
@@ -2444,7 +2611,7 @@ export default function FacturaUpload() {
         {/* ── STEP 1 — Datos del cliente ── */}
         {!loading && status !== "sent" && status !== "fuera_zona" && status !== "asesor_solicitado" && status !== "lista_espera" && step === 1 && (
           <div style={{ position: 'relative', width: '100%', maxWidth: 620 }}>
-            {(import.meta.env.DEV || window.location.hostname.split(".")[0] === "develop") && (
+            {showCeSelector && (import.meta.env.DEV || window.location.hostname.split(".")[0] === "develop" || modoProprietario) && (
               <div style={{ position: 'absolute', left: -140, top: 0 }}>
                 <select
                   onChange={e => handleDevCESelect(e.target.value)}
@@ -2485,22 +2652,64 @@ export default function FacturaUpload() {
               Rellena tus datos para que podamos presentarte tu plan personalizado.
             </p>
 
-            <div className="cs-row">
-              <div className="cs-field-group">
-                <label className="cs-label" style={{ fontWeight:700 }}>Nombre</label>
-                <input className={`cs-input${clienteErrors.nombre ? " error" : ""}`}
-                  name="nombre" placeholder="ej. María"
-                  value={cliente.nombre} onChange={handleCliente} />
-                {clienteErrors.nombre && <span className="cs-field-error">{clienteErrors.nombre}</span>}
-              </div>
-              <div className="cs-field-group">
-                <label className="cs-label" style={{ fontWeight:700 }}>Apellidos</label>
-                <input className={`cs-input${clienteErrors.apellidos ? " error" : ""}`}
-                  name="apellidos" placeholder="ej. López Hernández"
-                  value={cliente.apellidos} onChange={handleCliente} />
-                {clienteErrors.apellidos && <span className="cs-field-error">{clienteErrors.apellidos}</span>}
-              </div>
+            {/* Tipo de persona — Física (defecto) / Jurídica */}
+            <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+              {[
+                { label: "Persona Física",   juridica: false },
+                { label: "Persona Jurídica", juridica: true  },
+              ].map(({ label, juridica }) => {
+                const activo = !!cliente.PessoaJuridica === juridica;
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => {
+                      setCliente(c => juridica
+                        ? ({ ...c, PessoaJuridica: true,  nombre: "", apellidos: "" })
+                        : ({ ...c, PessoaJuridica: false, empresa: "" }));
+                      setClienteErrors({});
+                    }}
+                    style={{
+                      flex:1, padding:"10px 12px", borderRadius:10, fontSize:14,
+                      fontWeight:700, fontFamily:"inherit", cursor:"pointer",
+                      border: activo ? "1.5px solid #345B22" : "1.5px solid #ddd",
+                      background: activo ? "#F4FDF0" : "#fff",
+                      color: activo ? "#345B22" : "#777",
+                      transition:"all 0.15s",
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
+
+            {cliente.PessoaJuridica ? (
+              <div className="cs-field-group" style={{ marginBottom:16 }}>
+                <label className="cs-label" style={{ fontWeight:700 }}>Nombre de la empresa</label>
+                <input className={`cs-input${clienteErrors.empresa ? " error" : ""}`}
+                  name="empresa" placeholder="ej. Comunidad Solar S.L."
+                  value={cliente.empresa} onChange={handleCliente} />
+                {clienteErrors.empresa && <span className="cs-field-error">{clienteErrors.empresa}</span>}
+              </div>
+            ) : (
+              <div className="cs-row">
+                <div className="cs-field-group">
+                  <label className="cs-label" style={{ fontWeight:700 }}>Nombre</label>
+                  <input className={`cs-input${clienteErrors.nombre ? " error" : ""}`}
+                    name="nombre" placeholder="ej. María"
+                    value={cliente.nombre} onChange={handleCliente} />
+                  {clienteErrors.nombre && <span className="cs-field-error">{clienteErrors.nombre}</span>}
+                </div>
+                <div className="cs-field-group">
+                  <label className="cs-label" style={{ fontWeight:700 }}>Apellidos</label>
+                  <input className={`cs-input${clienteErrors.apellidos ? " error" : ""}`}
+                    name="apellidos" placeholder="ej. López Hernández"
+                    value={cliente.apellidos} onChange={handleCliente} />
+                  {clienteErrors.apellidos && <span className="cs-field-error">{clienteErrors.apellidos}</span>}
+                </div>
+              </div>
+            )}
 
             <div className="cs-field-group" style={{ marginBottom:16 }}>
               <label className="cs-label" style={{ fontWeight:700 }}>Correo electrónico</label>
@@ -2802,7 +3011,7 @@ export default function FacturaUpload() {
             {mode === "pdf" && status === "analyzed" && facturaData && (
               <div className="cs-card fade-in">
                 <button className="cs-btn-ghost" style={{ marginTop:0, marginBottom:20, width:"auto", padding:"8px 14px", fontSize:13 }}
-                  onClick={() => { setStatus("idle"); setFacturaData(null); setFile(null); setFactura1Data(null); setFile1(null); setError1(""); setFactura2Data(null); setFile2(null); setError2(""); }}>
+                  onClick={() => { setStatus("idle"); setFacturaData(null); setFile(null); setFactura1Data(null); setFile1(null); setError1(""); setFactura2Data(null); setFile2(null); setError2(""); setErrorCups1(false); setErrorCups2(false); setZonaWarn(""); }}>
                   ← Volver
                 </button>
 
@@ -2832,14 +3041,20 @@ export default function FacturaUpload() {
                   </div>
                 )}
 
+                {zonaWarn && (
+                  <div className="cs-alert-warn" style={{ marginBottom:16 }}>
+                    <span>⚠️</span><div>{zonaWarn}</div>
+                  </div>
+                )}
+
                 {/* Tus datos */}
                 <p style={{ fontSize:13, fontWeight:800, color:"#111", letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:10 }}>
                   Tus datos
                 </p>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:24 }}>
                   <div style={{ background:"#F5F4EF", borderRadius:10, padding:"12px 16px" }}>
-                    <p style={{ fontSize:12, color:"#777", marginBottom:4 }}>Nombre</p>
-                    <p style={{ fontSize:14, color:"#111", fontWeight:700 }}>{cliente.nombre}</p>
+                    <p style={{ fontSize:12, color:"#777", marginBottom:4 }}>{cliente.PessoaJuridica ? "Nombre de la empresa" : "Nombre"}</p>
+                    <p style={{ fontSize:14, color:"#111", fontWeight:700 }}>{cliente.PessoaJuridica ? cliente.empresa : cliente.nombre}</p>
                   </div>
                   <div style={{ background:"#F5F4EF", borderRadius:10, padding:"12px 16px" }}>
                     <p style={{ fontSize:12, color:"#777", marginBottom:4 }}>Número de teléfono</p>
@@ -2943,6 +3158,18 @@ export default function FacturaUpload() {
                             <img src="/rechazado.png" alt="" style={{ width:24, height:24, flexShrink:0 }} />
                             <p style={{ fontSize:14, color:"#8D0303", fontWeight:600, lineHeight:1.5, margin:0 }}>
                               El mes no coincide. Sube una factura de los meses indicados.
+                            </p>
+                          </div>
+                        )}
+                        {errorCups1 && (
+                          <div style={{
+                            display:"flex", alignItems:"flex-start", gap:12,
+                            background:"#FEF2F2", border:"1.5px solid #8D0303",
+                            borderRadius:12, padding:"14px 16px", marginBottom:10,
+                          }}>
+                            <img src="/rechazado.png" alt="" style={{ width:24, height:24, flexShrink:0 }} />
+                            <p style={{ fontSize:14, color:"#8D0303", fontWeight:600, lineHeight:1.5, margin:0 }}>
+                              El CUPS no coincide con el de la primera factura. Sube una factura del mismo punto de suministro.
                             </p>
                           </div>
                         )}
@@ -3074,6 +3301,18 @@ export default function FacturaUpload() {
                             </p>
                           </div>
                         )}
+                        {errorCups2 && (
+                          <div style={{
+                            display:"flex", alignItems:"flex-start", gap:12,
+                            background:"#FEF2F2", border:"1.5px solid #8D0303",
+                            borderRadius:12, padding:"14px 16px", marginBottom:10,
+                          }}>
+                            <img src="/rechazado.png" alt="" style={{ width:24, height:24, flexShrink:0 }} />
+                            <p style={{ fontSize:14, color:"#8D0303", fontWeight:600, lineHeight:1.5, margin:0 }}>
+                              El CUPS no coincide con el de la primera factura. Sube una factura del mismo punto de suministro.
+                            </p>
+                          </div>
+                        )}
                         {error2 && (
                           <div style={{
                             display:"flex", alignItems:"flex-start", gap:12,
@@ -3173,9 +3412,10 @@ export default function FacturaUpload() {
                 {TARIFAS_MULTI_FACTURA.includes(facturaData?.tarifa_acceso) && (
                   <button
                     className="cs-btn-primary"
-                    style={{ marginTop:8 }}
-                    disabled={sending}
+                    style={{ marginTop:8, opacity: zonaWarn ? 0.5 : 1, cursor: zonaWarn ? "not-allowed" : "pointer" }}
+                    disabled={sending || !!zonaWarn}
                     onClick={() => {
+                      if (zonaWarn) return;
                       if (factura1Data && factura2Data) {
                         handleEnviar();
                       } else {
@@ -3389,15 +3629,21 @@ export default function FacturaUpload() {
             <h3 style={{ fontSize:18, fontWeight:700, color:"#111", marginBottom:8 }}>
               Confirmar contratación
             </h3>
-            <p style={{ fontSize:13, color:"#777", marginBottom:24 }}>
-              Introduce tu DNI para completar la contratación.
+            <p style={{ fontSize:13, color:"#555", marginBottom:6 }}>
+              Necesitamos estos datos para preparar tu contratación.
+            </p>
+            <p style={{ fontSize:12, color:"#777", marginBottom:4 }}>
+              <strong>DNI / NIE</strong> Para emitir tu contrato de alquiler de paneles y tu contrato de suministro eléctrico.
+            </p>
+            <p style={{ fontSize:12, color:"#777", marginBottom:20 }}>
+              <strong>IBAN</strong> Cuenta en la que domiciliaremos tu factura de luz con la comercializadora (orden SEPA).
             </p>
 
             <div className="cs-field-group" style={{ marginBottom:16 }}>
-              <label className="cs-label">DNI</label>
+              <label className="cs-label">DNI / NIE</label>
               <input
                 className={`cs-input${dniError ? " error" : ""}`}
-                placeholder="12345678A"
+                placeholder="12345678A o X1234567A"
                 value={dniContrato}
                 onChange={(e) => { setDniContrato(e.target.value); setDniError(""); }}
                 onKeyDown={(e) => e.key === "Enter" && handleContratar()}
@@ -3420,19 +3666,21 @@ export default function FacturaUpload() {
             <div style={{ display:"flex", gap:12 }}>
               <button
                 className="cs-btn-ghost"
-                style={{ flex:1, marginTop:0 }}
+                style={{ flex:"0 0 120px", marginTop:0, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}
                 onClick={() => { setModalContratar(false); setDniContrato(""); setDniError(""); setIbanContrato(""); setIbanError(""); }}
                 disabled={enviandoContrato}
               >
-                ← Volver
+                <img src="/leftArrow.png" alt="" style={{ width:22, height:22 }} />
+                Volver
               </button>
               <button
                 className="cs-btn-primary"
-                style={{ flex:1, marginTop:0 }}
+                style={{ flex:1, marginTop:0, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}
                 onClick={handleContratar}
                 disabled={enviandoContrato}
               >
-                {enviandoContrato ? "Enviando..." : (ceStatus !== "Available" ? "Entrar en lista de espera →" : "Contratar ahora →")}
+                {enviandoContrato ? "Enviando..." : (ceStatus !== "Available" ? "Entrar en lista de espera" : "Contratar ahora")}
+                {!enviandoContrato && <img src="/rightArrow.png" alt="" style={{ width:22, height:22 }} />}
               </button>
             </div>
           </div>

@@ -10,6 +10,7 @@ export default function PlanScreen({
   cePanelesDisponibles,
   modoAlquiler,
   cuotaAlquilerMes,
+  modoProprietario = false,
   planData,
   panelesSel,
   panelesPropuesta,
@@ -24,12 +25,16 @@ export default function PlanScreen({
   onSetTabActiva,
   onSesionError,
   onSesionLoaded,
+  onExcedeMinimoProprietario,
   facturaPreviewData = null,
+  zonaWarn = "",
 }) {
   // eslint-disable-next-line no-unused-vars
   const [sesionData, setSesionData] = useState(sesionDataProp ?? null);
   const [sesionFailed, setSesionFailed] = useState(false);
   const [ceFotoUrl, setCeFotoUrl] = useState(null);
+  // Coeficientes del propietario — null = aún cargando o sin participación (no bloqueamos)
+  const [coefProprietario, setCoefProprietario] = useState(null);
 
   const yaContratado = accionRealizada === "contratado";
   const yaEnEspera   = accionRealizada === "lista_espera";
@@ -37,20 +42,66 @@ export default function PlanScreen({
   // Sin plazas — cuando Paneles_disponibles del CRM es menor que panelesSel del cliente.
   // Si paneles_disponibles es null/undefined no bloqueamos (no podemos afirmar que no haya plazas).
   const sinPlazas = cePanelesDisponibles != null && panelesSel != null && cePanelesDisponibles < panelesSel;
-  // El botón "Contratar" sólo abre el modal cuando la CE está Available Y hay plazas.
+
+  // excedeMinimoProprietario: el coeficiente del cliente supera el espacio disponible
+  // por encima del mínimo garantido al propietario.
+  //   disponible = coeficiente_cajon - coeficiente_reparto (reparto null → 0)
+  //   coeficiente_cliente = coeficienteDistribucion (calculado por el cotizador para panelesSel)
+  //   si coeficiente_cliente > disponible → excedeMinimoProprietario → lista de espera
+  // Si coefProprietario es null (sin participación de propietario) → no bloqueamos.
+  const excedeMinimoProprietario = (() => {
+    if (!coefProprietario) return false;
+    const coefReparto = coefProprietario.coeficiente_reparto ?? 0; // null → tratar como 0
+    const coefCajon   = coefProprietario.coeficiente_cajon;
+    if (coefCajon == null) return false; // sin cajón definido → no bloqueamos
+    const coefCliente = planData?.coeficienteDistribucion ?? 0;
+    const disponible  = coefCajon - coefReparto;
+    const bloqueado   = coefCliente > disponible + 1e-9; // tolerancia float
+    console.log("[PlanScreen] excedeMinimoProprietario:", { coefReparto, coefCajon, disponible, coefCliente, bloqueado });
+    return bloqueado;
+  })();
+
+  // El botón "Contratar" sólo abre el modal cuando la CE está Available Y hay plazas Y hay cupo.
   // En caso contrario va a la lista de espera (sin mensaje extra — comportamiento silencioso).
-  const puedeContratar = ceStatus === "Available" && !sinPlazas;
+  const puedeContratar = ceStatus === "Available" && !sinPlazas && !excedeMinimoProprietario;
 
   console.log("[PlanScreen] cálculo paneles:", {
     cePanelesDisponibles,
     panelesSel,
     ceStatus,
     sinPlazas,
+    excedeMinimoProprietario,
     puedeContratar,
     rama: puedeContratar ? "→ Contratar (modal)" : "→ Lista de espera",
   });
 
 
+
+  // Notificar pai sempre que excedeMinimoProprietario mudar (para payload 08/09)
+  useEffect(() => {
+    if (onExcedeMinimoProprietario) onExcedeMinimoProprietario(excedeMinimoProprietario);
+  }, [excedeMinimoProprietario]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // id_generacion para buscar coeficientes del propietario —
+  // pode vir da URL (primeira carga) ou da sessão (após onSesionLoaded)
+  const [idGenCE, setIdGenCE] = useState(
+    () => new URLSearchParams(window.location.search).get("id_generacion") ?? null
+  );
+
+  // Cargar coeficientes del propietario cuando idGenCE esté disponible
+  useEffect(() => {
+    if (!idGenCE) return;
+    console.log("[PlanScreen] buscando coef propietario para id_generacion:", idGenCE);
+    fetch(`${API_BASE}/ce/proprietario-coef?id_generacion=${encodeURIComponent(idGenCE)}`)
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) {
+          console.log("[PlanScreen] coef propietario recibido:", data);
+          setCoefProprietario(data);
+        }
+      })
+      .catch(() => {}); // si falla no bloqueamos
+  }, [idGenCE]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!CE_FOTO_ENABLED || !ceNombre) return;
@@ -73,6 +124,9 @@ export default function PlanScreen({
       })
       .then(data => {
         setSesionData(data);
+        // Propagar id_generacion da sessão para disparar fetch do coef propietario
+        const idGenFromSesion = data?.ce?.id_generacion ? String(data.ce.id_generacion) : null;
+        if (idGenFromSesion) setIdGenCE(prev => prev ?? idGenFromSesion);
         if (onSesionLoaded) onSesionLoaded(data);
       })
       .catch(() => {
@@ -94,57 +148,85 @@ export default function PlanScreen({
     );
   }
 
+  // Modo proprietário: botão Contratar desativado + mensagem informativa abaixo
+  const bloqueContratarProprietario = (
+    <div style={{ marginTop:20 }}>
+      <button
+        disabled
+        style={{ width:"100%", background:"#ccc", color:"#000", border:"2px solid transparent", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:"not-allowed", letterSpacing:"0.04em", opacity:0.7 }}
+      >
+        Contratar
+      </button>
+      <p style={{ fontSize:13, color:"#8D0303", marginTop:10, lineHeight:1.5, textAlign:"center" }}>
+        No se puede contratar porque es un trato de propietario. Ponte en contacto con el agente responsable para darle seguimiento.
+      </p>
+    </div>
+  );
+
   return (
     <>
     <div className="cs-results-card fade-in" style={{ maxWidth:1000, padding:"0 0 48px", backgroundColor:"#EEECE8" }}>
+
+      {zonaWarn && (
+        <div className="cs-alert-warn" style={{ margin:"24px 48px 0" }}>
+          <span>⚠️</span><div>{zonaWarn}</div>
+        </div>
+      )}
 
       {/* ── HERO ── */}
       <div style={{ padding:"44px 48px 32px" }}>
         <div className="cs-plan-hero">
           {modoAlquiler ? (
             /* HERO ALQUILER */
-            <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column" }}>
-              <p style={{ fontSize:20, fontWeight:500, marginBottom:6, color:"#121212" }}>
-                Hola <strong>{cliente.nombre}</strong>, estás a un paso de
+            <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column", fontFamily:"'Montserrat', sans-serif" }}>
+              <p style={{ fontSize:22, fontWeight:500, marginBottom:8, color:"#121212", fontFamily:"'Montserrat', sans-serif" }}>
+                <strong style={{ fontWeight:800 }}>Hola {cliente.nombre || cliente.empresa}</strong>, estás a un paso de
               </p>
-              <p className="cs-plan-hero-title" style={{ fontSize:46, fontWeight:800, lineHeight:1.1, marginBottom:20, color:"#EF931D" }}>
-                ahorrar un {planData?.ahorroAnualPercent ?? 30}% en tu<br />factura de la luz
+              <p className="cs-plan-hero-title" style={{ fontSize:48, fontWeight:700, lineHeight:1.05, marginBottom:0, color:"#121212", fontFamily:"'Montserrat', sans-serif" }}>
+                <span style={{ color:"#EF931D" }}>ahorrar un {planData?.ahorroAnualPercent ?? 30}%</span>
+                <br />
+                
               </p>
-              <p style={{ fontSize:16, fontWeight:400, marginBottom:2, color:"#121212" }}>
-                Este es tu fantástico plan en la Comunidad Energética de
+               <p style={{ fontSize:42, fontWeight:700, marginBottom:8, color:"#121212", fontFamily:"'Montserrat', sans-serif" }}>en tu factura de la luz</p>
+              <p style={{ fontSize:16, fontWeight:400, color:"#121212", marginTop:20, marginBottom:28, fontFamily:"'Montserrat', sans-serif" }}>
+                Este es tu fantástico plan en la Comunidad Energética de <strong style={{ fontWeight:700 }}>{ceNombre || "—"}</strong>.
               </p>
-              <p style={{ fontSize:16, fontWeight:700, color:"#121212", marginBottom:28 }}>
-                {ceNombre || "—"}.
-              </p>
-              <div style={{ background:"#fff", borderRadius:16, padding:"22px 26px", display:"inline-block", maxWidth:300, boxShadow:"0 6px 28px rgba(0,0,0,0.11)" }}>
-                <p style={{ fontSize:13, color:"#888", marginBottom:10, display:"flex", alignItems:"center", gap:6 }}>
-                  <span style={{ color:"#EF931D" }}>⊙</span>
+              <div style={{ background:"#fff", borderRadius:16, padding:"22px 26px", display:"inline-block", maxWidth:400, boxShadow:"0 6px 28px rgba(0,0,0,0.11)" }}>
+                <p style={{ fontSize:21, color:"#121212", marginBottom:2, display:"flex", alignItems:"center", gap:6 }}>
+                  <img src="/moneda.svg" alt="" style={{ width:32, height:32 }} />
                   <span>Cuota mensual</span>
-                  <strong style={{ color:"#EF931D" }}>{panelesSel} paneles</strong>
                 </p>
-                <p style={{ fontSize:54, fontWeight:800, lineHeight:1, color:"#121212" }}>
+                <p style={{ fontSize:23, fontWeight:700, color:"#EF931D", marginBottom:8, paddingLeft:40 }}>
+                  {panelesSel} paneles
+                </p>
+                <p style={{ fontSize:60, fontWeight:800, lineHeight:1, color:"#121212", display:"flex", alignItems:"baseline", gap:8, paddingLeft:40  }}>
                   {fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)}€
+                  <span style={{ fontSize:13, fontWeight:400, color:"#888" }}>(IVA incluido)</span>
                 </p>
-                <p style={{ fontSize:12, color:"#aaa", marginTop:4, marginBottom:18 }}>IVA incluido</p>
-                <button
-                  disabled={puedeContratar ? yaContratado : yaEnEspera}
-                  style={{ width:"100%", background:(puedeContratar ? yaContratado : yaEnEspera) ? "#ccc" : "#FFAD2A", color:"#000", border:"2px solid transparent", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:(puedeContratar ? yaContratado : yaEnEspera) ? "not-allowed" : "pointer", letterSpacing:"0.04em", opacity:(puedeContratar ? yaContratado : yaEnEspera) ? 0.7 : 1, transition:"background 0.2s,border-color 0.2s" }}
-                  onMouseEnter={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#fff"; e.currentTarget.style.borderColor="#000"; } }}
-                  onMouseLeave={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#FFAD2A"; } }}
-                  onMouseDown={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.borderColor="#000"; e.currentTarget.style.background="#FFAD2A"; } }}
-                  onMouseUp={e => { e.currentTarget.style.borderColor="transparent"; }}
-                  onClick={puedeContratar ? onContratar : onListaEspera}>
-                  {puedeContratar
-                    ? (yaContratado ? "Plan contratado" : "Contratar")
-                    : (yaEnEspera ? "Ya estás en lista de espera" : "Unirse a la lista de espera")}
-                </button>
+                {/* Modo proprietário: botão Contratar desativado + mensagem */}
+                {modoProprietario ? bloqueContratarProprietario : (
+                  <div style={{ marginTop:20 }}>
+                    <button
+                      disabled={puedeContratar ? yaContratado : yaEnEspera}
+                      style={{ width:"100%", background:(puedeContratar ? yaContratado : yaEnEspera) ? "#ccc" : "#FFAD2A", color:"#000", border:"2px solid transparent", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:(puedeContratar ? yaContratado : yaEnEspera) ? "not-allowed" : "pointer", letterSpacing:"0.04em", opacity:(puedeContratar ? yaContratado : yaEnEspera) ? 0.7 : 1, transition:"background 0.2s,border-color 0.2s" }}
+                      onMouseEnter={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#fff"; e.currentTarget.style.borderColor="#000"; } }}
+                      onMouseLeave={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#FFAD2A"; } }}
+                      onMouseDown={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.borderColor="#000"; e.currentTarget.style.background="#FFAD2A"; } }}
+                      onMouseUp={e => { e.currentTarget.style.borderColor="transparent"; }}
+                      onClick={puedeContratar ? onContratar : onListaEspera}>
+                      {puedeContratar
+                        ? (yaContratado ? "Plan contratado" : "Contratar")
+                        : (yaEnEspera ? "Ya estás en lista de espera" : "Unirse a la lista de espera")}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
             /* HERO VENTA */
             <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column" }}>
               <p style={{ fontSize:20, fontWeight:500, marginBottom:6, color:"#121212" }}>
-                Hola <strong>{cliente.nombre}</strong>, estás a un paso de tener
+                Hola <strong>{cliente.nombre || cliente.empresa}</strong>, estás a un paso de tener
               </p>
               <p className="cs-plan-hero-title" style={{ fontSize:46, fontWeight:800, lineHeight:1.1, marginBottom:20, color:"#EF931D" }}>
                 tu propia energía a 0€
@@ -166,22 +248,26 @@ export default function PlanScreen({
             </div>
           )}
 
-          {/* Columna derecha: imagen */}
-          <div className="cs-plan-hero-img" style={{ flex:"0 0 auto", display:"flex", alignItems:"flex-start" }}>
+          {/* Columna derecha: imagen + ¿Tienes dudas? */}
+          <div className="cs-plan-hero-img" style={{ flex:"0 0 auto", display:"flex", flexDirection:"column", alignItems:"flex-end", gap:40, marginBottom: 40 }}>
             <img
               src={ceFotoUrl || "/Intersect.png"}
               alt="Instalación solar"
-              style={{ width:300, height:340, objectFit:"cover", borderRadius:20, display:"block" }}
+              style={{
+                width:460, height:500, objectFit:"cover", display:"block",
+                ...(ceFotoUrl ? {
+                  borderRadius: 0,
+                  clipPath: "path('M433.1 0 C448.1 0 460 12.1 460 27.1 V472.9 C460 487.8 448.1 500 433.2 500 H316.5 C302.9 500 292.3 486.9 281.6 478.5 C277.1 475.0 271.4 472.9 265.2 472.9 H24.5 C11.0 472.9 0 461.8 0 448.2 V51.8 C0 38.1 11.0 27.1 24.5 27.1 H153.1 C159.4 27.1 165.0 24.9 169.5 21.4 C180.2 13.1 190.9 0 204.3 0 H433.1 Z')",
+                } : { borderRadius: 20 }),
+              }}
             />
+            <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+              <span style={{ fontSize:13, color:"#777", fontWeight:500 }}>¿Tienes dudas?</span>
+              <button className="cs-btn-asesor" onClick={() => window.open("https://comunidadsolar.zohobookings.eu/#/108535000001261056", "_blank")}>
+                Contacta con tu asesor
+              </button>
+            </div>
           </div>
-        </div>
-
-        {/* ¿Tienes dudas? — dentro del hero, fondo beige, alineado a la derecha */}
-        <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:18, marginTop:28, paddingTop:20, borderTop:"1px solid rgba(0,0,0,0.10)" }}>
-          <span style={{ fontSize:13, color:"#777", fontWeight:500 }}>¿Tienes dudas?</span>
-          <button className="cs-btn-asesor" onClick={() => {}}>
-            Contacta con tu asesor
-          </button>
         </div>
       </div>
 
@@ -198,18 +284,21 @@ export default function PlanScreen({
                   {fmtES(planData?.pagoUnico ?? 3480.75)}€
                 </p>
                 <p style={{ fontSize:11, color:"#aaa" }}>IVA 21% incluido</p>
-                <button
-                  disabled={puedeContratar ? yaContratado : yaEnEspera}
-                  style={{ marginTop:12, background:(puedeContratar ? yaContratado : yaEnEspera) ? "#ccc" : "#FFAD2A", color:"#000", border:"2px solid transparent", borderRadius:28, padding:"12px 32px", fontSize:14, fontWeight:700, fontFamily:"inherit", cursor:(puedeContratar ? yaContratado : yaEnEspera) ? "not-allowed" : "pointer", letterSpacing:"0.04em", opacity:(puedeContratar ? yaContratado : yaEnEspera) ? 0.7 : 1, transition:"background 0.2s,border-color 0.2s" }}
-                  onMouseEnter={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#fff"; e.currentTarget.style.borderColor="#000"; } }}
-                  onMouseLeave={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#FFAD2A"; } }}
-                  onMouseDown={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.borderColor="#000"; e.currentTarget.style.background="#FFAD2A"; } }}
-                  onMouseUp={e => { e.currentTarget.style.borderColor="transparent"; }}
-                  onClick={puedeContratar ? onContratar : onListaEspera}>
-                  {puedeContratar
-                    ? (yaContratado ? "Plan contratado" : "Contratar")
-                    : (yaEnEspera ? "Ya estás en lista de espera" : "Unirse a la lista de espera")}
-                </button>
+                {/* Modo proprietário: botão Contratar desativado + mensagem */}
+                {modoProprietario ? bloqueContratarProprietario : (
+                  <button
+                    disabled={puedeContratar ? yaContratado : yaEnEspera}
+                    style={{ marginTop:12, background:(puedeContratar ? yaContratado : yaEnEspera) ? "#ccc" : "#FFAD2A", color:"#000", border:"2px solid transparent", borderRadius:28, padding:"12px 32px", fontSize:14, fontWeight:700, fontFamily:"inherit", cursor:(puedeContratar ? yaContratado : yaEnEspera) ? "not-allowed" : "pointer", letterSpacing:"0.04em", opacity:(puedeContratar ? yaContratado : yaEnEspera) ? 0.7 : 1, transition:"background 0.2s,border-color 0.2s" }}
+                    onMouseEnter={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#fff"; e.currentTarget.style.borderColor="#000"; } }}
+                    onMouseLeave={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#FFAD2A"; } }}
+                    onMouseDown={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.borderColor="#000"; e.currentTarget.style.background="#FFAD2A"; } }}
+                    onMouseUp={e => { e.currentTarget.style.borderColor="transparent"; }}
+                    onClick={puedeContratar ? onContratar : onListaEspera}>
+                    {puedeContratar
+                      ? (yaContratado ? "Plan contratado" : "Contratar")
+                      : (yaEnEspera ? "Ya estás en lista de espera" : "Unirse a la lista de espera")}
+                  </button>
+                )}
               </div>
               <div style={{ background:"#fff", borderRadius:14, padding:"28px 24px", display:"flex", flexDirection:"column", alignItems:"center", gap:6, boxShadow:"0 2px 12px rgba(0,0,0,0.06)" }}>
                 <p style={{ fontSize:11, fontWeight:700, color:"#777", textTransform:"uppercase", letterSpacing:"0.08em" }}>Financiado</p>
@@ -254,7 +343,7 @@ export default function PlanScreen({
 
           {/* Conector → */}
           <div className="cs-plan-connector">
-            <span style={{ fontSize:26, color:"#EF931D", fontWeight:700, lineHeight:1 }}>→</span>
+            <img src="/Arrow.svg" alt="→" style={{ width:52, height:52 }} />
           </div>
 
           {/* Tarjeta Destino — domicilio */}
@@ -268,28 +357,33 @@ export default function PlanScreen({
 
           {/* Card de ahorro */}
           <div className="cs-plan-ahorro" style={{ flexShrink:0, marginLeft:16, display:"flex", flexDirection:"column", gap:8, minWidth:160 }}>
-            <div style={{ border:"2px solid #EF931D", borderRadius:14, padding:"20px 18px", display:"flex", flexDirection:"column", gap:14, background:"#fff", alignItems:"center" }}>
-              <p style={{ fontSize:11, fontWeight:800, color:"#EF931D", textTransform:"uppercase", letterSpacing:"0.10em", textAlign:"center" }}>AHORRO</p>
-              <div style={{ textAlign:"center" }}>
-                <p style={{ fontSize:28, fontWeight:800, color:"#EF931D", lineHeight:1 }}>{fmtES(planData?.ahorroMensual ?? 38.35)}€</p>
-                <p style={{ fontSize:11, color:"#555", marginTop:5 }}>Al mes</p>
+            <div style={{ border:"2px solid transparent", borderRadius:14, padding:"20px 18px", display:"flex", flexDirection:"column", gap:0, background:"linear-gradient(white, white) padding-box, linear-gradient(to bottom, #EF931D, #2EC4C4) border-box", alignItems:"center" }}>
+              <p style={{ fontSize:21, fontWeight:800, color:"#EF931D", textTransform:"uppercase", letterSpacing:"0.10em", textAlign:"center", marginBottom:12 }}>AHORRO</p>
+              <div style={{ width:"100%", borderTop:"2px solid #EF931D", marginBottom:12 }} />
+              <div style={{ textAlign:"center", marginBottom:12 }}>
+                <p style={{ fontSize:28, fontWeight:800, color:"#121212", lineHeight:1 }}>{fmtES(planData?.ahorroMensual ?? 38.35)}€</p>
+                <p style={{ fontSize:11, fontWeight:600, color:"#000000", marginTop:5 }}>Al mes</p>
               </div>
+              <div style={{ width:"100%", borderTop:"2px solid #EF931D", marginBottom:12 }} />
               <div style={{ textAlign:"center" }}>
-                <p style={{ fontSize:28, fontWeight:800, color:"#EF931D", lineHeight:1 }}>{fmtES(planData?.ahorroAnual ?? 460.20)}€</p>
-                <p style={{ fontSize:11, color:"#555", marginTop:5 }}>Al año</p>
+                <p style={{ fontSize:28, fontWeight:800, color:"#121212", lineHeight:1 }}>{fmtES(planData?.ahorroAnual ?? 460.20)}€</p>
+                <p style={{ fontSize:11, fontWeight:600, color:"#000000", marginTop:5 }}>Al año</p>
               </div>
               {!modoAlquiler && (
-                <div style={{ textAlign:"center" }}>
-                  <p style={{ fontSize:28, fontWeight:800, color:"#EF931D", lineHeight:1 }}>{fmtES(planData?.ahorro25Anos ?? 1575.35)}€</p>
-                  <p style={{ fontSize:11, color:"#555", marginTop:5 }}>En 25 años (estimado)</p>
-                </div>
+                <>
+                  <div style={{ width:"100%", borderTop:"2px solid #EF931D", marginTop:12, marginBottom:12 }} />
+                  <div style={{ textAlign:"center" }}>
+                    <p style={{ fontSize:28, fontWeight:800, color:"#121212", lineHeight:1 }}>{fmtES(planData?.ahorro25Anos ?? 1575.35)}€</p>
+                    <p style={{ fontSize:11, color:"#000000", marginTop:5 }}>En 25 años (estimado)</p>
+                  </div>
+                </>
               )}
             </div>
-            {/* Depósito — solo alquiler */}
+            {/* Depósito de garantía — solo alquiler */}
             {modoAlquiler && (
-              <div style={{ border:"2px solid #EF931D", borderRadius:14, padding:"18px 18px", display:"flex", flexDirection:"column", gap:4, background:"#fff", alignItems:"center" }}>
-                <p style={{ fontSize:28, fontWeight:800, color:"#EF931D", lineHeight:1 }}>{fmtES((cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0) * 2)}€</p>
-                <p style={{ fontSize:11, color:"#555", marginTop:5 }}>Depósito</p>
+              <div style={{ border:"2px solid transparent", borderRadius:14, padding:"18px 18px", display:"flex", flexDirection:"column", gap:4, background:"linear-gradient(white, white) padding-box, linear-gradient(to bottom, #EF931D, #2EC4C4) border-box", alignItems:"center" }}>
+                <p style={{ fontSize:28, fontWeight:800, color:"#121212", lineHeight:1 }}>{fmtES((cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0) * 2)}€</p>
+                <p style={{ fontSize:11, fontWeight:600, color:"#000000", marginTop:5 }}>Depósito de garantía</p>
               </div>
             )}
           </div>
@@ -304,9 +398,9 @@ export default function PlanScreen({
                 <tr><td>Número de paneles</td><td>{panelesSel}</td></tr>
                 <tr><td>Potencia total</td><td>{fmtES(planData?.potenciaTotal ?? 3)} kW</td></tr>
                 <tr><td>Producción de energía anual estimada*</td><td>{fmtES(planData?.produccionAnual ?? 4101.25)} kWh</td></tr>
-                <tr><td>Ahorro anual medio estimado*</td><td>{fmtES(planData?.ahorroAnual ?? 522.48)} €</td></tr>
+                <tr><td>Ahorro anual medio estimado**</td><td>{fmtES(planData?.ahorroAnual ?? 522.48)} €</td></tr>
                 {modoAlquiler ? (
-                  <tr><td>Precio mensual</td><td>{fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)} €</td></tr>
+                  <tr><td>Cuota mensual</td><td>{fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)} €</td></tr>
                 ) : (
                   <>
                     <tr><td>Ahorro total estimado durante 25 años*</td><td>{fmtES(planData?.ahorro25Anos ?? 15707.25)} €</td></tr>
@@ -321,33 +415,40 @@ export default function PlanScreen({
 
           {/* Optimizador */}
           <div style={{ background:"#F3D5A9", borderRadius:14, padding:"24px 20px", textAlign:"center", minWidth:170, maxWidth:190, display:"flex", flexDirection:"column", alignItems:"center", gap:12 }}>
-            <p style={{ fontSize:13, fontWeight:800, color:"#121212", textTransform:"uppercase", letterSpacing:"0.06em" }}>Optimiza tu plan</p>
-            <p style={{ fontSize:12, color:"#555", lineHeight:1.5 }}>Añade o quita paneles solares</p>
-            <div style={{ display:"flex", alignItems:"center", background:"#fff", borderRadius:10, border:"1.5px solid #121212", overflow:"hidden" }}>
+            <p style={{ fontSize:18, fontWeight:800, color:"#121212", lineHeight:1.2 }}>Optimiza<br />tu plan</p>
+            <div style={{ width:"100%", borderTop:"2px solid rgba(255, 255, 255)" }} />
+            <p style={{ fontSize:12, fontWeight:600, color:"#121212", lineHeight:1.5 }}>Añade o quita<br />paneles solares</p>
+            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
               <button
-                onClick={() => onSetPanelesPropuesta(p => Math.max(1, p - 1))}
-                style={{ background:"none", border:"none", padding:"8px 14px", fontSize:18, fontWeight:700, cursor:"pointer", color:"#EF931D", fontFamily:"inherit" }}>
+                disabled
+                style={{ background:"#fff", border:"1.5px solid #ccc", borderRadius:8, width:36, height:36, fontSize:18, fontWeight:700, cursor:"not-allowed", color:"#ccc", fontFamily:"inherit", display:"flex", alignItems:"center", justifyContent:"center", opacity:0.5 }}>
                 −
               </button>
-              <span style={{ fontSize:20, fontWeight:700, color:"#121212", minWidth:32, textAlign:"center" }}>
-                {panelesPropuesta}
-              </span>
+              <div style={{ background:"#fff", border:"1.5px solid #121212", borderRadius:8, width:40, height:36, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <span style={{ fontSize:20, fontWeight:700, color:"#121212" }}>{panelesPropuesta}</span>
+              </div>
               <button
-                onClick={() => onSetPanelesPropuesta(p => p + 1)}
-                style={{ background:"none", border:"none", padding:"8px 14px", fontSize:18, fontWeight:700, cursor:"pointer", color:"#EF931D", fontFamily:"inherit" }}>
+                disabled
+                style={{ background:"#fff", border:"1.5px solid #ccc", borderRadius:8, width:36, height:36, fontSize:18, fontWeight:700, cursor:"not-allowed", color:"#ccc", fontFamily:"inherit", display:"flex", alignItems:"center", justifyContent:"center", opacity:0.5 }}>
                 +
               </button>
             </div>
-            <p style={{ fontSize:11, color:"#555", lineHeight:1.55 }}>
-              Te recomendamos {panelesPropuesta === 1 ? "1 panel solar" : `${panelesPropuesta} paneles solares`}, pero puedes solicitar una cantidad diferente optimizando tu plan de participación con un asesor energético.
+            <p style={{ fontSize:11, color:"#000000", lineHeight:1.55 }}>
+              Te recomendamos {panelesPropuesta === 1 ? "1 panel solar" : `${panelesPropuesta} paneles solares`}, pero puedes solicitar una cantidad diferente optimizando tu plan.
             </p>
             <button
               disabled
-              style={{ background:"#fff", color:"#ccc", border:"2px solid #ccc", borderRadius:24, padding:"10px 24px", fontSize:13, fontWeight:700, fontFamily:"inherit", cursor:"not-allowed", letterSpacing:"0.04em", width:"100%", opacity:0.6 }}>
+              style={{ background:"#FFAD2A", color:"#121212", border:"none", borderRadius:24, padding:"12px 24px", fontSize:14, fontWeight:700, fontFamily:"inherit", cursor:"not-allowed", width:"100%", opacity:0.5 }}>
               Optimizar
             </button>
+            
           </div>
+          <p style={{ fontSize:11, color:"#121212", lineHeight:1.6, marginTop:-20, marginBottom:20 }}>
+          *Producción anual estimada: Estimación de la energía generada por tus paneles solares, calculada por un software especializado (PVSOL).<br />
+          **Ahorro anual medio estimado: Ahorro obtenido en base a la producción estimada y considerando los precios OMIE de los últimos años.
+        </p>
         </div>
+        
 
         {/* ── FACTURA PLAN ── */}
         <div style={{ marginBottom:56 }}>
@@ -387,46 +488,61 @@ export default function PlanScreen({
 
             {tabActiva === "como" && (
               <div>
-                <p style={{ fontWeight:700, color:"#EF931D", marginBottom:14 }}>Abierta la fase de Contratación:</p>
-                <p style={{ marginBottom:10 }}>Al pulsar "Contratar", comenzaremos a generar tres documentos:</p>
-                <ul style={{ paddingLeft:20, marginBottom:10 }}>
-                  <li>La orden de compra de tus paneles.</li>
-                  <li>La participación en la asociación Light for Humanity.</li>
-                  <li>Tu alta en la comercializadora de Comunidad Solar, para recibir electricidad a coste cero.</li>
+                <p style={{ marginBottom:10 }}>Al pulsar <strong>"Contratar"</strong>, comenzaremos a generar 5 documentos:</p>
+                <ul style={{ paddingLeft:20, marginBottom:10, lineHeight:1.7, listStyleType:"disc" }}>
+                  <li>Tu contrato de alquiler de paneles asociado a la comunidad energética.</li>
+                  <li>Tu alta en la comercializadora de Comunidad Solar, para recibir electricidad a coste acordado.</li>
+                  <li>Documento de Autorización de Gestor de Autoconsumo.</li>
+                  <li>Orden SEPA</li>
+                  <li>Documento de reparto</li>
                 </ul>
-                <p style={{ marginBottom:10 }}>Es muy importante que tengas a mano una factura actual de la luz.</p>
-                <p style={{ marginBottom:10 }}>Tus paneles quedarán reservados durante 48 horas; si no firmas la documentación en ese plazo, la reserva quedará sin efecto y volverás a lista de espera. Tras la firma de la documentación, dispondrás de 5 días para realizar el primer pago.</p>
-                <p>Si estás interesado en financiación, podrás solicitarla después de firmar el contrato. En caso de que la entidad bancaria no apruebe la financiación, el contrato no entrará en vigor.</p>
+                <p style={{ marginBottom:10 }}>Para hacer efectiva la reserva, deberás realizar en ese momento el pago de un depósito de garantía <strong>equivalente a 2 meses de tu cuota mensual.</strong></p>
+                <p style={{ marginBottom:10 }}>Tu plaza quedará bloqueada durante <strong>24 horas</strong>. Si no firmas la documentación en ese plazo, la reserva quedará sin efecto.</p>
+                <p style={{ marginBottom:10 }}>Una vez firmada la documentación, tendrás <strong>24 horas</strong> para realizar el pago del depósito de garantía y así completar todo el proceso de contratación.</p>
+                <p>Una vez la planta esté en funcionamiento, comenzarás a abonar tu cuota mensual y se aplicará un <strong>compromiso de permanencia de 1 año.</strong></p>
               </div>
             )}
 
             {tabActiva === "plan" && (
               <div>
-                <p style={{ marginBottom:10 }}>A continuación detallamos tu plan recomendado de participación de autoconsumo en la Comunidad Energética <strong>{ceNombre || "—"}</strong>. Este plan está basado en el consumo eléctrico que nos has facilitado y que te permitirá ahorrar hasta un {planData?.ahorroAnualPercent ?? 70}% en tu factura de la luz.</p>
-                <p style={{ marginBottom:10 }}>El plan incluye la compra de <strong>{panelesSel === 1 ? "1 panel solar" : `${panelesSel} paneles solares`}</strong> que generarán un total aproximado de <strong>{fmtES(planData?.produccionAnual)} kWh</strong> de electricidad, con un depósito inicial de <strong>{fmtES((cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0) * 2)}€</strong>. (El precio podría ser mayor en función del coste final de la instalación para verter a la red eléctrica, de lo que se informaría claramente por anticipado antes de cualquier contratación)</p>
-                <p style={{ marginBottom:10 }}>Al unirte a la Comunidad Energética de <strong>{ceNombre || "—"}</strong>, podrás disfrutar de la electricidad a <strong>0€ por kWh</strong> en tu factura de la luz.</p>
-                <p style={{ marginBottom:8 }}>Basándonos en los precios de energía de los últimos años, obtendrás los siguientes beneficios:</p>
-                <ul style={{ paddingLeft:20, marginBottom:10 }}>
-                  <li>Ahorro promedio de <strong>{fmtES(planData?.ahorroAnual)}€</strong> al año.</li>
-                  <li>Ahorro total estimado de <strong>{fmtES(planData?.ahorro25Anos)}€</strong> en 25 años (considerando una subida del precio de la energía del 0% anual).</li>
-                </ul>
-                <p>{panelesSel === 1 ? "El panel" : `Los ${panelesSel} paneles`} contiene{panelesSel === 1 ? "" : "n"} una potencia nominal total de <strong>{fmtES(planData?.potenciaTotal)} kW</strong>. Lo que quiere decir que el coeficiente de reparto que te pertenece es del <strong>{planData?.coeficienteDistribucion != null ? fmtES(planData.coeficienteDistribucion * 100) : "—"}%</strong> de toda la Comunidad Energética.</p>
+                <p style={{ marginBottom:10 }}>A continuación, te mostramos tu plan recomendado de participación en la Comunidad Energética <strong>{ceNombre || "—"}</strong>. Este plan está basado en el consumo eléctrico que nos has facilitado y está diseñado para que puedas ahorrar un {planData?.ahorroAnualPercent ?? 30}% en tu factura de la luz.</p>
+                <p style={{ marginBottom:10 }}>Tu participación incluye la asignación de <strong>{panelesSel === 1 ? "1 panel solar" : `${panelesSel} paneles solares`}</strong>, con una potencia nominal total de {fmtES(planData?.potenciaTotal)} kW, que generarán aproximadamente <strong>{fmtES(planData?.produccionAnual)} kWh</strong> de electricidad durante un periodo de <strong>25 años</strong>.</p>
+                <p style={{ marginBottom:10 }}>Al formar parte de la Comunidad Energética, pagarás 0€ por la energía autoconsumida, sin peajes ni márgenes comerciales.</p>
+                <p style={{ marginBottom:8 }}>Basándonos en la evolución de los precios de la energía (considerando un incremento del <strong style={{ background:"#FFE066", padding:"0 2px" }}>2.5%</strong> anual) se estiman los siguientes beneficios:</p>
+                <p style={{ marginBottom:4 }}>Ahorro medio mensual de <strong>{fmtES(planData?.ahorroMensual)}€</strong></p>
+                <p style={{ marginBottom:4 }}>Ahorro estimado anual <strong>{fmtES(planData?.ahorroAnual)}€</strong></p>
               </div>
             )}
 
             {tabActiva === "condiciones" && (
               <div>
-                <p style={{ marginBottom:10 }}>Al adquirir tu participación en la comunidad energética <strong>{ceNombre || "—"}</strong>, verás reflejada la electricidad generada por {panelesSel === 1 ? "tu panel" : "tus paneles"} en tu hogar a través de tu comercializadora. Durante los próximos 25 años, verás reflejada en tu factura de la luz la energía producida por {panelesSel === 1 ? "tu panel solar" : "tus paneles solares"}, con un coste de <strong>0€/kWh</strong>.</p>
-                <p style={{ marginBottom:10 }}>Para el mantenimiento y seguro de {panelesSel === 1 ? "tu panel solar" : "tus paneles solares"}, pagarás una cuota mensual de <strong>{fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes)}€</strong> <span style={{ fontSize:"0.85em", color:"#888", fontWeight:400 }}>(IVA incluido)</span>. {panelesSel === 1 ? "Este panel está diseñado" : "Estos paneles están diseñados"} para tener una vida útil de 25 años, y esta cuota es necesaria para asegurar su buen funcionamiento.</p>
-                <p style={{ marginBottom:10 }}>Una vez firmada la documentación, el pago se realizará en 3 fases: 50% del total se abonará tras la firma de los documentos, un 25% al finalizar la instalación y el 25% restante al comenzar la producción de la planta.</p>
-                <p style={{ marginBottom:10 }}>Podrás cambiarte a otra comercializadora en cualquier momento, ya que no hay permanencia con la comercializadora de Comunidad Solar. La distribuidora de electricidad ya conoce el porcentaje de producción solar que te corresponde, y la nueva comercializadora deberá descontarte esa producción en tu factura de la luz. Debes tener en cuenta que aunque te cambies de comercializadora, tendrás que seguir abonando la cuota del club.</p>
-                <p style={{ marginBottom:10 }}>Toda la electricidad que no consumas será vendida a la red pública a precio de mercado, y ese valor se descontará de tu factura. Para cualquier energía adicional que necesites, pagarás el precio de coste junto con los cargos regulados, sin ningún margen adicional.</p>
+                <p style={{ marginBottom:10 }}>Al formar parte de la Comunidad Energética <strong>{ceNombre || "—"}</strong>, verás reflejada en tu factura de la luz la energía generada por la planta, que se asignará a tu suministro a través de tu comercializadora.</p>
+                <p style={{ marginBottom:10 }}>Desde el momento en que la planta entre en funcionamiento, comenzarás a beneficiarte de un menor coste energético, reduciendo el importe de tu factura eléctrica.</p>
+                <p style={{ marginBottom:10 }}>Podrás cambiar de comercializadora en cualquier momento, ya que no existe permanencia con la comercializadora de Comunidad Solar. La distribuidora seguirá asignando tu porcentaje de energía, y la nueva comercializadora deberá reflejarlo en tu factura.</p>
+                <p style={{ marginBottom:10 }}>Toda la <strong>energía que no consumas</strong> será vendida a la red pública a precio de mercado, y <strong>ese valor se descontará de tu factura</strong>. Para cualquier energía adicional que necesites, pagarás el precio de coste junto con los cargos regulados, sin ningún margen adicional.</p>
                 <p style={{ marginBottom:10 }}>Comunidad Solar no busca obtener beneficios a través de la comercializadora; este es simplemente el mecanismo necesario para llevar la energía a tu hogar.</p>
-                <p>Este es un resumen de las condiciones. Te recomendamos leer toda la documentación para conocer todos los términos y detalles antes de proceder con la contratación.</p>
+                <p>Este es un resumen de las condiciones. Te <strong>recomendamos leer toda la documentación para conocer todos los términos y detalles.</strong></p>
               </div>
             )}
           </div>
+
+          
         </div>
+        {/* Botão Contratar — sempre visível abaixo das tabs (escondido em modo proprietário) */}
+          {modoAlquiler && !modoProprietario && (
+            <div style={{ display:"flex", justifyContent:"center", padding:"0px 32px 88px" }}>
+              <button
+                disabled={puedeContratar ? yaContratado : yaEnEspera}
+                style={{ background:(puedeContratar ? yaContratado : yaEnEspera) ? "#ccc" : "#FFAD2A", color:"#000", border:"2px solid transparent", borderRadius:28, padding:"13px 48px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:(puedeContratar ? yaContratado : yaEnEspera) ? "not-allowed" : "pointer", letterSpacing:"0.04em", opacity:(puedeContratar ? yaContratado : yaEnEspera) ? 0.7 : 1, transition:"background 0.2s,border-color 0.2s" }}
+                onMouseEnter={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#fff"; e.currentTarget.style.borderColor="#000"; } }}
+                onMouseLeave={e => { if(!(puedeContratar ? yaContratado : yaEnEspera)) { e.currentTarget.style.background="#FFAD2A"; e.currentTarget.style.borderColor="transparent"; } }}
+                onClick={puedeContratar ? onContratar : onListaEspera}>
+                {puedeContratar
+                  ? (yaContratado ? "Plan contratado" : "Contratar")
+                  : (yaEnEspera ? "Ya estás en lista de espera" : "Unirse a la lista de espera")}
+              </button>
+            </div>
+          )}
 
         {/* ── MÉTRICAS DE AHORRO (solo venta) ── */}
         {!modoAlquiler && (

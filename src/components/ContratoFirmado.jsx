@@ -35,7 +35,7 @@ export default function ContratoFirmado() {
         justifyContent: "center",
         background: "#F5F4EF",
         padding: 20,
-        fontFamily: '"DM Sans", system-ui, sans-serif',
+        fontFamily: '"Montserrat", system-ui, sans-serif',
       }}
     >
       <div style={{ maxWidth: 560, width: "100%" }}>

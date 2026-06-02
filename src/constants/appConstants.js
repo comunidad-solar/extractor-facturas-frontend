@@ -81,9 +81,10 @@ export const PERIODOS_POR_MES_3TD = {
 export const RESTRICT_TO_CE = null;
 
 export const FACTURA_PREVIEW_MOCK_FALLBACK = false;
-export const CE_FOTO_ENABLED = false; // true = busca foto da CE via GET /ce/foto; false = usa /Intersect.png
+export const CE_FOTO_ENABLED = true; // true = busca foto da CE via GET /ce/foto; false = usa /Intersect.png
 export const FORCE_WAITING_LIST = false; // true = fuerza badge "En Espera", botón lista espera al contratar //
-export const SUMINISTRO_ZONA_CHECK = false; // true = aviso discreto si el suministro de la factura queda fuera de zona
+export const SUMINISTRO_ZONA_CHECK = false; // true = aviso si la dirección de la factura queda fuera de la zona de la CE seleccionada
+export const CUPS_MATCH_CHECK = true; // true = en tarifas multi-factura (3.0/6.0/6.1), exige que el CUPS de la 2ª y 3ª factura coincida con el de la 1ª
 export const CUPS_ENABLED = false; // false = oculta opción "Introducir CUPS" en paso 2
 export const ASESOR_ENABLED = false; // false = oculta botón "Hablar con un asesor" y divisor "o" en paso 2
 
@@ -99,6 +100,9 @@ const cotizadorBase = subdomain === "develop"
 export const PLAN_REDIRECT_URL  = cotizadorBase;
 export const QUOTING_URL        = "https://dummyjson.com/test";
 export const LEAD_URL           = "https://dummyjson.com/test";
+// Calculadora de Autoconsumo Remoto (botão mostrado quando fora de zona).
+// Os dados de contacto do cliente são anexados via buildArCalculatorURL().
+export const AR_CALCULATOR_URL  = "https://presupuesto-ar.comunidadsolar.es/calcular-ahorro/aproximado?config=2d042eb19f83e7a3b2de85e8e26ac2f17&ce-name=torrontera+i+-+lazarillo";
 export const NOMINATIM_URL      = "https://nominatim.openstreetmap.org";
 
 // Mapa de estados de la CE a etiquetas visibles

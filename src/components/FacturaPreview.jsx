@@ -122,9 +122,9 @@ const SectionRow = ({ label }) => (
 // ─── Bar chart data builder ───────────────────────────────────────────────────
 const buildBarData = (gb, produto) => [
   ...(produto === 'AR' ? [{ name: 'Autoconsumo remoto', value: gb.autoconsumo_remoto_kwh, fill: '#A5D6A7' }] : []),
-  { name: 'Energía del mercado', value: gb.energia_mercado_kwh, fill: '#FFDF3C' },
-  { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,      fill: '#ADE272' },
-  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#ADF4E5' },
+  { name: 'Energía del mercado', value: gb.energia_mercado_kwh, fill: '#fed81a' },
+  { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,      fill: '#8cda32' },
+  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#6df0d4' },
 ];
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -167,9 +167,9 @@ export default function FacturaPreview({ data = null }) {
 
   const energyRows = [
     ...(d.produto === 'AR' ? [{ label: 'Autoconsumo remoto', val: r.autoconsumo_remoto, color: '#7CB342' }] : []),
-    { label: 'Energía del mercado', val: r.energia_mercado,  color: '#FFDF3C' },
-    { label: 'Autoconsumo',         val: 0,                   color: '#ADE272' },
-    { label: 'Excedente',           val: r.excedente_remoto, color: r.excedente_remoto < 0 ? '#ADF4E5' : '#111' },
+    { label: 'Energía del mercado', val: r.energia_mercado,  color: '#fed81a' },
+    { label: 'Autoconsumo',         val: 0,                   color: '#8cda32' },
+    { label: 'Excedente',           val: r.excedente_remoto, color: r.excedente_remoto < 0 ? '#6df0d4' : '#111' },
   ];
   const otherRows = [
     { label: 'Potencia',            val: r.potencia },
@@ -395,8 +395,13 @@ export default function FacturaPreview({ data = null }) {
         </div>
       </div>
 
+      {/* ── Ícone monedero ────────────────────────────────────────────────── */}
+      <div style={{ padding: '22px 52px 0px', display: 'flex', alignItems: 'center' }}>
+        <img src="/monedero.svg" alt="" style={{ width: 36, height: 36 }} />
+      </div>
+
       {/* ── Tabla detallada ────────────────────────────────────────────────── */}
-      <div style={{ padding: '0 32px 28px', borderTop: '1px solid #eee', overflowX: 'auto' }}>
+      <div style={{ padding: '0 32px 28px', overflowX: 'auto' }}>
         <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', marginBottom: 12, paddingTop: 16, borderBottom: '2px solid #7CB342', paddingBottom: 4 }}>
           MÁS INFORMACIÓN SOBRE TU FACTURA
         </p>
