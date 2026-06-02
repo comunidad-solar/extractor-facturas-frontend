@@ -173,6 +173,8 @@ export function buildRedirectURL(baseUrl, cliente, factura, idGen, manualFields,
   p.set("api_error", f.api?.api_error ?? "");
   p.set("nombre",    c.nombre    ?? "");
   p.set("apellidos", c.apellidos ?? "");
+  p.set("empresa",   c.empresa   ?? "");
+  p.set("PessoaJuridica", c.PessoaJuridica ? "true" : "false");
   p.set("correo",    c.correo    ?? "");
   p.set("direccion", c.direccion ?? "");
   // pe_p* — prioridad: manualFields → rawData (facturaData/cupsData)

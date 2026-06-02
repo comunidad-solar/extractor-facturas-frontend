@@ -165,7 +165,7 @@ export default function PlanScreen({
             /* HERO ALQUILER */
             <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column", fontFamily:"'Montserrat', sans-serif" }}>
               <p style={{ fontSize:22, fontWeight:500, marginBottom:8, color:"#121212", fontFamily:"'Montserrat', sans-serif" }}>
-                <strong style={{ fontWeight:800 }}>Hola {cliente.nombre}</strong>, estás a un paso de
+                <strong style={{ fontWeight:800 }}>Hola {cliente.nombre || cliente.empresa}</strong>, estás a un paso de
               </p>
               <p className="cs-plan-hero-title" style={{ fontSize:48, fontWeight:700, lineHeight:1.05, marginBottom:0, color:"#121212", fontFamily:"'Montserrat', sans-serif" }}>
                 <span style={{ color:"#EF931D" }}>ahorrar un {planData?.ahorroAnualPercent ?? 30}%</span>
@@ -211,7 +211,7 @@ export default function PlanScreen({
             /* HERO VENTA */
             <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column" }}>
               <p style={{ fontSize:20, fontWeight:500, marginBottom:6, color:"#121212" }}>
-                Hola <strong>{cliente.nombre}</strong>, estás a un paso de tener
+                Hola <strong>{cliente.nombre || cliente.empresa}</strong>, estás a un paso de tener
               </p>
               <p className="cs-plan-hero-title" style={{ fontSize:46, fontWeight:800, lineHeight:1.1, marginBottom:20, color:"#EF931D" }}>
                 tu propia energía a 0€

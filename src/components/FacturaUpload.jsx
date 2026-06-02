@@ -34,7 +34,8 @@ export default function FacturaUpload() {
 
   // ── Step 1 — client data ─────────────────────────────────────────────────
   const [cliente, setCliente] = useState({
-    nombre: "", apellidos: "", correo: "", telefono: "", direccion: "",
+    nombre: "", apellidos: "", empresa: "", correo: "", telefono: "", direccion: "",
+    PessoaJuridica: false,
   });
   const [clienteErrors, setClienteErrors] = useState({});
 
@@ -290,6 +291,8 @@ export default function FacturaUpload() {
       setCliente(c => ({
         nombre:    c.nombre    || cleanUrl(s("cliente.nombre"))    || cleanUrl(s("nombre"))    || "",
         apellidos: c.apellidos || cleanUrl(s("cliente.apellidos")) || cleanUrl(s("apellidos")) || "",
+        empresa:   c.empresa   || cleanUrl(s("cliente.empresa"))   || cleanUrl(s("empresa"))   || "",
+        PessoaJuridica: c.PessoaJuridica || s("PessoaJuridica") === "true" || s("cliente.PessoaJuridica") === "true",
         correo:    c.correo    || cleanUrl(s("cliente.correo"))    || cleanUrl(s("correo"))    || "",
         telefono:  c.telefono  || cleanUrl(s("cliente.telefono"))  || cleanUrl(s("telefono"))  || "",
         direccion: c.direccion || cleanUrl(s("cliente.direccion")) || cleanUrl(s("direccion")) || "",
@@ -326,6 +329,8 @@ export default function FacturaUpload() {
         setCliente(prev => ({
           nombre:    prev.nombre    || c.nombre    || "",
           apellidos: prev.apellidos || c.apellidos || "",
+          empresa:   prev.empresa   || c.empresa   || "",
+          PessoaJuridica: prev.PessoaJuridica || !!c.PessoaJuridica,
           correo:    prev.correo    || c.correo    || "",
           telefono:  prev.telefono  || c.telefono  || "",
           direccion: prev.direccion || c.direccion || "",
@@ -415,6 +420,8 @@ export default function FacturaUpload() {
             setCliente(prev => ({
               nombre:    prev.nombre    || data.cliente.nombre    || "",
               apellidos: prev.apellidos || data.cliente.apellidos || "",
+              empresa:   prev.empresa   || data.cliente.empresa   || "",
+              PessoaJuridica: prev.PessoaJuridica || !!data.cliente.PessoaJuridica,
               correo:    prev.correo    || data.cliente.correo    || "",
               telefono:  prev.telefono  || data.cliente.telefono  || "",
               direccion: prev.direccion || data.cliente.direccion || "",
@@ -578,8 +585,12 @@ export default function FacturaUpload() {
 
   const validateCliente = () => {
     const errs = {};
-    if (!cliente.nombre.trim())     errs.nombre    = "Obligatorio";
-    if (!cliente.apellidos.trim())  errs.apellidos = "Obligatorio";
+    if (cliente.PessoaJuridica) {
+      if (!cliente.empresa.trim())  errs.empresa = "Obligatorio";
+    } else {
+      if (!cliente.nombre.trim())     errs.nombre    = "Obligatorio";
+      if (!cliente.apellidos.trim())  errs.apellidos = "Obligatorio";
+    }
     if (!cliente.correo.trim())     errs.correo    = "Obligatorio";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cliente.correo.trim()))
       errs.correo = "Introduce un correo electrónico válido";
@@ -666,7 +677,7 @@ export default function FacturaUpload() {
   const chamarContinuar = async (ceResult) => {
     try {
       const payload = {
-        cliente: { nombre: cliente.nombre, apellidos: cliente.apellidos, correo: cliente.correo, telefono: cliente.telefono, direccion: cliente.direccion },
+        cliente: { nombre: cliente.nombre, apellidos: cliente.apellidos, empresa: cliente.empresa, PessoaJuridica: !!cliente.PessoaJuridica, correo: cliente.correo, telefono: cliente.telefono, direccion: cliente.direccion },
         ce: { nombre: ceResult?.ceNombre ?? ceNombre, direccion: ceResult?.ceDireccion ?? ceDireccion, status: FORCE_WAITING_LIST ? "Waiting list" : (ceResult?.ceStatus ?? ceStatus), etiqueta: ceResult?.ceEtiqueta ?? ceEtiqueta, id_generacion: ceResult?.idGeneracion || resolverIdGeneracion(idGeneracion, ceResult?.ceNombre ?? ceNombre), paneles_disponibles: ceResult?.panelesDisponibles ?? cePanelesDisponibles ?? null, paneles_a_la_venta: ceResult?.panelesALaVenta ?? cePanelesALaVenta ?? null, paneles_totales: ceResult?.panelesTotales ?? cePanelesTotales ?? null },
         Fsmstate: ceResult?.fsmstate ?? "02_FUERA_ZONA",
         FsmPrevious: null,
@@ -1138,6 +1149,8 @@ export default function FacturaUpload() {
   const buildClientePayload = (overrideDealId = null, overrideMpklogId = null) => ({
     nombre:     cliente.nombre,
     apellidos:  cliente.apellidos,
+    empresa:    cliente.empresa,
+    PessoaJuridica: !!cliente.PessoaJuridica,
     correo:     cliente.correo,
     telefono:   cliente.telefono,
     direccion:  cliente.direccion,
@@ -1512,6 +1525,8 @@ export default function FacturaUpload() {
       cliente: {
         nombre:         cliente.nombre    || sdCliente.nombre    || cleanUrl(urlCli.nombre)    || "",
         apellidos:      cliente.apellidos || sdCliente.apellidos || cleanUrl(urlCli.apellidos) || "",
+        empresa:        cliente.empresa   || sdCliente.empresa   || cleanUrl(urlCli.empresa)   || "",
+        PessoaJuridica: !!(cliente.PessoaJuridica ?? sdCliente.PessoaJuridica),
         correo:         cliente.correo    || sdCliente.correo    || cleanUrl(urlCli.correo)    || "",
         telefono:       cliente.telefono  || sdCliente.telefono  || cleanUrl(urlCli.telefono)  || "",
         direccion:      cliente.direccion || sdCliente.direccion || cleanUrl(urlCli.direccion) || "",
@@ -1771,6 +1786,8 @@ export default function FacturaUpload() {
         const clientePre = {
           nombre:    cliente.nombre    || urlCli.nombre    || "",
           apellidos: cliente.apellidos || urlCli.apellidos || "",
+          empresa:   cliente.empresa   || urlCli.empresa   || "",
+          PessoaJuridica: !!cliente.PessoaJuridica,
           correo:    cliente.correo    || urlCli.correo    || "",
           telefono:  cliente.telefono  || urlCli.telefono  || "",
           direccion: cliente.direccion || urlCli.direccion || "",
@@ -1897,6 +1914,8 @@ export default function FacturaUpload() {
       cliente: {
         nombre:         cliente.nombre    || sdCliente.nombre    || cleanUrl(urlCli.nombre)    || "",
         apellidos:      cliente.apellidos || sdCliente.apellidos || cleanUrl(urlCli.apellidos) || "",
+        empresa:        cliente.empresa   || sdCliente.empresa   || cleanUrl(urlCli.empresa)   || "",
+        PessoaJuridica: !!(cliente.PessoaJuridica ?? sdCliente.PessoaJuridica),
         correo:         cliente.correo    || sdCliente.correo    || cleanUrl(urlCli.correo)    || "",
         telefono:       cliente.telefono  || sdCliente.telefono  || cleanUrl(urlCli.telefono)  || "",
         direccion:      cliente.direccion || sdCliente.direccion || cleanUrl(urlCli.direccion) || "",
@@ -2041,7 +2060,7 @@ export default function FacturaUpload() {
     setStep(1); setMode(null); setFile(null); setFacturaData(null);
     setCups(""); setCupsData(null); setManualFields(emptyManual());
     setError(""); setStatus("idle"); setSending(false); setClienteErrors({});
-    setCliente({ nombre: "", apellidos: "", correo: "", telefono: "", direccion: "" });
+    setCliente({ nombre: "", apellidos: "", empresa: "", correo: "", telefono: "", direccion: "", PessoaJuridica: false });
     setFsmstate(""); setFsmPrevious(null); setCeNombre(""); setCeDireccion(""); setZonaWarn("");
     setUserCoords(null); setNominatimSuggestions([]); setShowDropdown(false);
     setCeDistancia(null); setCeRadio(null); setPlanData(null); setPanelesSel(3);
@@ -2311,6 +2330,8 @@ export default function FacturaUpload() {
                 setCliente(prev => ({
                   nombre:    prev.nombre    || data.cliente.nombre    || "",
                   apellidos: prev.apellidos || data.cliente.apellidos || "",
+                  empresa:   prev.empresa   || data.cliente.empresa   || "",
+                  PessoaJuridica: prev.PessoaJuridica || !!data.cliente.PessoaJuridica,
                   correo:    prev.correo    || data.cliente.correo    || "",
                   telefono:  prev.telefono  || data.cliente.telefono  || "",
                   direccion: prev.direccion || data.cliente.direccion || "",
@@ -2631,22 +2652,64 @@ export default function FacturaUpload() {
               Rellena tus datos para que podamos presentarte tu plan personalizado.
             </p>
 
-            <div className="cs-row">
-              <div className="cs-field-group">
-                <label className="cs-label" style={{ fontWeight:700 }}>Nombre</label>
-                <input className={`cs-input${clienteErrors.nombre ? " error" : ""}`}
-                  name="nombre" placeholder="ej. María"
-                  value={cliente.nombre} onChange={handleCliente} />
-                {clienteErrors.nombre && <span className="cs-field-error">{clienteErrors.nombre}</span>}
-              </div>
-              <div className="cs-field-group">
-                <label className="cs-label" style={{ fontWeight:700 }}>Apellidos</label>
-                <input className={`cs-input${clienteErrors.apellidos ? " error" : ""}`}
-                  name="apellidos" placeholder="ej. López Hernández"
-                  value={cliente.apellidos} onChange={handleCliente} />
-                {clienteErrors.apellidos && <span className="cs-field-error">{clienteErrors.apellidos}</span>}
-              </div>
+            {/* Tipo de persona — Física (defecto) / Jurídica */}
+            <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+              {[
+                { label: "Persona Física",   juridica: false },
+                { label: "Persona Jurídica", juridica: true  },
+              ].map(({ label, juridica }) => {
+                const activo = !!cliente.PessoaJuridica === juridica;
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => {
+                      setCliente(c => juridica
+                        ? ({ ...c, PessoaJuridica: true,  nombre: "", apellidos: "" })
+                        : ({ ...c, PessoaJuridica: false, empresa: "" }));
+                      setClienteErrors({});
+                    }}
+                    style={{
+                      flex:1, padding:"10px 12px", borderRadius:10, fontSize:14,
+                      fontWeight:700, fontFamily:"inherit", cursor:"pointer",
+                      border: activo ? "1.5px solid #345B22" : "1.5px solid #ddd",
+                      background: activo ? "#F4FDF0" : "#fff",
+                      color: activo ? "#345B22" : "#777",
+                      transition:"all 0.15s",
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
+
+            {cliente.PessoaJuridica ? (
+              <div className="cs-field-group" style={{ marginBottom:16 }}>
+                <label className="cs-label" style={{ fontWeight:700 }}>Nombre de la empresa</label>
+                <input className={`cs-input${clienteErrors.empresa ? " error" : ""}`}
+                  name="empresa" placeholder="ej. Comunidad Solar S.L."
+                  value={cliente.empresa} onChange={handleCliente} />
+                {clienteErrors.empresa && <span className="cs-field-error">{clienteErrors.empresa}</span>}
+              </div>
+            ) : (
+              <div className="cs-row">
+                <div className="cs-field-group">
+                  <label className="cs-label" style={{ fontWeight:700 }}>Nombre</label>
+                  <input className={`cs-input${clienteErrors.nombre ? " error" : ""}`}
+                    name="nombre" placeholder="ej. María"
+                    value={cliente.nombre} onChange={handleCliente} />
+                  {clienteErrors.nombre && <span className="cs-field-error">{clienteErrors.nombre}</span>}
+                </div>
+                <div className="cs-field-group">
+                  <label className="cs-label" style={{ fontWeight:700 }}>Apellidos</label>
+                  <input className={`cs-input${clienteErrors.apellidos ? " error" : ""}`}
+                    name="apellidos" placeholder="ej. López Hernández"
+                    value={cliente.apellidos} onChange={handleCliente} />
+                  {clienteErrors.apellidos && <span className="cs-field-error">{clienteErrors.apellidos}</span>}
+                </div>
+              </div>
+            )}
 
             <div className="cs-field-group" style={{ marginBottom:16 }}>
               <label className="cs-label" style={{ fontWeight:700 }}>Correo electrónico</label>
@@ -2990,8 +3053,8 @@ export default function FacturaUpload() {
                 </p>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:24 }}>
                   <div style={{ background:"#F5F4EF", borderRadius:10, padding:"12px 16px" }}>
-                    <p style={{ fontSize:12, color:"#777", marginBottom:4 }}>Nombre</p>
-                    <p style={{ fontSize:14, color:"#111", fontWeight:700 }}>{cliente.nombre}</p>
+                    <p style={{ fontSize:12, color:"#777", marginBottom:4 }}>{cliente.PessoaJuridica ? "Nombre de la empresa" : "Nombre"}</p>
+                    <p style={{ fontSize:14, color:"#111", fontWeight:700 }}>{cliente.PessoaJuridica ? cliente.empresa : cliente.nombre}</p>
                   </div>
                   <div style={{ background:"#F5F4EF", borderRadius:10, padding:"12px 16px" }}>
                     <p style={{ fontSize:12, color:"#777", marginBottom:4 }}>Número de teléfono</p>
