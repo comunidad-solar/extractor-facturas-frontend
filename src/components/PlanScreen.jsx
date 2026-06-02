@@ -25,7 +25,6 @@ export default function PlanScreen({
   onSetTabActiva,
   onSesionError,
   onSesionLoaded,
-  onExcedeMinimoProprietario,
   facturaPreviewData = null,
   zonaWarn = "",
 }) {
@@ -33,9 +32,6 @@ export default function PlanScreen({
   const [sesionData, setSesionData] = useState(sesionDataProp ?? null);
   const [sesionFailed, setSesionFailed] = useState(false);
   const [ceFotoUrl, setCeFotoUrl] = useState(null);
-  // Coeficientes del propietario — null = aún cargando o sin participación (no bloqueamos)
-  const [coefProprietario, setCoefProprietario] = useState(null);
-
   const yaContratado = accionRealizada === "contratado";
   const yaEnEspera   = accionRealizada === "lista_espera";
 
@@ -43,65 +39,18 @@ export default function PlanScreen({
   // Si paneles_disponibles es null/undefined no bloqueamos (no podemos afirmar que no haya plazas).
   const sinPlazas = cePanelesDisponibles != null && panelesSel != null && cePanelesDisponibles < panelesSel;
 
-  // excedeMinimoProprietario: el coeficiente del cliente supera el espacio disponible
-  // por encima del mínimo garantido al propietario.
-  //   disponible = coeficiente_cajon - coeficiente_reparto (reparto null → 0)
-  //   coeficiente_cliente = coeficienteDistribucion (calculado por el cotizador para panelesSel)
-  //   si coeficiente_cliente > disponible → excedeMinimoProprietario → lista de espera
-  // Si coefProprietario es null (sin participación de propietario) → no bloqueamos.
-  const excedeMinimoProprietario = (() => {
-    if (!coefProprietario) return false;
-    const coefReparto = coefProprietario.coeficiente_reparto ?? 0; // null → tratar como 0
-    const coefCajon   = coefProprietario.coeficiente_cajon;
-    if (coefCajon == null) return false; // sin cajón definido → no bloqueamos
-    const coefCliente = planData?.coeficienteDistribucion ?? 0;
-    const disponible  = coefCajon - coefReparto;
-    const bloqueado   = coefCliente > disponible + 1e-9; // tolerancia float
-    console.log("[PlanScreen] excedeMinimoProprietario:", { coefReparto, coefCajon, disponible, coefCliente, bloqueado });
-    return bloqueado;
-  })();
-
-  // El botón "Contratar" sólo abre el modal cuando la CE está Available Y hay plazas Y hay cupo.
+  // El botón "Contratar" sólo abre el modal cuando la CE está Available Y hay plazas.
   // En caso contrario va a la lista de espera (sin mensaje extra — comportamiento silencioso).
-  const puedeContratar = ceStatus === "Available" && !sinPlazas && !excedeMinimoProprietario;
+  const puedeContratar = ceStatus === "Available" && !sinPlazas;
 
   console.log("[PlanScreen] cálculo paneles:", {
     cePanelesDisponibles,
     panelesSel,
     ceStatus,
     sinPlazas,
-    excedeMinimoProprietario,
     puedeContratar,
     rama: puedeContratar ? "→ Contratar (modal)" : "→ Lista de espera",
   });
-
-
-
-  // Notificar pai sempre que excedeMinimoProprietario mudar (para payload 08/09)
-  useEffect(() => {
-    if (onExcedeMinimoProprietario) onExcedeMinimoProprietario(excedeMinimoProprietario);
-  }, [excedeMinimoProprietario]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // id_generacion para buscar coeficientes del propietario —
-  // pode vir da URL (primeira carga) ou da sessão (após onSesionLoaded)
-  const [idGenCE, setIdGenCE] = useState(
-    () => new URLSearchParams(window.location.search).get("id_generacion") ?? null
-  );
-
-  // Cargar coeficientes del propietario cuando idGenCE esté disponible
-  useEffect(() => {
-    if (!idGenCE) return;
-    console.log("[PlanScreen] buscando coef propietario para id_generacion:", idGenCE);
-    fetch(`${API_BASE}/ce/proprietario-coef?id_generacion=${encodeURIComponent(idGenCE)}`)
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data) {
-          console.log("[PlanScreen] coef propietario recibido:", data);
-          setCoefProprietario(data);
-        }
-      })
-      .catch(() => {}); // si falla no bloqueamos
-  }, [idGenCE]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!CE_FOTO_ENABLED || !ceNombre) return;
@@ -124,9 +73,6 @@ export default function PlanScreen({
       })
       .then(data => {
         setSesionData(data);
-        // Propagar id_generacion da sessão para disparar fetch do coef propietario
-        const idGenFromSesion = data?.ce?.id_generacion ? String(data.ce.id_generacion) : null;
-        if (idGenFromSesion) setIdGenCE(prev => prev ?? idGenFromSesion);
         if (onSesionLoaded) onSesionLoaded(data);
       })
       .catch(() => {
