@@ -111,6 +111,27 @@ export function suministroDentroDeZona(lat, lon, ce) {
   return haversineDistance(lat, lon, ceLat, ceLng) <= radio;
 }
 
+// ── Calculadora de Autoconsumo Remoto (AR) ─────────────────────────────────────
+// Anexa os dados de contacto já preenchidos no passo 1 à URL da calculadora AR.
+// A calculadora AR (ContentCalculateSavings.tsx) lê os params em texto plano:
+//   email (obrigatório para aplicar), first_name, last_name, phone.
+// Em Persona Jurídica, o nome da empresa vai em first_name.
+export function buildArCalculatorURL(baseUrl, cliente) {
+  const c = cliente ?? {};
+  if (!baseUrl || !c.correo) return baseUrl; // sem email a AR não pré-preenche nada
+  const p = new URLSearchParams();
+  p.set("email", c.correo);
+  if (c.PessoaJuridica) {
+    if (c.empresa) p.set("first_name", c.empresa);
+  } else {
+    if (c.nombre)    p.set("first_name", c.nombre);
+    if (c.apellidos) p.set("last_name",  c.apellidos);
+  }
+  if (c.telefono) p.set("phone", c.telefono);
+  const sep = baseUrl.includes("?") ? "&" : "?";
+  return `${baseUrl}${sep}${p.toString()}`;
+}
+
 // ── Formatação ────────────────────────────────────────────────────────────────
 export function fmtES(valor, decimais = 2) {
   if (valor == null) return "0";

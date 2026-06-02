@@ -100,6 +100,9 @@ const cotizadorBase = subdomain === "develop"
 export const PLAN_REDIRECT_URL  = cotizadorBase;
 export const QUOTING_URL        = "https://dummyjson.com/test";
 export const LEAD_URL           = "https://dummyjson.com/test";
+// Calculadora de Autoconsumo Remoto (botão mostrado quando fora de zona).
+// Os dados de contacto do cliente são anexados via buildArCalculatorURL().
+export const AR_CALCULATOR_URL  = "https://presupuesto-ar.comunidadsolar.es/calcular-ahorro/aproximado?config=2d042eb19f83e7a3b2de85e8e26ac2f17&ce-name=torrontera+i+-+lazarillo";
 export const NOMINATIM_URL      = "https://nominatim.openstreetmap.org";
 
 // Mapa de estados de la CE a etiquetas visibles

@@ -10,7 +10,7 @@ import {
   FIELD_LABELS, MANUAL_FIELD_KEYS, PRECIOS_POT_3TD_KEYS,
   PRECIOS_ENERGIA_BASE_KEYS, PRECIOS_ENERGIA_3TD_KEYS, API_AUTO_KEYS,
   PERIODOS_POR_MES_3TD, TARIFAS_MULTI_FACTURA,
-  CE_API_URL, API_BASE, SESION_URL, PLAN_REDIRECT_URL, QUOTING_URL, LEAD_URL,
+  CE_API_URL, API_BASE, SESION_URL, PLAN_REDIRECT_URL, QUOTING_URL, LEAD_URL, AR_CALCULATOR_URL,
   NOMINATIM_URL, CE_STATUS_LABELS, CE_ESTATUS_MAP,
   ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL, RESTRICT_TO_CE, FORCE_WAITING_LIST, SUMINISTRO_ZONA_CHECK, CUPS_MATCH_CHECK, CUPS_ENABLED, ASESOR_ENABLED,
 } from "../constants/appConstants";
@@ -18,7 +18,7 @@ import {
   hasValue, emptyManual, resolverIdGeneracion, getCeNombreById,
   haversineDistance, buildPayloadAsesor, enviarLead,
   validarDNI, validarIBAN, sugerirMeses3TD, calcularMotivoDeEspera,
-  mismoCups, findCeSeleccionada, suministroDentroDeZona,
+  mismoCups, findCeSeleccionada, suministroDentroDeZona, buildArCalculatorURL,
 } from "../utils/facturaUtils";
 import OptimizerModal from "./OptimizerModal";
 import PlanScreen from "./PlanScreen";
@@ -2473,7 +2473,7 @@ export default function FacturaUpload() {
             </p>
 
             <a
-              href="https://presupuesto-ar.comunidadsolar.es/calcular-ahorro/aproximado?config=2d042eb19f83e7a3b2de85e8e26ac2f17&ce-name=torrontera+i+-+lazarillo"
+              href={buildArCalculatorURL(AR_CALCULATOR_URL, cliente)}
               style={{
                 display:"block",
                 width:"100%",

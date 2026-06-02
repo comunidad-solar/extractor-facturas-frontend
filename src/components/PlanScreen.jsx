@@ -148,6 +148,21 @@ export default function PlanScreen({
     );
   }
 
+  // Modo proprietário: botão Contratar desativado + mensagem informativa abaixo
+  const bloqueContratarProprietario = (
+    <div style={{ marginTop:20 }}>
+      <button
+        disabled
+        style={{ width:"100%", background:"#ccc", color:"#000", border:"2px solid transparent", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:"not-allowed", letterSpacing:"0.04em", opacity:0.7 }}
+      >
+        Contratar
+      </button>
+      <p style={{ fontSize:13, color:"#8D0303", marginTop:10, lineHeight:1.5, textAlign:"center" }}>
+        No se puede contratar porque es un trato de propietario. Ponte en contacto con el agente responsable para darle seguimiento.
+      </p>
+    </div>
+  );
+
   return (
     <>
     <div className="cs-results-card fade-in" style={{ maxWidth:1000, padding:"0 0 48px", backgroundColor:"#EEECE8" }}>
@@ -188,8 +203,8 @@ export default function PlanScreen({
                   {fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)}€
                   <span style={{ fontSize:13, fontWeight:400, color:"#888" }}>(IVA incluido)</span>
                 </p>
-                {/* Modo proprietário: esconder botão Contratar/Lista de Espera */}
-                {!modoProprietario && (
+                {/* Modo proprietário: botão Contratar desativado + mensagem */}
+                {modoProprietario ? bloqueContratarProprietario : (
                   <div style={{ marginTop:20 }}>
                     <button
                       disabled={puedeContratar ? yaContratado : yaEnEspera}
@@ -269,8 +284,8 @@ export default function PlanScreen({
                   {fmtES(planData?.pagoUnico ?? 3480.75)}€
                 </p>
                 <p style={{ fontSize:11, color:"#aaa" }}>IVA 21% incluido</p>
-                {/* Modo proprietário: esconder botão Contratar/Lista de Espera */}
-                {!modoProprietario && (
+                {/* Modo proprietário: botão Contratar desativado + mensagem */}
+                {modoProprietario ? bloqueContratarProprietario : (
                   <button
                     disabled={puedeContratar ? yaContratado : yaEnEspera}
                     style={{ marginTop:12, background:(puedeContratar ? yaContratado : yaEnEspera) ? "#ccc" : "#FFAD2A", color:"#000", border:"2px solid transparent", borderRadius:28, padding:"12px 32px", fontSize:14, fontWeight:700, fontFamily:"inherit", cursor:(puedeContratar ? yaContratado : yaEnEspera) ? "not-allowed" : "pointer", letterSpacing:"0.04em", opacity:(puedeContratar ? yaContratado : yaEnEspera) ? 0.7 : 1, transition:"background 0.2s,border-color 0.2s" }}
