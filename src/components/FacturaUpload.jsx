@@ -29,6 +29,7 @@ export default function FacturaUpload() {
   const [mode, setMode] = useState(null); // null | "pdf" | "cups"
   const [modoAsesor, setModoAsesor] = useState(false);
   const [modoProprietario, setModoProprietario] = useState(false);
+  const [showCeSelector, setShowCeSelector] = useState(false); // seletor CE oculto; toggle ao clicar no texto do modo
 
   // ── Step 1 — client data ─────────────────────────────────────────────────
   const [cliente, setCliente] = useState({
@@ -2055,29 +2056,39 @@ export default function FacturaUpload() {
 
         {/* Indicador modo asesor */}
         {modoAsesor && !(loading && loadingMsg === "Preparando tu contrato...") && (
-          <div style={{
-            textAlign: "center",
-            fontSize: 11,
-            fontWeight: 600,
-            color: "#E48409",
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            marginBottom: 8,
-          }}>
+          <div
+            onClick={() => setShowCeSelector(v => !v)}
+            title="Mostrar/ocultar selector de CE"
+            style={{
+              textAlign: "center",
+              fontSize: 11,
+              fontWeight: 600,
+              color: "#E48409",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              marginBottom: 8,
+              cursor: "pointer",
+              userSelect: "none",
+            }}>
             🔒 Modo interno — Asesores
           </div>
         )}
         {/* Indicador modo proprietário */}
         {modoProprietario && !(loading && loadingMsg === "Preparando tu contrato...") && (
-          <div style={{
-            textAlign: "center",
-            fontSize: 11,
-            fontWeight: 600,
-            color: "#1FA84E",
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            marginBottom: 8,
-          }}>
+          <div
+            onClick={() => setShowCeSelector(v => !v)}
+            title="Mostrar/ocultar selector de CE"
+            style={{
+              textAlign: "center",
+              fontSize: 11,
+              fontWeight: 600,
+              color: "#1FA84E",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              marginBottom: 8,
+              cursor: "pointer",
+              userSelect: "none",
+            }}>
             🏠 Modo Proprietario
           </div>
         )}
@@ -2531,7 +2542,7 @@ export default function FacturaUpload() {
         {/* ── STEP 1 — Datos del cliente ── */}
         {!loading && status !== "sent" && status !== "fuera_zona" && status !== "asesor_solicitado" && status !== "lista_espera" && step === 1 && (
           <div style={{ position: 'relative', width: '100%', maxWidth: 620 }}>
-            {(import.meta.env.DEV || window.location.hostname.split(".")[0] === "develop" || modoProprietario) && (
+            {showCeSelector && (import.meta.env.DEV || window.location.hostname.split(".")[0] === "develop" || modoProprietario) && (
               <div style={{ position: 'absolute', left: -140, top: 0 }}>
                 <select
                   onChange={e => handleDevCESelect(e.target.value)}
