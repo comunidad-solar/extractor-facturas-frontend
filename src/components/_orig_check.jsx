@@ -12,13 +12,12 @@ import {
   PERIODOS_POR_MES_3TD, TARIFAS_MULTI_FACTURA,
   CE_API_URL, API_BASE, SESION_URL, PLAN_REDIRECT_URL, QUOTING_URL, LEAD_URL,
   NOMINATIM_URL, CE_STATUS_LABELS, CE_ESTATUS_MAP,
-  ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL, RESTRICT_TO_CE, FORCE_WAITING_LIST, SUMINISTRO_ZONA_CHECK, CUPS_MATCH_CHECK, CUPS_ENABLED, ASESOR_ENABLED,
+  ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL, RESTRICT_TO_CE, FORCE_WAITING_LIST, SUMINISTRO_ZONA_CHECK, CUPS_ENABLED, ASESOR_ENABLED,
 } from "../constants/appConstants";
 import {
   hasValue, emptyManual, resolverIdGeneracion, getCeNombreById,
   haversineDistance, buildPayloadAsesor, enviarLead,
   validarDNI, validarIBAN, sugerirMeses3TD, calcularMotivoDeEspera,
-  mismoCups, findCeSeleccionada, suministroDentroDeZona,
 } from "../utils/facturaUtils";
 import OptimizerModal from "./OptimizerModal";
 import PlanScreen from "./PlanScreen";
@@ -94,8 +93,6 @@ export default function FacturaUpload() {
   const [error2, setError2]                     = useState("");           // PDF inválido (3ª)
   const [errorMes1, setErrorMes1]               = useState(false);        // mês não coincide (2ª)
   const [errorMes2, setErrorMes2]               = useState(false);        // mês não coincide (3ª)
-  const [errorCups1, setErrorCups1]             = useState(false);        // CUPS não coincide (2ª)
-  const [errorCups2, setErrorCups2]             = useState(false);        // CUPS não coincide (3ª)
   const [mesesSugeridos1, setMesesSugeridos1]   = useState([]); // sugestões para 2ª fatura
   const [mesesSugeridos2, setMesesSugeridos2]   = useState([]); // sugestões para 3ª fatura
   const [modalConfirmarEnvio, setModalConfirmarEnvio] = useState(false);
@@ -930,34 +927,14 @@ export default function FacturaUpload() {
       setSuministroLon(data.suministro_lon ?? null);
       setNombreCliente(data.nombre_cliente ?? null);
       setDireccionSuministro(data.direccion_suministro ?? null);
-      // Verificação: o ponto de fornecimento da factura está dentro da zona da CE selecionada?
-      setZonaWarn("");
-      let fueraDeZona = false;
       if (SUMINISTRO_ZONA_CHECK && data.suministro_lat && data.suministro_lon) {
         const ces = listaCERef.current.length > 0 ? listaCERef.current : listaCE;
-        const ceSel = findCeSeleccionada(ces, { idGeneracion, ceNombre });
-        const dentro = suministroDentroDeZona(data.suministro_lat, data.suministro_lon, ceSel);
-        const distancia = ceSel ? Math.round(haversineDistance(data.suministro_lat, data.suministro_lon, parseFloat(ceSel.lat), parseFloat(ceSel.lng))) : null;
-        console.log("🏠 [Verificación dirección factura]", {
-          suministro: { lat: data.suministro_lat, lon: data.suministro_lon, direccion: data.direccion_suministro ?? null },
-          ceSeleccionada: ceSel ? { nombre: ceSel.name || ceSel.addressName, lat: ceSel.lat, lng: ceSel.lng, radioMetros: ceSel.radioMetros } : null,
-          distanciaMetros: distancia,
-          dentroDeZona: dentro,
-          resultado: dentro === false ? "FUERA DE ZONA ⚠️" : (dentro === true ? "Dentro de zona ✅" : "Sin datos suficientes"),
-        });
-        if (dentro === false) {
-          fueraDeZona = true;
-          setZonaWarn(
-  `La dirección de la factura está fuera de la zona de la Comunidad Energética${ceSel?.name || ceNombre ? ` ${ceSel?.name || ceNombre}` : ""}. Suba una factura con la misma dirección que introdujo anteriormente.`
-);
+        if (ces && ces.length > 0) {
+          const dentroZona = ces.some(ce =>
+            haversineDistance(data.suministro_lat, data.suministro_lon, parseFloat(ce.lat), parseFloat(ce.lng)) <= parseFloat(ce.radioMetros)
+          );
+          if (!dentroZona) setZonaWarn("El punto de suministro de la factura está fuera de la zona de cobertura.");
         }
-      }
-      // Fora de zona: bloqueia — mostra a tela analisada com o aviso e NÃO envia ao cotizador
-      if (fueraDeZona) {
-        console.log("🚫 [Bloqueo] Factura fuera de zona — no se envía al cotizador");
-        setStatus("analyzed");
-        setLoading(false);
-        return;
       }
       const facturaBuiltPDF = {
         ...buildFactura({ ...flat, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), modo: modoAlquiler ? "alquiler" : "venta" }),
@@ -1007,7 +984,7 @@ export default function FacturaUpload() {
       setError1("Archivo no válido. Asegúrate de que sea una factura en formato PDF.");
       return;
     }
-    setFile1(f); setLoading1(true); setError1(""); setErrorMes1(false); setErrorCups1(false);
+    setFile1(f); setLoading1(true); setError1(""); setErrorMes1(false);
     try {
       const fd = new FormData();
       fd.append("file", f, f.name);
@@ -1016,18 +993,6 @@ export default function FacturaUpload() {
       const data = await res.json();
 
       const flat1 = flattenFacturaResponse(data);
-      // CUPS deve coincidir com o da primeira factura (mesmo ponto de fornecimento)
-      const cupsOk1 = mismoCups(flat1.cups, facturaData?.cups);
-      console.log("🔌 [Verificación CUPS — 2ª factura]", {
-        cupsPrimera: facturaData?.cups ?? null,
-        cupsSegunda: flat1.cups ?? null,
-        coincide: cupsOk1,
-        resultado: cupsOk1 ? "Mismo punto de suministro ✅" : "CUPS DISTINTO ⚠️",
-      });
-      if (CUPS_MATCH_CHECK && !cupsOk1) {
-        setErrorCups1(true);
-        setFile1(null); setLoading1(false); return;
-      }
       const mes1 = parseInt(facturaData?.periodo_fin?.split("/")?.[1]);
       const mes2 = parseInt(flat1.periodo_fin?.split("/")?.[1]);
       // Mês deve estar nos sugeridos (e diferente do da 1ª)
@@ -1060,7 +1025,7 @@ export default function FacturaUpload() {
       setError2("Archivo no válido. Asegúrate de que sea una factura en formato PDF.");
       return;
     }
-    setFile2(f); setLoading2(true); setError2(""); setErrorMes2(false); setErrorCups2(false);
+    setFile2(f); setLoading2(true); setError2(""); setErrorMes2(false);
     try {
       const fd = new FormData();
       fd.append("file", f, f.name);
@@ -1069,18 +1034,6 @@ export default function FacturaUpload() {
       const data = await res.json();
 
       const flat2 = flattenFacturaResponse(data);
-      // CUPS deve coincidir com o da primeira factura (mesmo ponto de fornecimento)
-      const cupsOk2 = mismoCups(flat2.cups, facturaData?.cups);
-      console.log("🔌 [Verificación CUPS — 3ª factura]", {
-        cupsPrimera: facturaData?.cups ?? null,
-        cupsTercera: flat2.cups ?? null,
-        coincide: cupsOk2,
-        resultado: cupsOk2 ? "Mismo punto de suministro ✅" : "CUPS DISTINTO ⚠️",
-      });
-      if (CUPS_MATCH_CHECK && !cupsOk2) {
-        setErrorCups2(true);
-        setFile2(null); setLoading2(false); return;
-      }
       const mes1 = parseInt(facturaData?.periodo_fin?.split("/")?.[1]);
       const mes3 = parseInt(flat2.periodo_fin?.split("/")?.[1]);
       const mesesSugeridosMes3 = mesesSugeridos2.map(({ mes }) => mes);
@@ -2218,7 +2171,6 @@ export default function FacturaUpload() {
             cePanelesDisponibles={cePanelesDisponibles}
             modoAlquiler={modoAlquiler}
             modoProprietario={modoProprietario}
-            zonaWarn={zonaWarn}
             cuotaAlquilerMes={cuotaAlquilerMes}
             planData={planData}
             panelesSel={panelesSel}
@@ -2948,7 +2900,7 @@ export default function FacturaUpload() {
             {mode === "pdf" && status === "analyzed" && facturaData && (
               <div className="cs-card fade-in">
                 <button className="cs-btn-ghost" style={{ marginTop:0, marginBottom:20, width:"auto", padding:"8px 14px", fontSize:13 }}
-                  onClick={() => { setStatus("idle"); setFacturaData(null); setFile(null); setFactura1Data(null); setFile1(null); setError1(""); setFactura2Data(null); setFile2(null); setError2(""); setErrorCups1(false); setErrorCups2(false); setZonaWarn(""); }}>
+                  onClick={() => { setStatus("idle"); setFacturaData(null); setFile(null); setFactura1Data(null); setFile1(null); setError1(""); setFactura2Data(null); setFile2(null); setError2(""); }}>
                   ← Volver
                 </button>
 
@@ -2975,12 +2927,6 @@ export default function FacturaUpload() {
                 {error && (
                   <div className="cs-alert-err" style={{ marginBottom:16 }}>
                     <span>⚠️</span><div>{error}</div>
-                  </div>
-                )}
-
-                {zonaWarn && (
-                  <div className="cs-alert-warn" style={{ marginBottom:16 }}>
-                    <span>⚠️</span><div>{zonaWarn}</div>
                   </div>
                 )}
 
@@ -3095,18 +3041,6 @@ export default function FacturaUpload() {
                             <img src="/rechazado.png" alt="" style={{ width:24, height:24, flexShrink:0 }} />
                             <p style={{ fontSize:14, color:"#8D0303", fontWeight:600, lineHeight:1.5, margin:0 }}>
                               El mes no coincide. Sube una factura de los meses indicados.
-                            </p>
-                          </div>
-                        )}
-                        {errorCups1 && (
-                          <div style={{
-                            display:"flex", alignItems:"flex-start", gap:12,
-                            background:"#FEF2F2", border:"1.5px solid #8D0303",
-                            borderRadius:12, padding:"14px 16px", marginBottom:10,
-                          }}>
-                            <img src="/rechazado.png" alt="" style={{ width:24, height:24, flexShrink:0 }} />
-                            <p style={{ fontSize:14, color:"#8D0303", fontWeight:600, lineHeight:1.5, margin:0 }}>
-                              El CUPS no coincide con el de la primera factura. Sube una factura del mismo punto de suministro.
                             </p>
                           </div>
                         )}
@@ -3238,18 +3172,6 @@ export default function FacturaUpload() {
                             </p>
                           </div>
                         )}
-                        {errorCups2 && (
-                          <div style={{
-                            display:"flex", alignItems:"flex-start", gap:12,
-                            background:"#FEF2F2", border:"1.5px solid #8D0303",
-                            borderRadius:12, padding:"14px 16px", marginBottom:10,
-                          }}>
-                            <img src="/rechazado.png" alt="" style={{ width:24, height:24, flexShrink:0 }} />
-                            <p style={{ fontSize:14, color:"#8D0303", fontWeight:600, lineHeight:1.5, margin:0 }}>
-                              El CUPS no coincide con el de la primera factura. Sube una factura del mismo punto de suministro.
-                            </p>
-                          </div>
-                        )}
                         {error2 && (
                           <div style={{
                             display:"flex", alignItems:"flex-start", gap:12,
@@ -3349,10 +3271,9 @@ export default function FacturaUpload() {
                 {TARIFAS_MULTI_FACTURA.includes(facturaData?.tarifa_acceso) && (
                   <button
                     className="cs-btn-primary"
-                    style={{ marginTop:8, opacity: zonaWarn ? 0.5 : 1, cursor: zonaWarn ? "not-allowed" : "pointer" }}
-                    disabled={sending || !!zonaWarn}
+                    style={{ marginTop:8 }}
+                    disabled={sending}
                     onClick={() => {
-                      if (zonaWarn) return;
                       if (factura1Data && factura2Data) {
                         handleEnviar();
                       } else {

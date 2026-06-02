@@ -68,6 +68,49 @@ export function haversineDistance(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// ── Verificações de factura ───────────────────────────────────────────────────
+// Normaliza um CUPS para comparação: maiúsculas, sem espaços.
+export function normalizarCups(cups) {
+  return (cups ?? "").toString().toUpperCase().replace(/\s+/g, "").trim();
+}
+
+// Compara dois CUPS pelo identificador do ponto de fornecimento (primeiros 20
+// caracteres: "ES" + 16 alfanuméricos + 2 letras de controlo), ignorando o
+// sufixo de ponto fronteira (ex.: "0F", "1P"). Devolve true se forem o mesmo
+// ponto de fornecimento. Se faltar algum dos valores devolve true (não bloqueia).
+export function mismoCups(cupsA, cupsB) {
+  const a = normalizarCups(cupsA);
+  const b = normalizarCups(cupsB);
+  if (!a || !b) return true;
+  const base = (s) => s.slice(0, 20);
+  return base(a) === base(b);
+}
+
+// Encontra a CE selecionada numa lista de CEs, priorizando id_generacion e
+// caindo para o nome (name / addressName). Devolve o objeto CE ou null.
+export function findCeSeleccionada(ces, { idGeneracion, ceNombre } = {}) {
+  if (!Array.isArray(ces) || ces.length === 0) return null;
+  if (idGeneracion) {
+    const porId = ces.find((c) => String(c.id_generacion) === String(idGeneracion));
+    if (porId) return porId;
+  }
+  if (ceNombre) {
+    return ces.find((c) => c.name === ceNombre || c.addressName === ceNombre) ?? null;
+  }
+  return null;
+}
+
+// Verifica se um ponto de fornecimento (lat/lon) está dentro do raio da CE.
+// Devolve true/false, ou null se faltarem dados para decidir.
+export function suministroDentroDeZona(lat, lon, ce) {
+  if (lat == null || lon == null || !ce) return null;
+  const ceLat = parseFloat(ce.lat);
+  const ceLng = parseFloat(ce.lng);
+  const radio = parseFloat(ce.radioMetros);
+  if (Number.isNaN(ceLat) || Number.isNaN(ceLng) || Number.isNaN(radio)) return null;
+  return haversineDistance(lat, lon, ceLat, ceLng) <= radio;
+}
+
 // ── Formatação ────────────────────────────────────────────────────────────────
 export function fmtES(valor, decimais = 2) {
   if (valor == null) return "0";

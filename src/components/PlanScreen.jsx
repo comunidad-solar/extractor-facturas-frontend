@@ -27,6 +27,7 @@ export default function PlanScreen({
   onSesionLoaded,
   onExcedeMinimoProprietario,
   facturaPreviewData = null,
+  zonaWarn = "",
 }) {
   // eslint-disable-next-line no-unused-vars
   const [sesionData, setSesionData] = useState(sesionDataProp ?? null);
@@ -150,6 +151,12 @@ export default function PlanScreen({
   return (
     <>
     <div className="cs-results-card fade-in" style={{ maxWidth:1000, padding:"0 0 48px", backgroundColor:"#EEECE8" }}>
+
+      {zonaWarn && (
+        <div className="cs-alert-warn" style={{ margin:"24px 48px 0" }}>
+          <span>⚠️</span><div>{zonaWarn}</div>
+        </div>
+      )}
 
       {/* ── HERO ── */}
       <div style={{ padding:"44px 48px 32px" }}>
