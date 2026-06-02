@@ -12,6 +12,10 @@
   outline: none;
 }
 
+html, body, button, input, textarea, select {
+  font-family: 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
+}
+
 body {
   background: #f5f5f0;
   min-height: 100vh;

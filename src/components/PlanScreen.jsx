@@ -25,16 +25,13 @@ export default function PlanScreen({
   onSetTabActiva,
   onSesionError,
   onSesionLoaded,
-  onExcedeMinimoProprietario,
   facturaPreviewData = null,
+  zonaWarn = "",
 }) {
   // eslint-disable-next-line no-unused-vars
   const [sesionData, setSesionData] = useState(sesionDataProp ?? null);
   const [sesionFailed, setSesionFailed] = useState(false);
   const [ceFotoUrl, setCeFotoUrl] = useState(null);
-  // Coeficientes del propietario — null = aún cargando o sin participación (no bloqueamos)
-  const [coefProprietario, setCoefProprietario] = useState(null);
-
   const yaContratado = accionRealizada === "contratado";
   const yaEnEspera   = accionRealizada === "lista_espera";
 
@@ -42,65 +39,18 @@ export default function PlanScreen({
   // Si paneles_disponibles es null/undefined no bloqueamos (no podemos afirmar que no haya plazas).
   const sinPlazas = cePanelesDisponibles != null && panelesSel != null && cePanelesDisponibles < panelesSel;
 
-  // excedeMinimoProprietario: el coeficiente del cliente supera el espacio disponible
-  // por encima del mínimo garantido al propietario.
-  //   disponible = coeficiente_cajon - coeficiente_reparto (reparto null → 0)
-  //   coeficiente_cliente = coeficienteDistribucion (calculado por el cotizador para panelesSel)
-  //   si coeficiente_cliente > disponible → excedeMinimoProprietario → lista de espera
-  // Si coefProprietario es null (sin participación de propietario) → no bloqueamos.
-  const excedeMinimoProprietario = (() => {
-    if (!coefProprietario) return false;
-    const coefReparto = coefProprietario.coeficiente_reparto ?? 0; // null → tratar como 0
-    const coefCajon   = coefProprietario.coeficiente_cajon;
-    if (coefCajon == null) return false; // sin cajón definido → no bloqueamos
-    const coefCliente = planData?.coeficienteDistribucion ?? 0;
-    const disponible  = coefCajon - coefReparto;
-    const bloqueado   = coefCliente > disponible + 1e-9; // tolerancia float
-    console.log("[PlanScreen] excedeMinimoProprietario:", { coefReparto, coefCajon, disponible, coefCliente, bloqueado });
-    return bloqueado;
-  })();
-
-  // El botón "Contratar" sólo abre el modal cuando la CE está Available Y hay plazas Y hay cupo.
+  // El botón "Contratar" sólo abre el modal cuando la CE está Available Y hay plazas.
   // En caso contrario va a la lista de espera (sin mensaje extra — comportamiento silencioso).
-  const puedeContratar = ceStatus === "Available" && !sinPlazas && !excedeMinimoProprietario;
+  const puedeContratar = ceStatus === "Available" && !sinPlazas;
 
   console.log("[PlanScreen] cálculo paneles:", {
     cePanelesDisponibles,
     panelesSel,
     ceStatus,
     sinPlazas,
-    excedeMinimoProprietario,
     puedeContratar,
     rama: puedeContratar ? "→ Contratar (modal)" : "→ Lista de espera",
   });
-
-
-
-  // Notificar pai sempre que excedeMinimoProprietario mudar (para payload 08/09)
-  useEffect(() => {
-    if (onExcedeMinimoProprietario) onExcedeMinimoProprietario(excedeMinimoProprietario);
-  }, [excedeMinimoProprietario]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // id_generacion para buscar coeficientes del propietario —
-  // pode vir da URL (primeira carga) ou da sessão (após onSesionLoaded)
-  const [idGenCE, setIdGenCE] = useState(
-    () => new URLSearchParams(window.location.search).get("id_generacion") ?? null
-  );
-
-  // Cargar coeficientes del propietario cuando idGenCE esté disponible
-  useEffect(() => {
-    if (!idGenCE) return;
-    console.log("[PlanScreen] buscando coef propietario para id_generacion:", idGenCE);
-    fetch(`${API_BASE}/ce/proprietario-coef?id_generacion=${encodeURIComponent(idGenCE)}`)
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data) {
-          console.log("[PlanScreen] coef propietario recibido:", data);
-          setCoefProprietario(data);
-        }
-      })
-      .catch(() => {}); // si falla no bloqueamos
-  }, [idGenCE]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!CE_FOTO_ENABLED || !ceNombre) return;
@@ -123,9 +73,6 @@ export default function PlanScreen({
       })
       .then(data => {
         setSesionData(data);
-        // Propagar id_generacion da sessão para disparar fetch do coef propietario
-        const idGenFromSesion = data?.ce?.id_generacion ? String(data.ce.id_generacion) : null;
-        if (idGenFromSesion) setIdGenCE(prev => prev ?? idGenFromSesion);
         if (onSesionLoaded) onSesionLoaded(data);
       })
       .catch(() => {
@@ -147,9 +94,30 @@ export default function PlanScreen({
     );
   }
 
+  // Modo proprietário: botão Contratar desativado + mensagem informativa abaixo
+  const bloqueContratarProprietario = (
+    <div style={{ marginTop:20 }}>
+      <button
+        disabled
+        style={{ width:"100%", background:"#ccc", color:"#000", border:"2px solid transparent", borderRadius:28, padding:"13px", fontSize:15, fontWeight:700, fontFamily:"inherit", cursor:"not-allowed", letterSpacing:"0.04em", opacity:0.7 }}
+      >
+        Contratar
+      </button>
+      <p style={{ fontSize:13, color:"#8D0303", marginTop:10, lineHeight:1.5, textAlign:"center" }}>
+        No se puede contratar porque es un trato de propietario. Ponte en contacto con el agente responsable para darle seguimiento.
+      </p>
+    </div>
+  );
+
   return (
     <>
     <div className="cs-results-card fade-in" style={{ maxWidth:1000, padding:"0 0 48px", backgroundColor:"#EEECE8" }}>
+
+      {zonaWarn && (
+        <div className="cs-alert-warn" style={{ margin:"24px 48px 0" }}>
+          <span>⚠️</span><div>{zonaWarn}</div>
+        </div>
+      )}
 
       {/* ── HERO ── */}
       <div style={{ padding:"44px 48px 32px" }}>
@@ -158,7 +126,7 @@ export default function PlanScreen({
             /* HERO ALQUILER */
             <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column", fontFamily:"'Montserrat', sans-serif" }}>
               <p style={{ fontSize:22, fontWeight:500, marginBottom:8, color:"#121212", fontFamily:"'Montserrat', sans-serif" }}>
-                <strong style={{ fontWeight:800 }}>Hola {cliente.nombre}</strong>, estás a un paso de
+                <strong style={{ fontWeight:800 }}>Hola {cliente.nombre || cliente.empresa}</strong>, estás a un paso de
               </p>
               <p className="cs-plan-hero-title" style={{ fontSize:48, fontWeight:700, lineHeight:1.05, marginBottom:0, color:"#121212", fontFamily:"'Montserrat', sans-serif" }}>
                 <span style={{ color:"#EF931D" }}>ahorrar un {planData?.ahorroAnualPercent ?? 30}%</span>
@@ -181,8 +149,8 @@ export default function PlanScreen({
                   {fmtES(cuotaAlquilerMes ?? planData?.cuotaAlquilerMes ?? 0)}€
                   <span style={{ fontSize:13, fontWeight:400, color:"#888" }}>(IVA incluido)</span>
                 </p>
-                {/* Modo proprietário: esconder botão Contratar/Lista de Espera */}
-                {!modoProprietario && (
+                {/* Modo proprietário: botão Contratar desativado + mensagem */}
+                {modoProprietario ? bloqueContratarProprietario : (
                   <div style={{ marginTop:20 }}>
                     <button
                       disabled={puedeContratar ? yaContratado : yaEnEspera}
@@ -204,7 +172,7 @@ export default function PlanScreen({
             /* HERO VENTA */
             <div style={{ flex:1, minWidth:220, display:"flex", flexDirection:"column" }}>
               <p style={{ fontSize:20, fontWeight:500, marginBottom:6, color:"#121212" }}>
-                Hola <strong>{cliente.nombre}</strong>, estás a un paso de tener
+                Hola <strong>{cliente.nombre || cliente.empresa}</strong>, estás a un paso de tener
               </p>
               <p className="cs-plan-hero-title" style={{ fontSize:46, fontWeight:800, lineHeight:1.1, marginBottom:20, color:"#EF931D" }}>
                 tu propia energía a 0€
@@ -262,8 +230,8 @@ export default function PlanScreen({
                   {fmtES(planData?.pagoUnico ?? 3480.75)}€
                 </p>
                 <p style={{ fontSize:11, color:"#aaa" }}>IVA 21% incluido</p>
-                {/* Modo proprietário: esconder botão Contratar/Lista de Espera */}
-                {!modoProprietario && (
+                {/* Modo proprietário: botão Contratar desativado + mensagem */}
+                {modoProprietario ? bloqueContratarProprietario : (
                   <button
                     disabled={puedeContratar ? yaContratado : yaEnEspera}
                     style={{ marginTop:12, background:(puedeContratar ? yaContratado : yaEnEspera) ? "#ccc" : "#FFAD2A", color:"#000", border:"2px solid transparent", borderRadius:28, padding:"12px 32px", fontSize:14, fontWeight:700, fontFamily:"inherit", cursor:(puedeContratar ? yaContratado : yaEnEspera) ? "not-allowed" : "pointer", letterSpacing:"0.04em", opacity:(puedeContratar ? yaContratado : yaEnEspera) ? 0.7 : 1, transition:"background 0.2s,border-color 0.2s" }}

@@ -10,14 +10,15 @@ import {
   FIELD_LABELS, MANUAL_FIELD_KEYS, PRECIOS_POT_3TD_KEYS,
   PRECIOS_ENERGIA_BASE_KEYS, PRECIOS_ENERGIA_3TD_KEYS, API_AUTO_KEYS,
   PERIODOS_POR_MES_3TD, TARIFAS_MULTI_FACTURA,
-  CE_API_URL, API_BASE, SESION_URL, PLAN_REDIRECT_URL, QUOTING_URL, LEAD_URL,
+  CE_API_URL, API_BASE, SESION_URL, PLAN_REDIRECT_URL, QUOTING_URL, LEAD_URL, AR_CALCULATOR_URL,
   NOMINATIM_URL, CE_STATUS_LABELS, CE_ESTATUS_MAP,
-  ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL, RESTRICT_TO_CE, FORCE_WAITING_LIST, SUMINISTRO_ZONA_CHECK, CUPS_ENABLED, ASESOR_ENABLED,
+  ASESOR_ENVIO_URL, ASESOR_REDIRECT_URL, RESTRICT_TO_CE, FORCE_WAITING_LIST, SUMINISTRO_ZONA_CHECK, CUPS_MATCH_CHECK, CUPS_ENABLED, ASESOR_ENABLED,
 } from "../constants/appConstants";
 import {
   hasValue, emptyManual, resolverIdGeneracion, getCeNombreById,
   haversineDistance, buildPayloadAsesor, enviarLead,
   validarDNI, validarIBAN, sugerirMeses3TD, calcularMotivoDeEspera,
+  mismoCups, findCeSeleccionada, suministroDentroDeZona, buildArCalculatorURL,
 } from "../utils/facturaUtils";
 import OptimizerModal from "./OptimizerModal";
 import PlanScreen from "./PlanScreen";
@@ -29,10 +30,12 @@ export default function FacturaUpload() {
   const [mode, setMode] = useState(null); // null | "pdf" | "cups"
   const [modoAsesor, setModoAsesor] = useState(false);
   const [modoProprietario, setModoProprietario] = useState(false);
+  const [showCeSelector, setShowCeSelector] = useState(false); // seletor CE oculto; toggle ao clicar no texto do modo
 
   // ── Step 1 — client data ─────────────────────────────────────────────────
   const [cliente, setCliente] = useState({
-    nombre: "", apellidos: "", correo: "", telefono: "", direccion: "",
+    nombre: "", apellidos: "", empresa: "", correo: "", telefono: "", direccion: "",
+    PessoaJuridica: false,
   });
   const [clienteErrors, setClienteErrors] = useState({});
 
@@ -92,6 +95,8 @@ export default function FacturaUpload() {
   const [error2, setError2]                     = useState("");           // PDF inválido (3ª)
   const [errorMes1, setErrorMes1]               = useState(false);        // mês não coincide (2ª)
   const [errorMes2, setErrorMes2]               = useState(false);        // mês não coincide (3ª)
+  const [errorCups1, setErrorCups1]             = useState(false);        // CUPS não coincide (2ª)
+  const [errorCups2, setErrorCups2]             = useState(false);        // CUPS não coincide (3ª)
   const [mesesSugeridos1, setMesesSugeridos1]   = useState([]); // sugestões para 2ª fatura
   const [mesesSugeridos2, setMesesSugeridos2]   = useState([]); // sugestões para 3ª fatura
   const [modalConfirmarEnvio, setModalConfirmarEnvio] = useState(false);
@@ -132,7 +137,6 @@ export default function FacturaUpload() {
   const [enviandoContrato, setEnviandoContrato] = useState(false);
   const [accionRealizada, setAccionRealizada]   = useState(null); // null | "contratado" | "lista_espera"
   const [motivoListaEspera, setMotivoListaEspera] = useState(null); // null | "Sin plazas" | "Quoting"
-  const excedeMinimoProprietarioRef             = useRef(false); // mirror síncrono do valor calculado na PlanScreen
   const [planAbierto, setPlanAbierto]           = useState(false);
   const [advertenciaAno, setAdvertenciaAno]     = useState(false);
   const [ibanContrato, setIbanContrato]         = useState("");
@@ -286,6 +290,8 @@ export default function FacturaUpload() {
       setCliente(c => ({
         nombre:    c.nombre    || cleanUrl(s("cliente.nombre"))    || cleanUrl(s("nombre"))    || "",
         apellidos: c.apellidos || cleanUrl(s("cliente.apellidos")) || cleanUrl(s("apellidos")) || "",
+        empresa:   c.empresa   || cleanUrl(s("cliente.empresa"))   || cleanUrl(s("empresa"))   || "",
+        PessoaJuridica: c.PessoaJuridica || s("PessoaJuridica") === "true" || s("cliente.PessoaJuridica") === "true",
         correo:    c.correo    || cleanUrl(s("cliente.correo"))    || cleanUrl(s("correo"))    || "",
         telefono:  c.telefono  || cleanUrl(s("cliente.telefono"))  || cleanUrl(s("telefono"))  || "",
         direccion: c.direccion || cleanUrl(s("cliente.direccion")) || cleanUrl(s("direccion")) || "",
@@ -322,6 +328,8 @@ export default function FacturaUpload() {
         setCliente(prev => ({
           nombre:    prev.nombre    || c.nombre    || "",
           apellidos: prev.apellidos || c.apellidos || "",
+          empresa:   prev.empresa   || c.empresa   || "",
+          PessoaJuridica: prev.PessoaJuridica || !!c.PessoaJuridica,
           correo:    prev.correo    || c.correo    || "",
           telefono:  prev.telefono  || c.telefono  || "",
           direccion: prev.direccion || c.direccion || "",
@@ -411,6 +419,8 @@ export default function FacturaUpload() {
             setCliente(prev => ({
               nombre:    prev.nombre    || data.cliente.nombre    || "",
               apellidos: prev.apellidos || data.cliente.apellidos || "",
+              empresa:   prev.empresa   || data.cliente.empresa   || "",
+              PessoaJuridica: prev.PessoaJuridica || !!data.cliente.PessoaJuridica,
               correo:    prev.correo    || data.cliente.correo    || "",
               telefono:  prev.telefono  || data.cliente.telefono  || "",
               direccion: prev.direccion || data.cliente.direccion || "",
@@ -574,8 +584,12 @@ export default function FacturaUpload() {
 
   const validateCliente = () => {
     const errs = {};
-    if (!cliente.nombre.trim())     errs.nombre    = "Obligatorio";
-    if (!cliente.apellidos.trim())  errs.apellidos = "Obligatorio";
+    if (cliente.PessoaJuridica) {
+      if (!cliente.empresa.trim())  errs.empresa = "Obligatorio";
+    } else {
+      if (!cliente.nombre.trim())     errs.nombre    = "Obligatorio";
+      if (!cliente.apellidos.trim())  errs.apellidos = "Obligatorio";
+    }
     if (!cliente.correo.trim())     errs.correo    = "Obligatorio";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cliente.correo.trim()))
       errs.correo = "Introduce un correo electrónico válido";
@@ -662,7 +676,7 @@ export default function FacturaUpload() {
   const chamarContinuar = async (ceResult) => {
     try {
       const payload = {
-        cliente: { nombre: cliente.nombre, apellidos: cliente.apellidos, correo: cliente.correo, telefono: cliente.telefono, direccion: cliente.direccion },
+        cliente: { nombre: cliente.nombre, apellidos: cliente.apellidos, empresa: cliente.empresa, PessoaJuridica: !!cliente.PessoaJuridica, correo: cliente.correo, telefono: cliente.telefono, direccion: cliente.direccion },
         ce: { nombre: ceResult?.ceNombre ?? ceNombre, direccion: ceResult?.ceDireccion ?? ceDireccion, status: FORCE_WAITING_LIST ? "Waiting list" : (ceResult?.ceStatus ?? ceStatus), etiqueta: ceResult?.ceEtiqueta ?? ceEtiqueta, id_generacion: ceResult?.idGeneracion || resolverIdGeneracion(idGeneracion, ceResult?.ceNombre ?? ceNombre), paneles_disponibles: ceResult?.panelesDisponibles ?? cePanelesDisponibles ?? null, paneles_a_la_venta: ceResult?.panelesALaVenta ?? cePanelesALaVenta ?? null, paneles_totales: ceResult?.panelesTotales ?? cePanelesTotales ?? null },
         Fsmstate: ceResult?.fsmstate ?? "02_FUERA_ZONA",
         FsmPrevious: null,
@@ -926,14 +940,34 @@ export default function FacturaUpload() {
       setSuministroLon(data.suministro_lon ?? null);
       setNombreCliente(data.nombre_cliente ?? null);
       setDireccionSuministro(data.direccion_suministro ?? null);
+      // Verificação: o ponto de fornecimento da factura está dentro da zona da CE selecionada?
+      setZonaWarn("");
+      let fueraDeZona = false;
       if (SUMINISTRO_ZONA_CHECK && data.suministro_lat && data.suministro_lon) {
         const ces = listaCERef.current.length > 0 ? listaCERef.current : listaCE;
-        if (ces && ces.length > 0) {
-          const dentroZona = ces.some(ce =>
-            haversineDistance(data.suministro_lat, data.suministro_lon, parseFloat(ce.lat), parseFloat(ce.lng)) <= parseFloat(ce.radioMetros)
-          );
-          if (!dentroZona) setZonaWarn("El punto de suministro de la factura está fuera de la zona de cobertura.");
+        const ceSel = findCeSeleccionada(ces, { idGeneracion, ceNombre });
+        const dentro = suministroDentroDeZona(data.suministro_lat, data.suministro_lon, ceSel);
+        const distancia = ceSel ? Math.round(haversineDistance(data.suministro_lat, data.suministro_lon, parseFloat(ceSel.lat), parseFloat(ceSel.lng))) : null;
+        console.log("🏠 [Verificación dirección factura]", {
+          suministro: { lat: data.suministro_lat, lon: data.suministro_lon, direccion: data.direccion_suministro ?? null },
+          ceSeleccionada: ceSel ? { nombre: ceSel.name || ceSel.addressName, lat: ceSel.lat, lng: ceSel.lng, radioMetros: ceSel.radioMetros } : null,
+          distanciaMetros: distancia,
+          dentroDeZona: dentro,
+          resultado: dentro === false ? "FUERA DE ZONA ⚠️" : (dentro === true ? "Dentro de zona ✅" : "Sin datos suficientes"),
+        });
+        if (dentro === false) {
+          fueraDeZona = true;
+          setZonaWarn(
+  `La dirección de la factura está fuera de la zona de la Comunidad Energética${ceSel?.name || ceNombre ? ` ${ceSel?.name || ceNombre}` : ""}. Suba una factura con la misma dirección que introdujo anteriormente.`
+);
         }
+      }
+      // Fora de zona: bloqueia — mostra a tela analisada com o aviso e NÃO envia ao cotizador
+      if (fueraDeZona) {
+        console.log("🚫 [Bloqueo] Factura fuera de zona — no se envía al cotizador");
+        setStatus("analyzed");
+        setLoading(false);
+        return;
       }
       const facturaBuiltPDF = {
         ...buildFactura({ ...flat, ...Object.fromEntries(Object.entries(manualFields).filter(([, v]) => v !== "")), modo: modoAlquiler ? "alquiler" : "venta" }),
@@ -983,7 +1017,7 @@ export default function FacturaUpload() {
       setError1("Archivo no válido. Asegúrate de que sea una factura en formato PDF.");
       return;
     }
-    setFile1(f); setLoading1(true); setError1(""); setErrorMes1(false);
+    setFile1(f); setLoading1(true); setError1(""); setErrorMes1(false); setErrorCups1(false);
     try {
       const fd = new FormData();
       fd.append("file", f, f.name);
@@ -992,6 +1026,18 @@ export default function FacturaUpload() {
       const data = await res.json();
 
       const flat1 = flattenFacturaResponse(data);
+      // CUPS deve coincidir com o da primeira factura (mesmo ponto de fornecimento)
+      const cupsOk1 = mismoCups(flat1.cups, facturaData?.cups);
+      console.log("🔌 [Verificación CUPS — 2ª factura]", {
+        cupsPrimera: facturaData?.cups ?? null,
+        cupsSegunda: flat1.cups ?? null,
+        coincide: cupsOk1,
+        resultado: cupsOk1 ? "Mismo punto de suministro ✅" : "CUPS DISTINTO ⚠️",
+      });
+      if (CUPS_MATCH_CHECK && !cupsOk1) {
+        setErrorCups1(true);
+        setFile1(null); setLoading1(false); return;
+      }
       const mes1 = parseInt(facturaData?.periodo_fin?.split("/")?.[1]);
       const mes2 = parseInt(flat1.periodo_fin?.split("/")?.[1]);
       // Mês deve estar nos sugeridos (e diferente do da 1ª)
@@ -1024,7 +1070,7 @@ export default function FacturaUpload() {
       setError2("Archivo no válido. Asegúrate de que sea una factura en formato PDF.");
       return;
     }
-    setFile2(f); setLoading2(true); setError2(""); setErrorMes2(false);
+    setFile2(f); setLoading2(true); setError2(""); setErrorMes2(false); setErrorCups2(false);
     try {
       const fd = new FormData();
       fd.append("file", f, f.name);
@@ -1033,6 +1079,18 @@ export default function FacturaUpload() {
       const data = await res.json();
 
       const flat2 = flattenFacturaResponse(data);
+      // CUPS deve coincidir com o da primeira factura (mesmo ponto de fornecimento)
+      const cupsOk2 = mismoCups(flat2.cups, facturaData?.cups);
+      console.log("🔌 [Verificación CUPS — 3ª factura]", {
+        cupsPrimera: facturaData?.cups ?? null,
+        cupsTercera: flat2.cups ?? null,
+        coincide: cupsOk2,
+        resultado: cupsOk2 ? "Mismo punto de suministro ✅" : "CUPS DISTINTO ⚠️",
+      });
+      if (CUPS_MATCH_CHECK && !cupsOk2) {
+        setErrorCups2(true);
+        setFile2(null); setLoading2(false); return;
+      }
       const mes1 = parseInt(facturaData?.periodo_fin?.split("/")?.[1]);
       const mes3 = parseInt(flat2.periodo_fin?.split("/")?.[1]);
       const mesesSugeridosMes3 = mesesSugeridos2.map(({ mes }) => mes);
@@ -1090,6 +1148,8 @@ export default function FacturaUpload() {
   const buildClientePayload = (overrideDealId = null, overrideMpklogId = null) => ({
     nombre:     cliente.nombre,
     apellidos:  cliente.apellidos,
+    empresa:    cliente.empresa,
+    PessoaJuridica: !!cliente.PessoaJuridica,
     correo:     cliente.correo,
     telefono:   cliente.telefono,
     direccion:  cliente.direccion,
@@ -1464,6 +1524,8 @@ export default function FacturaUpload() {
       cliente: {
         nombre:         cliente.nombre    || sdCliente.nombre    || cleanUrl(urlCli.nombre)    || "",
         apellidos:      cliente.apellidos || sdCliente.apellidos || cleanUrl(urlCli.apellidos) || "",
+        empresa:        cliente.empresa   || sdCliente.empresa   || cleanUrl(urlCli.empresa)   || "",
+        PessoaJuridica: !!(cliente.PessoaJuridica ?? sdCliente.PessoaJuridica),
         correo:         cliente.correo    || sdCliente.correo    || cleanUrl(urlCli.correo)    || "",
         telefono:       cliente.telefono  || sdCliente.telefono  || cleanUrl(urlCli.telefono)  || "",
         direccion:      cliente.direccion || sdCliente.direccion || cleanUrl(urlCli.direccion) || "",
@@ -1723,6 +1785,8 @@ export default function FacturaUpload() {
         const clientePre = {
           nombre:    cliente.nombre    || urlCli.nombre    || "",
           apellidos: cliente.apellidos || urlCli.apellidos || "",
+          empresa:   cliente.empresa   || urlCli.empresa   || "",
+          PessoaJuridica: !!cliente.PessoaJuridica,
           correo:    cliente.correo    || urlCli.correo    || "",
           telefono:  cliente.telefono  || urlCli.telefono  || "",
           direccion: cliente.direccion || urlCli.direccion || "",
@@ -1837,7 +1901,6 @@ export default function FacturaUpload() {
       fsmstate: fsmEffH,
       panelesDisponibles: panelesDispEffH,
       panelesSel,
-      excedeMinimoProprietario: excedeMinimoProprietarioRef.current,
     });
     console.log("[handleContratar] motivoDeEspera calculado:", motivoDeEspera, {
       panelesDisp_state: cePanelesDisponibles,
@@ -1849,6 +1912,8 @@ export default function FacturaUpload() {
       cliente: {
         nombre:         cliente.nombre    || sdCliente.nombre    || cleanUrl(urlCli.nombre)    || "",
         apellidos:      cliente.apellidos || sdCliente.apellidos || cleanUrl(urlCli.apellidos) || "",
+        empresa:        cliente.empresa   || sdCliente.empresa   || cleanUrl(urlCli.empresa)   || "",
+        PessoaJuridica: !!(cliente.PessoaJuridica ?? sdCliente.PessoaJuridica),
         correo:         cliente.correo    || sdCliente.correo    || cleanUrl(urlCli.correo)    || "",
         telefono:       cliente.telefono  || sdCliente.telefono  || cleanUrl(urlCli.telefono)  || "",
         direccion:      cliente.direccion || sdCliente.direccion || cleanUrl(urlCli.direccion) || "",
@@ -1993,7 +2058,7 @@ export default function FacturaUpload() {
     setStep(1); setMode(null); setFile(null); setFacturaData(null);
     setCups(""); setCupsData(null); setManualFields(emptyManual());
     setError(""); setStatus("idle"); setSending(false); setClienteErrors({});
-    setCliente({ nombre: "", apellidos: "", correo: "", telefono: "", direccion: "" });
+    setCliente({ nombre: "", apellidos: "", empresa: "", correo: "", telefono: "", direccion: "", PessoaJuridica: false });
     setFsmstate(""); setFsmPrevious(null); setCeNombre(""); setCeDireccion(""); setZonaWarn("");
     setUserCoords(null); setNominatimSuggestions([]); setShowDropdown(false);
     setCeDistancia(null); setCeRadio(null); setPlanData(null); setPanelesSel(3);
@@ -2055,29 +2120,39 @@ export default function FacturaUpload() {
 
         {/* Indicador modo asesor */}
         {modoAsesor && !(loading && loadingMsg === "Preparando tu contrato...") && (
-          <div style={{
-            textAlign: "center",
-            fontSize: 11,
-            fontWeight: 600,
-            color: "#E48409",
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            marginBottom: 8,
-          }}>
+          <div
+            onClick={() => setShowCeSelector(v => !v)}
+            title="Mostrar/ocultar selector de CE"
+            style={{
+              textAlign: "center",
+              fontSize: 11,
+              fontWeight: 600,
+              color: "#E48409",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              marginBottom: 8,
+              cursor: "pointer",
+              userSelect: "none",
+            }}>
             🔒 Modo interno — Asesores
           </div>
         )}
         {/* Indicador modo proprietário */}
         {modoProprietario && !(loading && loadingMsg === "Preparando tu contrato...") && (
-          <div style={{
-            textAlign: "center",
-            fontSize: 11,
-            fontWeight: 600,
-            color: "#1FA84E",
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            marginBottom: 8,
-          }}>
+          <div
+            onClick={() => setShowCeSelector(v => !v)}
+            title="Mostrar/ocultar selector de CE"
+            style={{
+              textAlign: "center",
+              fontSize: 11,
+              fontWeight: 600,
+              color: "#1FA84E",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              marginBottom: 8,
+              cursor: "pointer",
+              userSelect: "none",
+            }}>
             🏠 Modo Proprietario
           </div>
         )}
@@ -2160,6 +2235,7 @@ export default function FacturaUpload() {
             cePanelesDisponibles={cePanelesDisponibles}
             modoAlquiler={modoAlquiler}
             modoProprietario={modoProprietario}
+            zonaWarn={zonaWarn}
             cuotaAlquilerMes={cuotaAlquilerMes}
             planData={planData}
             panelesSel={panelesSel}
@@ -2174,7 +2250,6 @@ export default function FacturaUpload() {
             onSetPanelesPropuesta={setPanelesPropuesta}
             onSetTabActiva={setTabActiva}
             onSesionError={() => setSesionError(true)}
-            onExcedeMinimoProprietario={(val) => { excedeMinimoProprietarioRef.current = val; }}
             facturaPreviewData={facturaPreviewData}
             onSesionLoaded={(data) => {
               setSesionData(data);
@@ -2252,6 +2327,8 @@ export default function FacturaUpload() {
                 setCliente(prev => ({
                   nombre:    prev.nombre    || data.cliente.nombre    || "",
                   apellidos: prev.apellidos || data.cliente.apellidos || "",
+                  empresa:   prev.empresa   || data.cliente.empresa   || "",
+                  PessoaJuridica: prev.PessoaJuridica || !!data.cliente.PessoaJuridica,
                   correo:    prev.correo    || data.cliente.correo    || "",
                   telefono:  prev.telefono  || data.cliente.telefono  || "",
                   direccion: prev.direccion || data.cliente.direccion || "",
@@ -2282,7 +2359,6 @@ export default function FacturaUpload() {
                 fsmstate: _fsmCotiz,
                 panelesDisponibles: _panelesDispCotiz,
                 panelesSel: planData?.panelesSel ?? panelesSel ?? null,
-                excedeMinimoProprietario: excedeMinimoProprietarioRef.current,
               });
               const _listaDeEsperaCotiz = _motivoEsperaCotiz !== null;
               console.log("[09_COTIZACION_ALQ] motivoDeEspera:", _motivoEsperaCotiz, "listaDeEspera:", _listaDeEsperaCotiz, {
@@ -2393,7 +2469,7 @@ export default function FacturaUpload() {
             </p>
 
             <a
-              href="https://presupuesto-ar.comunidadsolar.es/calcular-ahorro/aproximado?config=2d042eb19f83e7a3b2de85e8e26ac2f17&ce-name=torrontera+i+-+lazarillo"
+              href={buildArCalculatorURL(AR_CALCULATOR_URL, cliente)}
               style={{
                 display:"block",
                 width:"100%",
@@ -2531,7 +2607,7 @@ export default function FacturaUpload() {
         {/* ── STEP 1 — Datos del cliente ── */}
         {!loading && status !== "sent" && status !== "fuera_zona" && status !== "asesor_solicitado" && status !== "lista_espera" && step === 1 && (
           <div style={{ position: 'relative', width: '100%', maxWidth: 620 }}>
-            {(import.meta.env.DEV || window.location.hostname.split(".")[0] === "develop" || modoProprietario) && (
+            {showCeSelector && (import.meta.env.DEV || window.location.hostname.split(".")[0] === "develop" || modoProprietario) && (
               <div style={{ position: 'absolute', left: -140, top: 0 }}>
                 <select
                   onChange={e => handleDevCESelect(e.target.value)}
@@ -2572,22 +2648,64 @@ export default function FacturaUpload() {
               Rellena tus datos para que podamos presentarte tu plan personalizado.
             </p>
 
-            <div className="cs-row">
-              <div className="cs-field-group">
-                <label className="cs-label" style={{ fontWeight:700 }}>Nombre</label>
-                <input className={`cs-input${clienteErrors.nombre ? " error" : ""}`}
-                  name="nombre" placeholder="ej. María"
-                  value={cliente.nombre} onChange={handleCliente} />
-                {clienteErrors.nombre && <span className="cs-field-error">{clienteErrors.nombre}</span>}
-              </div>
-              <div className="cs-field-group">
-                <label className="cs-label" style={{ fontWeight:700 }}>Apellidos</label>
-                <input className={`cs-input${clienteErrors.apellidos ? " error" : ""}`}
-                  name="apellidos" placeholder="ej. López Hernández"
-                  value={cliente.apellidos} onChange={handleCliente} />
-                {clienteErrors.apellidos && <span className="cs-field-error">{clienteErrors.apellidos}</span>}
-              </div>
+            {/* Tipo de persona — Física (defecto) / Jurídica */}
+            <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+              {[
+                { label: "Persona Física",   juridica: false },
+                { label: "Persona Jurídica", juridica: true  },
+              ].map(({ label, juridica }) => {
+                const activo = !!cliente.PessoaJuridica === juridica;
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => {
+                      setCliente(c => juridica
+                        ? ({ ...c, PessoaJuridica: true,  nombre: "", apellidos: "" })
+                        : ({ ...c, PessoaJuridica: false, empresa: "" }));
+                      setClienteErrors({});
+                    }}
+                    style={{
+                      flex:1, padding:"10px 12px", borderRadius:10, fontSize:14,
+                      fontWeight:700, fontFamily:"inherit", cursor:"pointer",
+                      border: activo ? "1.5px solid #345B22" : "1.5px solid #ddd",
+                      background: activo ? "#F4FDF0" : "#fff",
+                      color: activo ? "#345B22" : "#777",
+                      transition:"all 0.15s",
+                    }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
+
+            {cliente.PessoaJuridica ? (
+              <div className="cs-field-group" style={{ marginBottom:16 }}>
+                <label className="cs-label" style={{ fontWeight:700 }}>Nombre de la empresa</label>
+                <input className={`cs-input${clienteErrors.empresa ? " error" : ""}`}
+                  name="empresa" placeholder="ej. Comunidad Solar S.L."
+                  value={cliente.empresa} onChange={handleCliente} />
+                {clienteErrors.empresa && <span className="cs-field-error">{clienteErrors.empresa}</span>}
+              </div>
+            ) : (
+              <div className="cs-row">
+                <div className="cs-field-group">
+                  <label className="cs-label" style={{ fontWeight:700 }}>Nombre</label>
+                  <input className={`cs-input${clienteErrors.nombre ? " error" : ""}`}
+                    name="nombre" placeholder="ej. María"
+                    value={cliente.nombre} onChange={handleCliente} />
+                  {clienteErrors.nombre && <span className="cs-field-error">{clienteErrors.nombre}</span>}
+                </div>
+                <div className="cs-field-group">
+                  <label className="cs-label" style={{ fontWeight:700 }}>Apellidos</label>
+                  <input className={`cs-input${clienteErrors.apellidos ? " error" : ""}`}
+                    name="apellidos" placeholder="ej. López Hernández"
+                    value={cliente.apellidos} onChange={handleCliente} />
+                  {clienteErrors.apellidos && <span className="cs-field-error">{clienteErrors.apellidos}</span>}
+                </div>
+              </div>
+            )}
 
             <div className="cs-field-group" style={{ marginBottom:16 }}>
               <label className="cs-label" style={{ fontWeight:700 }}>Correo electrónico</label>
@@ -2889,7 +3007,7 @@ export default function FacturaUpload() {
             {mode === "pdf" && status === "analyzed" && facturaData && (
               <div className="cs-card fade-in">
                 <button className="cs-btn-ghost" style={{ marginTop:0, marginBottom:20, width:"auto", padding:"8px 14px", fontSize:13 }}
-                  onClick={() => { setStatus("idle"); setFacturaData(null); setFile(null); setFactura1Data(null); setFile1(null); setError1(""); setFactura2Data(null); setFile2(null); setError2(""); }}>
+                  onClick={() => { setStatus("idle"); setFacturaData(null); setFile(null); setFactura1Data(null); setFile1(null); setError1(""); setFactura2Data(null); setFile2(null); setError2(""); setErrorCups1(false); setErrorCups2(false); setZonaWarn(""); }}>
                   ← Volver
                 </button>
 
@@ -2919,14 +3037,20 @@ export default function FacturaUpload() {
                   </div>
                 )}
 
+                {zonaWarn && (
+                  <div className="cs-alert-warn" style={{ marginBottom:16 }}>
+                    <span>⚠️</span><div>{zonaWarn}</div>
+                  </div>
+                )}
+
                 {/* Tus datos */}
                 <p style={{ fontSize:13, fontWeight:800, color:"#111", letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:10 }}>
                   Tus datos
                 </p>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:24 }}>
                   <div style={{ background:"#F5F4EF", borderRadius:10, padding:"12px 16px" }}>
-                    <p style={{ fontSize:12, color:"#777", marginBottom:4 }}>Nombre</p>
-                    <p style={{ fontSize:14, color:"#111", fontWeight:700 }}>{cliente.nombre}</p>
+                    <p style={{ fontSize:12, color:"#777", marginBottom:4 }}>{cliente.PessoaJuridica ? "Nombre de la empresa" : "Nombre"}</p>
+                    <p style={{ fontSize:14, color:"#111", fontWeight:700 }}>{cliente.PessoaJuridica ? cliente.empresa : cliente.nombre}</p>
                   </div>
                   <div style={{ background:"#F5F4EF", borderRadius:10, padding:"12px 16px" }}>
                     <p style={{ fontSize:12, color:"#777", marginBottom:4 }}>Número de teléfono</p>
@@ -3030,6 +3154,18 @@ export default function FacturaUpload() {
                             <img src="/rechazado.png" alt="" style={{ width:24, height:24, flexShrink:0 }} />
                             <p style={{ fontSize:14, color:"#8D0303", fontWeight:600, lineHeight:1.5, margin:0 }}>
                               El mes no coincide. Sube una factura de los meses indicados.
+                            </p>
+                          </div>
+                        )}
+                        {errorCups1 && (
+                          <div style={{
+                            display:"flex", alignItems:"flex-start", gap:12,
+                            background:"#FEF2F2", border:"1.5px solid #8D0303",
+                            borderRadius:12, padding:"14px 16px", marginBottom:10,
+                          }}>
+                            <img src="/rechazado.png" alt="" style={{ width:24, height:24, flexShrink:0 }} />
+                            <p style={{ fontSize:14, color:"#8D0303", fontWeight:600, lineHeight:1.5, margin:0 }}>
+                              El CUPS no coincide con el de la primera factura. Sube una factura del mismo punto de suministro.
                             </p>
                           </div>
                         )}
@@ -3161,6 +3297,18 @@ export default function FacturaUpload() {
                             </p>
                           </div>
                         )}
+                        {errorCups2 && (
+                          <div style={{
+                            display:"flex", alignItems:"flex-start", gap:12,
+                            background:"#FEF2F2", border:"1.5px solid #8D0303",
+                            borderRadius:12, padding:"14px 16px", marginBottom:10,
+                          }}>
+                            <img src="/rechazado.png" alt="" style={{ width:24, height:24, flexShrink:0 }} />
+                            <p style={{ fontSize:14, color:"#8D0303", fontWeight:600, lineHeight:1.5, margin:0 }}>
+                              El CUPS no coincide con el de la primera factura. Sube una factura del mismo punto de suministro.
+                            </p>
+                          </div>
+                        )}
                         {error2 && (
                           <div style={{
                             display:"flex", alignItems:"flex-start", gap:12,
@@ -3260,9 +3408,10 @@ export default function FacturaUpload() {
                 {TARIFAS_MULTI_FACTURA.includes(facturaData?.tarifa_acceso) && (
                   <button
                     className="cs-btn-primary"
-                    style={{ marginTop:8 }}
-                    disabled={sending}
+                    style={{ marginTop:8, opacity: zonaWarn ? 0.5 : 1, cursor: zonaWarn ? "not-allowed" : "pointer" }}
+                    disabled={sending || !!zonaWarn}
                     onClick={() => {
+                      if (zonaWarn) return;
                       if (factura1Data && factura2Data) {
                         handleEnviar();
                       } else {

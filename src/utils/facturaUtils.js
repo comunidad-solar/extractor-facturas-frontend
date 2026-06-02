@@ -20,11 +20,8 @@ export const hasValue = (v) => v !== null && v !== undefined && v !== "" && v !=
 //   - null         se o cliente pode contratar normalmente
 //
 // Regra única partilhada entre PlanScreen (payload 09) e handleContratar (payload 08).
-export function calcularMotivoDeEspera({ ceStatus, fsmstate, panelesDisponibles, panelesSel, excedeMinimoProprietario = false }) {
+export function calcularMotivoDeEspera({ ceStatus, fsmstate, panelesDisponibles, panelesSel }) {
   if (panelesDisponibles != null && panelesSel != null && panelesDisponibles < panelesSel) {
-    return "Sin plazas";
-  }
-  if (excedeMinimoProprietario) {
     return "Sin plazas";
   }
   if (fsmstate === "01_DENTRO_ZONA" && ceStatus !== "Available") {
@@ -66,6 +63,70 @@ export function haversineDistance(lat1, lon1, lat2, lon2) {
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ── Verificações de factura ───────────────────────────────────────────────────
+// Normaliza um CUPS para comparação: maiúsculas, sem espaços.
+export function normalizarCups(cups) {
+  return (cups ?? "").toString().toUpperCase().replace(/\s+/g, "").trim();
+}
+
+// Compara dois CUPS pelo identificador do ponto de fornecimento (primeiros 20
+// caracteres: "ES" + 16 alfanuméricos + 2 letras de controlo), ignorando o
+// sufixo de ponto fronteira (ex.: "0F", "1P"). Devolve true se forem o mesmo
+// ponto de fornecimento. Se faltar algum dos valores devolve true (não bloqueia).
+export function mismoCups(cupsA, cupsB) {
+  const a = normalizarCups(cupsA);
+  const b = normalizarCups(cupsB);
+  if (!a || !b) return true;
+  const base = (s) => s.slice(0, 20);
+  return base(a) === base(b);
+}
+
+// Encontra a CE selecionada numa lista de CEs, priorizando id_generacion e
+// caindo para o nome (name / addressName). Devolve o objeto CE ou null.
+export function findCeSeleccionada(ces, { idGeneracion, ceNombre } = {}) {
+  if (!Array.isArray(ces) || ces.length === 0) return null;
+  if (idGeneracion) {
+    const porId = ces.find((c) => String(c.id_generacion) === String(idGeneracion));
+    if (porId) return porId;
+  }
+  if (ceNombre) {
+    return ces.find((c) => c.name === ceNombre || c.addressName === ceNombre) ?? null;
+  }
+  return null;
+}
+
+// Verifica se um ponto de fornecimento (lat/lon) está dentro do raio da CE.
+// Devolve true/false, ou null se faltarem dados para decidir.
+export function suministroDentroDeZona(lat, lon, ce) {
+  if (lat == null || lon == null || !ce) return null;
+  const ceLat = parseFloat(ce.lat);
+  const ceLng = parseFloat(ce.lng);
+  const radio = parseFloat(ce.radioMetros);
+  if (Number.isNaN(ceLat) || Number.isNaN(ceLng) || Number.isNaN(radio)) return null;
+  return haversineDistance(lat, lon, ceLat, ceLng) <= radio;
+}
+
+// ── Calculadora de Autoconsumo Remoto (AR) ─────────────────────────────────────
+// Anexa os dados de contacto já preenchidos no passo 1 à URL da calculadora AR.
+// A calculadora AR (ContentCalculateSavings.tsx) lê os params em texto plano:
+//   email (obrigatório para aplicar), first_name, last_name, phone.
+// Em Persona Jurídica, o nome da empresa vai em first_name.
+export function buildArCalculatorURL(baseUrl, cliente) {
+  const c = cliente ?? {};
+  if (!baseUrl || !c.correo) return baseUrl; // sem email a AR não pré-preenche nada
+  const p = new URLSearchParams();
+  p.set("email", c.correo);
+  if (c.PessoaJuridica) {
+    if (c.empresa) p.set("first_name", c.empresa);
+  } else {
+    if (c.nombre)    p.set("first_name", c.nombre);
+    if (c.apellidos) p.set("last_name",  c.apellidos);
+  }
+  if (c.telefono) p.set("phone", c.telefono);
+  const sep = baseUrl.includes("?") ? "&" : "?";
+  return `${baseUrl}${sep}${p.toString()}`;
 }
 
 // ── Formatação ────────────────────────────────────────────────────────────────
@@ -130,6 +191,8 @@ export function buildRedirectURL(baseUrl, cliente, factura, idGen, manualFields,
   p.set("api_error", f.api?.api_error ?? "");
   p.set("nombre",    c.nombre    ?? "");
   p.set("apellidos", c.apellidos ?? "");
+  p.set("empresa",   c.empresa   ?? "");
+  p.set("PessoaJuridica", c.PessoaJuridica ? "true" : "false");
   p.set("correo",    c.correo    ?? "");
   p.set("direccion", c.direccion ?? "");
   // pe_p* — prioridad: manualFields → rawData (facturaData/cupsData)
