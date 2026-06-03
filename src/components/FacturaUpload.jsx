@@ -399,11 +399,12 @@ export default function FacturaUpload() {
     // dias depois). Buscamos a sessão no backend e, se tiver `plan`, montamos
     // a PlanScreen como se fosse plan-demo.
     const isPlanDemo = params.get("demo") === "true" && params.get("fase") === "plan-demo";
+    const isRetomar  = params.get("retomar") === "true";
     const sidSolo    = params.get("session_id");
     if (sidSolo && !isPlanDemo) {
-      console.log("[useEffect] session_id solitário detetado:", sidSolo, "→ GET /sesion para recuperar plan");
+      console.log("[useEffect] session_id solitário detetado:", sidSolo, "→ GET /sesion para recuperar", isRetomar ? "solicitud (retomar)" : "plan");
       setLoading(true);
-      setLoadingMsg("Recuperando tu plan...");
+      setLoadingMsg(isRetomar ? "Recuperando tu solicitud..." : "Recuperando tu plan...");
       (async () => {
         try {
           const r = await fetch(`${SESION_URL}/${encodeURIComponent(sidSolo)}`);
@@ -460,6 +461,19 @@ export default function FacturaUpload() {
             console.log("[useEffect] modoAlquiler derivado de cliente.tipoVenta:", data.cliente.tipoVenta, "→", isAlquiler);
             setModoAlquiler(isAlquiler);
           }
+          // ── RETOMAR (?retomar=true) — sessão SEM factura/plan/dealId →
+          //    cliente + CE/zona já restaurados acima; saltar direto ao passo 2
+          //    (envio da fatura). Sessão completa cai no fluxo normal abaixo
+          //    (recuperar plan), então o link continua funcionando após concluir.
+          const sesionCompleta = !!(data?.factura || data?.plan || data?.dealId || data?.cliente?.dealId);
+          if (isRetomar && !sesionCompleta) {
+            console.log("[retomar] sessão incompleta → passo 2 com dados restaurados");
+            setContinuarSessionId(sidSolo); // preserva o vínculo para o /enviar obter dealId via callback
+            setStep(2);
+            setLoading(false);
+            return;
+          }
+
           if (data?.facturaPreview) setFacturaPreviewData(data.facturaPreview);
           if (data?.factura) {
             // factura está em formato Claude (estruturado) — guardar como facturaData direto.
@@ -497,11 +511,14 @@ export default function FacturaUpload() {
     try {
       const sidUrl = params.get("session_id");
       if (sidUrl) {
-        const cleanUrl = `${window.location.origin}/?session_id=${encodeURIComponent(sidUrl)}`;
-        // Sólo aplica si la URL actual tiene más params que session_id
-        if (window.location.search && window.location.search !== `?session_id=${encodeURIComponent(sidUrl)}`) {
+        // Preservar retomar=true — num F5 a sessão incompleta deve voltar ao passo 2,
+        // não ao fluxo de recuperação de plan.
+        const retomarSuffix = params.get("retomar") === "true" ? "retomar=true&" : "";
+        const cleanUrl = `${window.location.origin}/?${retomarSuffix}session_id=${encodeURIComponent(sidUrl)}`;
+        // Sólo aplica si la URL actual tiene más params que los mantenidos
+        if (window.location.search && window.location.search !== `?${retomarSuffix}session_id=${encodeURIComponent(sidUrl)}`) {
           window.history.replaceState({}, "", cleanUrl);
-          console.log("[URL] limpa — só session_id mantido na barra:", cleanUrl);
+          console.log("[URL] limpa — mantidos na barra:", cleanUrl);
         }
       } else {
         console.log("[URL] sem session_id na URL — não limpamos (preservamos params iniciais como interno-asesores)");
