@@ -80,6 +80,7 @@ export const PERIODOS_POR_MES_3TD = {
 // Restrição de CE: só permite avançar se a CE mais próxima for esta. null = desativado.
 export const RESTRICT_TO_CE = null;
 
+export const MAINTENANCE_MODE = true; // true = muestra la pantalla "En mantenimiento" al abrir y bloquea toda la app
 export const FACTURA_PREVIEW_MOCK_FALLBACK = false;
 export const CE_FOTO_ENABLED = true; // true = busca foto da CE via GET /ce/foto; false = usa /Intersect.png
 export const FORCE_WAITING_LIST = false; // true = fuerza badge "En Espera", botón lista espera al contratar //
