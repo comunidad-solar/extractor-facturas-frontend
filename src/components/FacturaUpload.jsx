@@ -465,7 +465,10 @@ export default function FacturaUpload() {
           //    cliente + CE/zona já restaurados acima; saltar direto ao passo 2
           //    (envio da fatura). Sessão completa cai no fluxo normal abaixo
           //    (recuperar plan), então o link continua funcionando após concluir.
-          const sesionCompleta = !!(data?.factura || data?.plan || data?.dealId || data?.cliente?.dealId);
+          // NOTA: dealId NÃO indica funil concluído — a sessão do /continuar recebe
+          // dealId/mpklogId via callback Zoho logo após o passo 1, mesmo sem fatura.
+          // Completo = tem factura ou plan.
+          const sesionCompleta = !!(data?.factura || data?.plan);
           if (isRetomar && !sesionCompleta) {
             console.log("[retomar] sessão incompleta → passo 2 com dados restaurados");
             setContinuarSessionId(sidSolo); // preserva o vínculo para o /enviar obter dealId via callback
