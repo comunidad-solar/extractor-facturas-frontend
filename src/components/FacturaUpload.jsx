@@ -2592,7 +2592,7 @@ export default function FacturaUpload() {
               }}
               onMouseEnter={e => { e.currentTarget.style.background="#fff"; e.currentTarget.style.borderColor="#000"; }}
               onMouseLeave={e => { e.currentTarget.style.background="#FFAD2A"; e.currentTarget.style.borderColor="transparent"; }}
-              onClick={() => { setStatus("idle"); setStep(1); }}
+              onClick={() => { window.location.href = "https://comunidadsolar.es/"; }}
             >
               <img src="/leftArrow.png" alt="" style={{ height:18, display:"block" }} />
               Ir a la página de inicio
