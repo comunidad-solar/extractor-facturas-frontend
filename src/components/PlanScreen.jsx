@@ -209,7 +209,7 @@ export default function PlanScreen({
             />
             <div style={{ display:"flex", alignItems:"center", gap:14 }}>
               <span style={{ fontSize:13, color:"#777", fontWeight:500 }}>¿Tienes dudas?</span>
-              <button className="cs-btn-asesor" onClick={() => window.open("https://comunidadsolar.zohobookings.eu/#/108535000001261056", "_blank")}>
+              <button className="cs-btn-asesor" onClick={() => window.open("https://comunidadsolar.zohobookings.eu/#/108535000006657002", "_blank")}>
                 Contacta con tu asesor
               </button>
             </div>

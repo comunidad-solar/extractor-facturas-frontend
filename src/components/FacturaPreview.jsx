@@ -122,9 +122,9 @@ const SectionRow = ({ label }) => (
 // ─── Bar chart data builder ───────────────────────────────────────────────────
 const buildBarData = (gb, produto) => [
   ...(produto === 'AR' ? [{ name: 'Autoconsumo remoto', value: gb.autoconsumo_remoto_kwh, fill: '#A5D6A7' }] : []),
-  { name: 'Energía del mercado', value: gb.energia_mercado_kwh, fill: '#fed81a' },
-  { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,      fill: '#8cda32' },
-  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#6df0d4' },
+  { name: 'Energía del mercado', value: gb.energia_mercado_kwh, fill: '#FFDF3C' },
+  { name: 'Autoconsumo',         value: gb.autoconsumo_kwh,      fill: '#A4E2A1'},
+  { name: 'Excedentes',          value: gb.excedentes_kwh,       fill: '#ADF4E5' },
 ];
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -165,11 +165,13 @@ export default function FacturaPreview({ data = null }) {
     }
   };
 
+  // color    → cor do valor em € (coluna 1)
+  // textColor→ cor do rótulo de texto (coluna 2) — independente da cor da barra (coluna 3)
   const energyRows = [
-    ...(d.produto === 'AR' ? [{ label: 'Autoconsumo remoto', val: r.autoconsumo_remoto, color: '#7CB342' }] : []),
-    { label: 'Energía del mercado', val: r.energia_mercado,  color: '#fed81a' },
-    { label: 'Autoconsumo',         val: 0,                   color: '#8cda32' },
-    { label: 'Excedente',           val: r.excedente_remoto, color: r.excedente_remoto < 0 ? '#6df0d4' : '#111' },
+    ...(d.produto === 'AR' ? [{ label: 'Autoconsumo remoto', val: r.autoconsumo_remoto, color: '#7CB342', textColor: '#A5D6A7' }] : []),
+    { label: 'Energía del mercado', val: r.energia_mercado,  color: '#fed81a', textColor: '#fed81a' },
+    { label: 'Autoconsumo',         val: 0,                   color: '#8cda32', textColor: '#8cda32' },
+    { label: 'Excedente',           val: r.excedente_remoto, color: r.excedente_remoto < 0 ? '#6df0d4' : '#111', textColor: '#6df0d4' },
   ];
   const otherRows = [
     { label: 'Potencia',            val: r.potencia },
@@ -355,16 +357,12 @@ export default function FacturaPreview({ data = null }) {
 
           {/* Col 2: labels coloridas alinhadas com barras + descriptions otros */}
           <div style={{ flexShrink: 0, fontSize: 12, textAlign: 'center' }}>
-            {/* Labels das barras — cor da barra correspondente */}
-            {energyRows.map(({ label }) => {
-              const labelKey = label.startsWith('Excedente') ? 'Excedentes' : label;
-              const cor = barData.find(b => b.name === labelKey)?.fill || '#111';
-              return (
-                <div key={label} style={{ height: 45, display: 'flex', alignItems: 'center', justifyContent: 'center', color: cor, fontWeight: 600, whiteSpace: 'nowrap' }}>
-                  {label}
-                </div>
-              );
-            })}
+            {/* Labels — cor de texto própria (textColor), independente da cor da barra */}
+            {energyRows.map(({ label, textColor }) => (
+              <div key={label} style={{ height: 45, display: 'flex', alignItems: 'center', justifyContent: 'center', color: textColor || '#111', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                {label}
+              </div>
+            ))}
             {/* Gap = XAxis height */}
             <div style={{ height: 30 }} />
             {/* Descriptions otros */}
