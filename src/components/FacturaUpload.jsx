@@ -1374,13 +1374,45 @@ export default function FacturaUpload() {
     }
 
     setSending(true); setError(""); setStatus("loading_plan");
+
+    // Gate: não enviar /enviar até o polling do /continuar trazer dealId+mpklogId.
+    // Mantém a tela de loading (loading_plan) enquanto espera. Se já temos os ids no
+    // state, segue direto. Timeout ~40s → segue mesmo vazio (criação legítima sem deal
+    // ainda; nesse caso o Flow cria o deal). Evita /enviar com cliente null → deal duplicado.
+    let dealIdGate   = dealId;
+    let mpklogIdGate = mpklogId;
+    if (continuarSessionId && (!dealIdGate || !mpklogIdGate)) {
+      console.log("[handleEnviar] aguardando IDs do polling antes de /enviar…");
+      for (let i = 0; i < 40; i++) {  // 40 × 2s = ~80s
+        try {
+          const pr = await fetch(`${API_BASE}/sesion/${continuarSessionId}`);
+          if (pr.ok) {
+            const pd = await pr.json();
+            if (pd.dealId && pd.mpklogId) {
+              dealIdGate = pd.dealId; mpklogIdGate = pd.mpklogId;
+              setDealId(pd.dealId); setMpklogId(pd.mpklogId);
+              console.log("[handleEnviar] IDs obtidos pelo gate:", { dealId: pd.dealId, mpklogId: pd.mpklogId });
+              break;
+            }
+          }
+        } catch (_) {}
+        await new Promise(r => setTimeout(r, 2000));
+      }
+      if (!dealIdGate || !mpklogIdGate) {
+        console.warn("[handleEnviar] timeout do gate — IDs não chegaram; pedindo retry ao utilizador");
+        setSending(false);
+        setStatus("ids_timeout");
+        return;
+      }
+    }
+
     const factura = facturaBuilt ?? (mode === "pdf" ? buildFacturaPDF() : buildFacturaCUPS());
     const cePayload = { nombre: ceNombre, direccion: ceDireccion, status: ceStatus, etiqueta: ceEtiqueta, id_generacion: resolverIdGeneracion(idGeneracion, ceNombre), paneles_disponibles: cePanelesDisponibles ?? null, paneles_a_la_venta: cePanelesALaVenta ?? null, paneles_totales: cePanelesTotales ?? null };
     try {
       console.log("[handleEnviar] cliente.lat:", userCoords?.lat, "cliente.lon:", userCoords?.lon);
       const fd = new FormData();
       const dataPayload = {
-        cliente: buildClientePayload(), factura, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload,
+        cliente: buildClientePayload(dealIdGate, mpklogIdGate), factura, Fsmstate, FsmPrevious: fsmPrevious, ce: cePayload,
         session_id: effectiveExtractSessionId,
         continuar_session_id: continuarSessionId,
         ...(factura1Data && { factura_1: buildFactura1(), session_id_1: extract1SessionId }),
@@ -2513,6 +2545,36 @@ export default function FacturaUpload() {
             >
               Quiero mi propuesta de Autoconsumo Remoto
             </a>
+          </div>
+        )}
+
+        {/* ── TIMEOUT DOS IDs — pedir retry ── */}
+        {!loading && status === "ids_timeout" && (
+          <div className="cs-card fade-in">
+            <div style={{ marginBottom:24 }}>
+              <img src="/logo.png" alt="Comunidad Solar" style={{ height:48, display:"block" }} />
+            </div>
+            <div style={{
+              display:"flex",
+              alignItems:"flex-start",
+              gap:12,
+              background:"#fffbeb",
+              border:"1.5px solid #f59e0b",
+              borderRadius:12,
+              padding:"16px 18px",
+              marginBottom:24,
+            }}>
+              <p style={{ fontSize:14, color:"#92400e", fontWeight:600, lineHeight:1.5, margin:0 }}>
+                No pudimos preparar tu plan en este momento. Por favor, vuelve al inicio e inténtalo de nuevo en unos minutos.
+              </p>
+            </div>
+            <button
+              className="cs-btn-primary"
+              style={{ width:"100%" }}
+              onClick={() => { setStatus("idle"); setStep(1); setError(""); }}
+            >
+              Volver al inicio
+            </button>
           </div>
         )}
 
