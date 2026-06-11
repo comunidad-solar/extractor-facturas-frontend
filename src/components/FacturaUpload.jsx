@@ -17,7 +17,7 @@ import {
 import {
   hasValue, emptyManual, resolverIdGeneracion, getCeNombreById,
   haversineDistance, buildPayloadAsesor, enviarLead,
-  validarDNI, validarIBAN, sugerirMeses3TD, calcularMotivoDeEspera,
+  validarDocumento, validarIBAN, sugerirMeses3TD, calcularMotivoDeEspera,
   mismoCups, findCeSeleccionada, suministroDentroDeZona, buildArCalculatorURL,
 } from "../utils/facturaUtils";
 import OptimizerModal from "./OptimizerModal";
@@ -1755,10 +1755,10 @@ export default function FacturaUpload() {
 
   const handleContratar = async () => {
     if (!dniContrato.trim()) {
-      setDniError("El DNI es obligatorio"); return;
+      setDniError("El DNI, NIE o CIF es obligatorio"); return;
     }
-    if (!validarDNI(dniContrato.trim())) {
-      setDniError("El DNI o NIE no es válido"); return;
+    if (!validarDocumento(dniContrato.trim())) {
+      setDniError("El DNI, NIE o CIF no es válido"); return;
     }
     if (!ibanContrato.trim()) {
       setIbanError("El IBAN es obligatorio"); return;
@@ -3711,17 +3711,17 @@ export default function FacturaUpload() {
               Necesitamos estos datos para preparar tu contratación.
             </p>
             <p style={{ fontSize:12, color:"#777", marginBottom:4 }}>
-              <strong>DNI / NIE</strong> Para emitir tu contrato de alquiler de paneles y tu contrato de suministro eléctrico.
+              <strong>DNI / NIE / CIF</strong> Para emitir tu contrato de alquiler de paneles y tu contrato de suministro eléctrico.
             </p>
             <p style={{ fontSize:12, color:"#777", marginBottom:20 }}>
               <strong>IBAN</strong> Cuenta en la que domiciliaremos tu factura de luz con la comercializadora (orden SEPA).
             </p>
 
             <div className="cs-field-group" style={{ marginBottom:16 }}>
-              <label className="cs-label">DNI / NIE</label>
+              <label className="cs-label">DNI / NIE / CIF</label>
               <input
                 className={`cs-input${dniError ? " error" : ""}`}
-                placeholder="12345678A o X1234567A"
+                placeholder="12345678A · X1234567A · B12345674"
                 value={dniContrato}
                 onChange={(e) => { setDniContrato(e.target.value); setDniError(""); }}
                 onKeyDown={(e) => e.key === "Enter" && handleContratar()}
