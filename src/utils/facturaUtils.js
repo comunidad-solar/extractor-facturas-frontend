@@ -231,6 +231,44 @@ export function validarDNI(dni) {
   return false;
 }
 
+// CIF (empresas): letra inicial + 7 dígitos + dígito/letra de control.
+export function validarCIF(cif) {
+  const value = (cif || "").toUpperCase().trim();
+  if (!/^[ABCDEFGHJKLMNPQRSUVW][0-9]{7}[0-9A-J]$/.test(value)) return false;
+
+  const letra   = value.charAt(0);
+  const digitos = value.substring(1, 8);
+  const control = value.charAt(8);
+
+  let sumPar = 0;   // posições pares (2,4,6) — somam-se directamente
+  let sumImpar = 0; // posições ímpares (1,3,5,7) — ×2 e soma de dígitos
+  for (let i = 0; i < digitos.length; i++) {
+    const n = parseInt(digitos[i], 10);
+    if (i % 2 === 0) {
+      let d = n * 2;
+      if (d > 9) d -= 9;
+      sumImpar += d;
+    } else {
+      sumPar += n;
+    }
+  }
+  const total         = sumPar + sumImpar;
+  const digitoControl = (10 - (total % 10)) % 10;
+  const letraControl  = "JABCDEFGHI".charAt(digitoControl);
+
+  // Tipos que exigem letra de control: K,P,Q,R,S,N,W
+  if ("KPQRSNW".includes(letra)) return control === letraControl;
+  // Tipos que exigem dígito: A,B,E,H
+  if ("ABEH".includes(letra))    return control === String(digitoControl);
+  // Restantes: aceitam dígito OU letra
+  return control === String(digitoControl) || control === letraControl;
+}
+
+// Aceita DNI, NIE ou CIF (empresa).
+export function validarDocumento(doc) {
+  return validarDNI(doc) || validarCIF(doc);
+}
+
 export function validarIBAN(iban) {
   const ibanLimpio = iban.replace(/\s/g, "").toUpperCase();
   if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$/.test(ibanLimpio)) return false;
